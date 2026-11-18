@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
+import { useActiveDevice, useDeviceEvents } from './state/queries'
 
 const TITLES: Record<string, string> = {
   '/connect': 'Connect',
@@ -9,12 +10,16 @@ const TITLES: Record<string, string> = {
 export function App() {
   const { pathname } = useLocation()
   const title = TITLES[pathname] ?? 'Jiggle'
+  const device = useActiveDevice()
+  useDeviceEvents()
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="drag" />
         <div className="device-header">
-          <div className="device-name">No device</div>
+          <div className="device-name">
+            {device ? `${device.name} · iOS ${device.osVersion}` : 'No device'}
+          </div>
         </div>
         <nav>
           {NAV_ITEMS.map((n) => (

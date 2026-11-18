@@ -1,0 +1,44 @@
+import { z } from 'zod'
+import type { Device, RawIconState } from './types'
+
+const Udid = z.string().min(1)
+
+const Device_ = z.object({
+  udid: Udid,
+  name: z.string(),
+  productType: z.string(),
+  modelName: z.string(),
+  deviceClass: z.enum(['iPhone', 'iPad']),
+  osVersion: z.string(),
+  connection: z.enum(['usb', 'wifi']),
+  state: z.enum(['ready', 'locked', 'trust-pending', 'trust-declined', 'unsupported-os', 'error'])
+})
+
+const RawIconState_ = z.array(z.array(z.record(z.string(), z.unknown())))
+
+export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_ }
+
+// One entry per request channel (`domain:action`): its argument tuple and its result.
+// Main validates `args` on every call; `result` only types the renderer.
+export const channels = {
+  'device:list': { args: z.tuple([]), result: z.array(Device_) },
+  'layout:get': { args: z.tuple([Udid]), result: RawIconState_ }
+} as const
+
+export type ChannelName = keyof typeof channels
+export type ChannelArgs<C extends ChannelName> = z.infer<(typeof channels)[C]['args']>
+export type ChannelResult<C extends ChannelName> = z.infer<(typeof channels)[C]['result']>
+
+// Main → renderer events. They carry no payload: the renderer refetches.
+export type EventName = 'device:changed'
+
+// What preload exposes as `window.jiggle`.
+export interface JiggleApi {
+  device: {
+    list(): Promise<Device[]>
+    onChanged(listener: () => void): () => void
+  }
+  layout: {
+    get(udid: string): Promise<RawIconState>
+  }
+}

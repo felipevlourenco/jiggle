@@ -1,0 +1,818 @@
+{
+  "device": {
+    "udid": "00008130-000A1B2C3D4E0002",
+    "name": "Sam's iPhone",
+    "productType": "iPhone17,1",
+    "modelName": "iPhone 16 Pro",
+    "deviceClass": "iPhone",
+    "osVersion": "26.1",
+    "connection": "usb",
+    "state": "ready"
+  },
+  "rawState": [
+    [
+      {
+        "bundleIdentifier": "com.apple.mobilephone",
+        "bundleVersion": "36",
+        "displayIdentifier": "com.apple.mobilephone",
+        "displayName": "Phone",
+        "iconModDate": "2026-11-06T08:52:57"
+      },
+      {
+        "bundleIdentifier": "com.google.chrome.ios",
+        "bundleVersion": "157.0.8103.37",
+        "displayIdentifier": "com.google.chrome.ios",
+        "displayName": "Chrome",
+        "iconModDate": "2026-11-07T05:10:02"
+      },
+      {
+        "bundleIdentifier": "com.google.GoogleMobile",
+        "bundleVersion": "447.9.1016606130",
+        "displayIdentifier": "com.google.GoogleMobile",
+        "displayName": "Google",
+        "iconModDate": "2026-11-17T09:55:04"
+      },
+      {
+        "bundleIdentifier": "net.whatsapp.WhatsApp",
+        "bundleVersion": "1112500299",
+        "displayIdentifier": "net.whatsapp.WhatsApp",
+        "displayName": "\u200eWhatsApp",
+        "iconModDate": "2026-11-13T07:15:32"
+      }
+    ],
+    [
+      {
+        "allowsExternalSuggestions": true,
+        "allowsSuggestions": true,
+        "bundleIdentifier": "com.google.GoogleMobile.WidgetKitExtension",
+        "containerBundleIdentifier": "com.google.GoogleMobile",
+        "displayIdentifier": "937438F9-7E04-48C2-A9F4-89453EAD7EAB",
+        "elementType": "widget",
+        "gridSize": "medium",
+        "iconLists": [],
+        "iconType": "custom",
+        "widgetIdentifier": "QuickSearchBarWidget"
+      },
+      {
+        "bundleIdentifier": "com.apple.MobileSMS",
+        "bundleVersion": "1491.200.101.2.7",
+        "displayIdentifier": "com.apple.MobileSMS",
+        "displayName": "Messages",
+        "iconModDate": "2026-11-16T13:27:00"
+      },
+      {
+        "bundleIdentifier": "com.apple.facetime",
+        "bundleVersion": "36",
+        "displayIdentifier": "com.apple.facetime",
+        "displayName": "FaceTime",
+        "iconModDate": "2026-11-16T13:26:58"
+      },
+      {
+        "bundleIdentifier": "com.apple.mobiletimer",
+        "bundleVersion": "1.0",
+        "displayIdentifier": "com.apple.mobiletimer",
+        "displayName": "Clock",
+        "iconModDate": "2026-11-16T13:26:56"
+      },
+      {
+        "bundleIdentifier": "com.apple.Maps",
+        "bundleVersion": "2972.31.6.17.141",
+        "displayIdentifier": "com.apple.Maps",
+        "displayName": "Maps",
+        "iconModDate": "2026-11-16T13:27:01"
+      },
+      {
+        "bundleIdentifier": "com.apple.mobileslideshow",
+        "bundleVersion": "916.57.154",
+        "displayIdentifier": "com.apple.mobileslideshow",
+        "displayName": "Photos",
+        "iconModDate": "2026-11-16T13:27:00"
+      },
+      {
+        "bundleIdentifier": "com.apple.mobilecal",
+        "bundleVersion": "1",
+        "displayIdentifier": "com.apple.mobilecal",
+        "displayName": "Calendar",
+        "iconModDate": "2026-11-16T13:27:03"
+      },
+      {
+        "bundleIdentifier": "com.apple.AppStore",
+        "bundleVersion": "1",
+        "displayIdentifier": "com.apple.AppStore",
+        "displayName": "App Store",
+        "iconModDate": "2026-11-16T13:27:01"
+      },
+      {
+        "bundleIdentifier": "com.apple.weather",
+        "bundleVersion": "1474",
+        "displayIdentifier": "com.apple.weather",
+        "displayName": "Weather",
+        "iconModDate": "2026-11-16T13:26:56"
+      },
+      {
+        "bundleIdentifier": "com.example.rainradar",
+        "bundleVersion": "2817",
+        "displayIdentifier": "com.example.rainradar",
+        "displayName": "Rain Radar",
+        "iconModDate": "2026-11-14T09:01:08"
+      },
+      {
+        "bundleIdentifier": "com.apple.Passbook",
+        "bundleVersion": "1696.2.9",
+        "displayIdentifier": "com.apple.Passbook",
+        "displayName": "Wallet",
+        "iconModDate": "2026-11-16T13:26:59"
+      },
+      {
+        "displayName": "Utilities",
+        "iconLists": [
+          [
+            {
+              "bundleIdentifier": "com.apple.VoiceMemos",
+              "bundleVersion": "1446.1.1",
+              "displayIdentifier": "com.apple.VoiceMemos",
+              "displayName": "Voice Memos",
+              "iconModDate": "2026-11-16T13:26:56"
+            },
+            {
+              "bundleIdentifier": "com.apple.compass",
+              "bundleVersion": "1.0",
+              "displayIdentifier": "com.apple.compass",
+              "displayName": "Compass",
+              "iconModDate": "2026-11-16T13:26:58"
+            },
+            {
+              "bundleIdentifier": "com.apple.measure",
+              "bundleVersion": "196.40.3",
+              "displayIdentifier": "com.apple.measure",
+              "displayName": "Measure",
+              "iconModDate": "2026-11-16T13:26:59"
+            },
+            {
+              "bundleIdentifier": "com.apple.calculator",
+              "bundleVersion": "225",
+              "displayIdentifier": "com.apple.calculator",
+              "displayName": "Calculator",
+              "iconModDate": "2026-11-16T13:26:58"
+            },
+            {
+              "bundleIdentifier": "com.apple.DocumentsApp",
+              "bundleVersion": "403.1.10",
+              "displayIdentifier": "com.apple.DocumentsApp",
+              "displayName": "Files",
+              "iconModDate": "2026-11-16T13:26:57"
+            },
+            {
+              "bundleIdentifier": "com.apple.mobilesafari",
+              "bundleVersion": "8625.2.8.10.7",
+              "displayIdentifier": "com.apple.mobilesafari",
+              "displayName": "Safari",
+              "iconModDate": "2026-11-16T13:26:56"
+            },
+            {
+              "bundleIdentifier": "com.apple.Health",
+              "bundleVersion": "7027.1.56.2.9",
+              "displayIdentifier": "com.apple.Health",
+              "displayName": "Health",
+              "iconModDate": "2026-11-16T13:27:01"
+            },
+            {
+              "bundleIdentifier": "com.apple.Bridge",
+              "bundleVersion": "1.0",
+              "displayIdentifier": "com.apple.Bridge",
+              "displayName": "Watch",
+              "iconModDate": "2026-11-16T13:27:03"
+            },
+            {
+              "bundleIdentifier": "com.apple.mobilenotes",
+              "bundleVersion": "3001.42.1",
+              "displayIdentifier": "com.apple.mobilenotes",
+              "displayName": "Notes",
+              "iconModDate": "2026-11-16T13:27:02"
+            }
+          ]
+        ],
+        "listType": "folder"
+      },
+      {
+        "bundleIdentifier": "com.apple.Preferences",
+        "bundleVersion": "2027.1.9.100",
+        "displayIdentifier": "com.apple.Preferences",
+        "displayName": "Settings",
+        "iconModDate": "2026-11-06T08:52:57"
+      },
+      {
+        "bundleIdentifier": "com.apple.findmy",
+        "bundleVersion": "470.31.6.16.46",
+        "displayIdentifier": "com.apple.findmy",
+        "displayName": "Find My",
+        "iconModDate": "2026-11-16T13:26:58"
+      },
+      {
+        "bundleIdentifier": "com.apple.MobileAddressBook",
+        "bundleVersion": "1.0",
+        "displayIdentifier": "com.apple.MobileAddressBook",
+        "displayName": "Contacts",
+        "iconModDate": "2026-11-16T13:27:01"
+      },
+      {
+        "bundleIdentifier": "com.apple.camera",
+        "bundleVersion": "4177.41.6.0.1",
+        "displayIdentifier": "com.apple.camera",
+        "displayName": "Camera",
+        "iconModDate": "2026-11-16T13:27:02"
+      },
+      {
+        "bundleIdentifier": "com.google.Chromecast",
+        "bundleVersion": "4.38.29.06",
+        "displayIdentifier": "com.google.Chromecast",
+        "displayName": "Google Home",
+        "iconModDate": "2026-11-17T09:55:49"
+      }
+    ],
+    [
+      {
+        "allowsExternalSuggestions": true,
+        "allowsSuggestions": true,
+        "bundleIdentifier": "com.apple.weather.widget",
+        "containerBundleIdentifier": "com.apple.weather",
+        "displayIdentifier": "1186DE67-1DB0-4995-BF70-EE5C16063BD3",
+        "elementType": "widget",
+        "gridSize": "medium",
+        "iconLists": [],
+        "iconType": "custom",
+        "userSelectedElementIdentifier": "CCBBDCA8-A241-4738-A043-34C30BB413CF",
+        "widgetIdentifier": "com.apple.weather"
+      },
+      {
+        "bundleIdentifier": "com.example.bankthree",
+        "bundleVersion": "2164",
+        "displayIdentifier": "com.example.bankthree",
+        "displayName": "Bank Three",
+        "iconModDate": "2026-11-13T07:14:57"
+      },
+      {
+        "bundleIdentifier": "com.example.bankone",
+        "bundleVersion": "20261111.90257",
+        "displayIdentifier": "com.example.bankone",
+        "displayName": "Bank One",
+        "iconModDate": "2026-11-13T07:14:32"
+      },
+      {
+        "bundleIdentifier": "com.example.banktwo",
+        "bundleVersion": "32",
+        "displayIdentifier": "com.example.banktwo",
+        "displayName": "Bank Two",
+        "iconModDate": "2026-11-14T09:01:17"
+      },
+      {
+        "bundleIdentifier": "com.example.mobileplan",
+        "bundleVersion": "50143694",
+        "displayIdentifier": "com.example.mobileplan",
+        "displayName": "Mobile Plan",
+        "iconModDate": "2026-11-17T09:54:18"
+      },
+      {
+        "bundleIdentifier": "com.google.Gmail",
+        "bundleVersion": "6.0.261102.1809040",
+        "displayIdentifier": "com.google.Gmail",
+        "displayName": "Gmail",
+        "iconModDate": "2026-11-14T09:02:22"
+      },
+      {
+        "bundleIdentifier": "com.google.calendar",
+        "bundleVersion": "26.43.0.54788800",
+        "displayIdentifier": "com.google.calendar",
+        "displayName": "Google Calendar",
+        "iconModDate": "2026-11-12T15:57:18"
+      },
+      {
+        "bundleIdentifier": "com.google.Keep",
+        "bundleVersion": "2.2026.45100",
+        "displayIdentifier": "com.google.Keep",
+        "displayName": "Google Keep",
+        "iconModDate": "2026-11-14T09:01:29"
+      },
+      {
+        "bundleIdentifier": "com.google.photos",
+        "bundleVersion": "8.1.1016889038",
+        "displayIdentifier": "com.google.photos",
+        "displayName": "Google Photos",
+        "iconModDate": "2026-11-18T08:45:50"
+      },
+      {
+        "bundleIdentifier": "com.google.Drive",
+        "bundleVersion": "4.2645.41004",
+        "displayIdentifier": "com.google.Drive",
+        "displayName": "Drive",
+        "iconModDate": "2026-11-17T09:55:22"
+      },
+      {
+        "bundleIdentifier": "com.google.Translate",
+        "bundleVersion": "10.46.361",
+        "displayIdentifier": "com.google.Translate",
+        "displayName": "Google Translate",
+        "iconModDate": "2026-11-13T07:14:16"
+      },
+      {
+        "bundleIdentifier": "com.google.Maps",
+        "bundleVersion": "26.45.1.0117382790",
+        "displayIdentifier": "com.google.Maps",
+        "displayName": "Google Maps",
+        "iconModDate": "2026-11-11T12:08:32"
+      },
+      {
+        "bundleIdentifier": "com.google.ios.youtube",
+        "bundleVersion": "21.45.4",
+        "displayIdentifier": "com.google.ios.youtube",
+        "displayName": "YouTube",
+        "iconModDate": "2026-11-12T16:03:07"
+      },
+      {
+        "bundleIdentifier": "com.reddit.Reddit",
+        "bundleVersion": "676861",
+        "displayIdentifier": "com.reddit.Reddit",
+        "displayName": "Reddit",
+        "iconModDate": "2026-11-18T08:46:40"
+      },
+      {
+        "bundleIdentifier": "com.burbn.instagram",
+        "bundleVersion": "1114925422",
+        "displayIdentifier": "com.burbn.instagram",
+        "displayName": "Instagram",
+        "iconModDate": "2026-11-18T08:46:25"
+      },
+      {
+        "bundleIdentifier": "com.spotify.client",
+        "bundleVersion": "920002054",
+        "displayIdentifier": "com.spotify.client",
+        "displayName": "Spotify",
+        "iconModDate": "2026-11-17T09:55:04"
+      },
+      {
+        "bundleIdentifier": "com.example.designquiz",
+        "bundleVersion": "45",
+        "displayIdentifier": "com.example.designquiz",
+        "displayName": "Design Quiz",
+        "iconModDate": "2026-11-18T07:05:25"
+      }
+    ],
+    [
+      {
+        "bundleIdentifier": "com.example.streamplus",
+        "bundleVersion": "4",
+        "displayIdentifier": "com.example.streamplus",
+        "displayName": "Stream Plus",
+        "iconModDate": "2026-11-14T09:01:13"
+      },
+      {
+        "bundleIdentifier": "com.example.ebike",
+        "bundleVersion": "38",
+        "displayIdentifier": "com.example.ebike",
+        "displayName": "E-Bike",
+        "iconModDate": "2026-11-09T13:42:42"
+      },
+      {
+        "bundleIdentifier": "com.ubercab.UberClient",
+        "bundleVersion": "3.747.10000",
+        "displayIdentifier": "com.ubercab.UberClient",
+        "displayName": "Uber",
+        "iconModDate": "2026-11-12T15:58:25"
+      },
+      {
+        "bundleIdentifier": "com.example.carshare",
+        "bundleVersion": "2020032777",
+        "displayIdentifier": "com.example.carshare",
+        "displayName": "Car Share",
+        "iconModDate": "2026-11-09T13:42:49"
+      },
+      {
+        "bundleIdentifier": "com.example.cornergrocer",
+        "bundleVersion": "261028173814",
+        "displayIdentifier": "com.example.cornergrocer",
+        "displayName": "Corner Grocer",
+        "iconModDate": "2026-11-09T13:43:11"
+      },
+      {
+        "bundleIdentifier": "com.example.drugstore",
+        "bundleVersion": "770008",
+        "displayIdentifier": "com.example.drugstore",
+        "displayName": "Drug Store",
+        "iconModDate": "2026-11-16T16:15:05"
+      },
+      {
+        "bundleIdentifier": "com.tinyspeck.chatlyio",
+        "bundleVersion": "463937",
+        "displayIdentifier": "com.tinyspeck.chatlyio",
+        "displayName": "Slack",
+        "iconModDate": "2026-11-15T08:22:18"
+      },
+      {
+        "bundleIdentifier": "com.shazam.Shazam",
+        "bundleVersion": "6001",
+        "displayIdentifier": "com.shazam.Shazam",
+        "displayName": "Shazam",
+        "iconModDate": "2026-10-25T08:54:30"
+      },
+      {
+        "bundleIdentifier": "com.example.consoleapp",
+        "bundleVersion": "26110100",
+        "displayIdentifier": "com.example.consoleapp",
+        "displayName": "Console App",
+        "iconModDate": "2026-11-18T08:45:28"
+      },
+      {
+        "bundleIdentifier": "com.example.citizenid",
+        "bundleVersion": "1",
+        "displayIdentifier": "com.example.citizenid",
+        "displayName": "Citizen ID",
+        "iconModDate": "2026-07-24T08:50:51"
+      },
+      {
+        "bundleIdentifier": "com.example.govlogin",
+        "bundleVersion": "6269",
+        "displayIdentifier": "com.example.govlogin",
+        "displayName": "Gov Login",
+        "iconModDate": "2026-11-12T16:02:33"
+      },
+      {
+        "bundleIdentifier": "com.example.healthcover",
+        "bundleVersion": "4.16.11",
+        "displayIdentifier": "com.example.healthcover",
+        "displayName": "Health Cover",
+        "iconModDate": "2026-09-18T05:10:58"
+      },
+      {
+        "bundleIdentifier": "com.example.mealdelivery",
+        "bundleVersion": "6402",
+        "displayIdentifier": "com.example.mealdelivery",
+        "displayName": "Meal Delivery",
+        "iconModDate": "2026-11-17T09:54:22"
+      },
+      {
+        "bundleIdentifier": "com.amazon.AmazonUK",
+        "bundleVersion": "901720.0",
+        "displayIdentifier": "com.amazon.AmazonUK",
+        "displayName": "Amazon",
+        "iconModDate": "2026-11-17T09:55:07"
+      },
+      {
+        "bundleIdentifier": "com.example.hospitalportal",
+        "bundleVersion": "11.9.3.0",
+        "displayIdentifier": "com.example.hospitalportal",
+        "displayName": "Hospital Portal",
+        "iconModDate": "2026-11-17T09:54:14"
+      },
+      {
+        "bundleIdentifier": "com.example.stickermaker",
+        "bundleVersion": "3.41.0.0",
+        "displayIdentifier": "com.example.stickermaker",
+        "displayName": "Sticker Maker",
+        "iconModDate": "2026-11-03T14:11:13"
+      },
+      {
+        "bundleIdentifier": "com.example.moviestream",
+        "bundleVersion": "0",
+        "displayIdentifier": "com.example.moviestream",
+        "displayName": "Movie Stream",
+        "iconModDate": "2025-12-29T07:29:11"
+      },
+      {
+        "bundleIdentifier": "com.apple.shortcuts",
+        "bundleVersion": "5114.0.8.3",
+        "displayIdentifier": "com.apple.shortcuts",
+        "displayName": "Shortcuts",
+        "iconModDate": "2026-11-16T13:27:01"
+      },
+      {
+        "bundleIdentifier": "com.example.robotvac",
+        "bundleVersion": "2054",
+        "displayIdentifier": "com.example.robotvac",
+        "displayName": "Robot Vac",
+        "iconModDate": "2026-10-31T04:42:38"
+      },
+      {
+        "bundleIdentifier": "com.example.homehub",
+        "bundleVersion": "8",
+        "displayIdentifier": "com.example.homehub",
+        "displayName": "Home Hub",
+        "iconModDate": "2026-11-08T03:56:57"
+      },
+      {
+        "bundleIdentifier": "com.apple.TestFlight",
+        "bundleVersion": "697.1",
+        "displayIdentifier": "com.apple.TestFlight",
+        "displayName": "TestFlight",
+        "iconModDate": "2026-10-24T07:49:08"
+      },
+      {
+        "bundleIdentifier": "com.example.notesai",
+        "bundleVersion": "25",
+        "displayIdentifier": "com.example.notesai",
+        "displayName": "Notes AI",
+        "iconModDate": "2026-11-15T20:31:03"
+      },
+      {
+        "bundleIdentifier": "com.example.jobfinder",
+        "bundleVersion": "20261110.30111",
+        "displayIdentifier": "com.example.jobfinder",
+        "displayName": "Job Finder",
+        "iconModDate": "2026-11-13T07:14:57"
+      }
+    ],
+    [
+      {
+        "bundleIdentifier": "com.example.votercard",
+        "bundleVersion": "0.0.13",
+        "displayIdentifier": "com.example.votercard",
+        "displayName": "e-T\u00edtulo",
+        "iconModDate": "2026-11-01T11:18:14"
+      },
+      {
+        "displayIdentifier": "com.example.driverlicense",
+        "displayName": "Driver License"
+      },
+      {
+        "bundleIdentifier": "com.google.Authenticator",
+        "bundleVersion": "5.2.0.11100",
+        "displayIdentifier": "com.google.Authenticator",
+        "displayName": "Authenticator",
+        "iconModDate": "2026-11-11T12:08:15"
+      },
+      {
+        "bundleIdentifier": "com.github.stormbreaker.prod",
+        "bundleVersion": "210075479",
+        "displayIdentifier": "com.github.stormbreaker.prod",
+        "displayName": "GitHub",
+        "iconModDate": "2026-11-13T07:14:25"
+      },
+      {
+        "bundleIdentifier": "com.example.railplanner",
+        "bundleVersion": "8.57.0.90",
+        "displayIdentifier": "com.example.railplanner",
+        "displayName": "Rail Planner",
+        "iconModDate": "2026-11-10T14:54:22"
+      },
+      {
+        "bundleIdentifier": "com.example.freshbox",
+        "bundleVersion": "667",
+        "displayIdentifier": "com.example.freshbox",
+        "displayName": "Fresh Box",
+        "iconModDate": "2026-10-27T13:10:02"
+      },
+      {
+        "bundleIdentifier": "de.zalando.iphone",
+        "bundleVersion": "134593",
+        "displayIdentifier": "de.zalando.iphone",
+        "displayName": "Zalando",
+        "iconModDate": "2026-11-11T12:08:08"
+      },
+      {
+        "bundleIdentifier": "com.example.outlet",
+        "bundleVersion": "657",
+        "displayIdentifier": "com.example.outlet",
+        "displayName": "Outlet",
+        "iconModDate": "2026-11-07T05:06:29"
+      },
+      {
+        "bundleIdentifier": "de.aboutyou.mobile.app",
+        "bundleVersion": "4106248",
+        "displayIdentifier": "de.aboutyou.mobile.app",
+        "displayName": "ABOUT YOU",
+        "iconModDate": "2026-11-13T07:14:20"
+      },
+      {
+        "bundleIdentifier": "com.example.splitpay",
+        "bundleVersion": "202611041029",
+        "displayIdentifier": "com.example.splitpay",
+        "displayName": "Split Pay",
+        "iconModDate": "2026-11-12T16:02:21"
+      },
+      {
+        "bundleIdentifier": "com.example.moneytransfer",
+        "bundleVersion": "17639",
+        "displayIdentifier": "com.example.moneytransfer",
+        "displayName": "Money Transfer",
+        "iconModDate": "2026-11-17T09:54:35"
+      },
+      {
+        "bundleIdentifier": "com.ring",
+        "bundleVersion": "5.117.0.26",
+        "displayIdentifier": "com.ring",
+        "displayName": "Ring",
+        "iconModDate": "2026-11-18T08:47:01"
+      },
+      {
+        "bundleIdentifier": "com.apple.Passwords",
+        "bundleVersion": "8625.2.8.10.7",
+        "displayIdentifier": "com.apple.Passwords",
+        "displayName": "Passwords",
+        "iconModDate": "2026-11-16T13:27:01"
+      },
+      {
+        "bundleIdentifier": "com.example.gymclub",
+        "bundleVersion": "2",
+        "displayIdentifier": "com.example.gymclub",
+        "displayName": "Gym Club",
+        "iconModDate": "2026-11-09T13:42:54"
+      },
+      {
+        "bundleIdentifier": "com.booking.BookingApp",
+        "bundleVersion": "71.5.3065485393",
+        "displayIdentifier": "com.booking.BookingApp",
+        "displayName": "Booking.com",
+        "iconModDate": "2026-11-17T09:54:39"
+      },
+      {
+        "bundleIdentifier": "com.example.tvgo",
+        "bundleVersion": "31284",
+        "displayIdentifier": "com.example.tvgo",
+        "displayName": "TV Go",
+        "iconModDate": "2026-10-30T06:13:50"
+      },
+      {
+        "bundleIdentifier": "com.anthropic.claude",
+        "bundleVersion": "43547795780",
+        "displayIdentifier": "com.anthropic.claude",
+        "displayName": "Claude",
+        "iconModDate": "2026-11-16T09:01:19"
+      },
+      {
+        "bundleIdentifier": "com.example.songtabs",
+        "bundleVersion": "20004",
+        "displayIdentifier": "com.example.songtabs",
+        "displayName": "Song Tabs",
+        "iconModDate": "2026-11-02T08:52:49"
+      },
+      {
+        "bundleIdentifier": "com.example.transitplanner",
+        "bundleVersion": "9845",
+        "displayIdentifier": "com.example.transitplanner",
+        "displayName": "Transit Planner",
+        "iconModDate": "2026-10-11T16:45:40"
+      },
+      {
+        "bundleIdentifier": "com.example.benefitsoffice",
+        "bundleVersion": "385",
+        "displayIdentifier": "com.example.benefitsoffice",
+        "displayName": "Benefits Office",
+        "iconModDate": "2026-10-28T17:41:37"
+      }
+    ],
+    [
+      {
+        "bundleIdentifier": "com.google.gemini",
+        "bundleVersion": "1.2026.4470202.0",
+        "displayIdentifier": "com.google.gemini",
+        "displayName": "Gemini",
+        "iconModDate": "2026-11-14T09:02:05"
+      },
+      {
+        "bundleIdentifier": "com.example.cinema",
+        "bundleVersion": "10424",
+        "displayIdentifier": "com.example.cinema",
+        "displayName": "Path\u00e9",
+        "iconModDate": "2026-11-17T09:55:14"
+      },
+      {
+        "bundleIdentifier": "com.example.flyerdeals",
+        "bundleVersion": "4500",
+        "displayIdentifier": "com.example.flyerdeals",
+        "displayName": "Flyer Deals",
+        "iconModDate": "2026-10-12T09:11:41"
+      },
+      {
+        "bundleIdentifier": "com.example.pharmacy",
+        "bundleVersion": "4.4.21.1",
+        "displayIdentifier": "com.example.pharmacy",
+        "displayName": "Pharmacy",
+        "iconModDate": "2026-10-20T06:42:03"
+      },
+      {
+        "bundleIdentifier": "com.example.guitartuner",
+        "bundleVersion": "49",
+        "displayIdentifier": "com.example.guitartuner",
+        "displayName": "Guitar Tuner",
+        "iconModDate": "2026-11-04T14:40:43"
+      },
+      {
+        "bundleIdentifier": "com.apple.GenerativePlaygroundApp",
+        "bundleVersion": "198.2.12",
+        "displayIdentifier": "com.apple.GenerativePlaygroundApp",
+        "displayName": "Playground",
+        "iconModDate": "2026-11-16T13:27:02"
+      },
+      {
+        "bundleIdentifier": "com.example.amptone",
+        "bundleVersion": "112680",
+        "displayIdentifier": "com.example.amptone",
+        "displayName": "Amp Tone",
+        "iconModDate": "2026-09-18T05:09:17"
+      },
+      {
+        "bundleIdentifier": "com.example.chordbook",
+        "bundleVersion": "10636",
+        "displayIdentifier": "com.example.chordbook",
+        "displayName": "Chord Book",
+        "iconModDate": "2026-11-07T04:52:17"
+      },
+      {
+        "bundleIdentifier": "com.ticketmaster.ios.TicketmasterApp",
+        "bundleVersion": "2",
+        "displayIdentifier": "com.ticketmaster.ios.TicketmasterApp",
+        "displayName": "Ticketmaster",
+        "iconModDate": "2026-10-28T17:42:40"
+      },
+      {
+        "bundleIdentifier": "com.example.smartplug",
+        "bundleVersion": "20260915185540",
+        "displayIdentifier": "com.example.smartplug",
+        "displayName": "Smart Plug",
+        "iconModDate": "2026-10-03T00:11:33"
+      },
+      {
+        "bundleIdentifier": "com.openai.chat",
+        "bundleVersion": "42345155361",
+        "displayIdentifier": "com.openai.chat",
+        "displayName": "ChatGPT",
+        "iconModDate": "2026-11-12T16:02:48"
+      },
+      {
+        "bundleIdentifier": "com.apple.Preview",
+        "bundleVersion": "1034.1.5.100",
+        "displayIdentifier": "com.apple.Preview",
+        "displayName": "Preview",
+        "iconModDate": "2026-11-16T13:27:04"
+      },
+      {
+        "bundleIdentifier": "com.example.budgetair",
+        "bundleVersion": "13",
+        "displayIdentifier": "com.example.budgetair",
+        "displayName": "Budget Air",
+        "iconModDate": "2026-10-27T13:10:08"
+      },
+      {
+        "bundleIdentifier": "com.example.skyair",
+        "bundleVersion": "2026.11.10.184",
+        "displayIdentifier": "com.example.skyair",
+        "displayName": "Sky Air",
+        "iconModDate": "2026-11-18T08:45:57"
+      },
+      {
+        "bundleIdentifier": "com.example.govportal",
+        "bundleVersion": "1",
+        "displayIdentifier": "com.example.govportal",
+        "displayName": "Gov Portal",
+        "iconModDate": "2026-10-07T06:14:05"
+      },
+      {
+        "bundleIdentifier": "com.example.lottery",
+        "bundleVersion": "3",
+        "displayIdentifier": "com.example.lottery",
+        "displayName": "Lottery",
+        "iconModDate": "2026-10-08T14:03:28"
+      },
+      {
+        "bundleIdentifier": "ph.telegra.Telegraph",
+        "bundleVersion": "36546",
+        "displayIdentifier": "ph.telegra.Telegraph",
+        "displayName": "Telegram",
+        "iconModDate": "2026-11-17T09:54:12"
+      },
+      {
+        "bundleIdentifier": "com.example.studynotes",
+        "bundleVersion": "5754",
+        "displayIdentifier": "com.example.studynotes",
+        "displayName": "Study Notes",
+        "iconModDate": "2026-11-17T09:54:32"
+      },
+      {
+        "bundleIdentifier": "com.linkedin.LinkedIn",
+        "bundleVersion": "9.32.5491",
+        "displayIdentifier": "com.linkedin.LinkedIn",
+        "displayName": "LinkedIn",
+        "iconModDate": "2026-11-13T07:15:32"
+      }
+    ],
+    [
+      {
+        "bundleIdentifier": "com.example.powerco",
+        "bundleVersion": "814871",
+        "displayIdentifier": "com.example.powerco",
+        "displayName": "Power Co",
+        "iconModDate": "2026-11-18T08:45:20"
+      },
+      {
+        "displayIdentifier": "com.waze.iphone",
+        "displayName": "Waze"
+      },
+      {
+        "bundleIdentifier": "com.example.cardgame",
+        "bundleVersion": "5882",
+        "displayIdentifier": "com.example.cardgame",
+        "displayName": "Card Game",
+        "iconModDate": "2026-11-18T08:45:35"
+      }
+    ]
+  ]
+}
