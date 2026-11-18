@@ -18,6 +18,7 @@ body {
 .shell {
   display: grid;
   grid-template-columns: 220px 1fr;
+  grid-template-rows: minmax(0, 1fr); /* the window bounds a screen; a tall one scrolls inside it */
   height: 100%;
 }
 .sidebar {

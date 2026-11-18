@@ -13,6 +13,13 @@ const load = (file: string): RawIconState =>
 const grid = gridFor('iPhone')
 
 describe('normalize / serialize', () => {
+  it('treats an icon that only has a displayIdentifier as an app, and keeps its raw dict', () => {
+    const raw: RawIconState = [[], [{ displayIdentifier: 'com.waze.iphone', displayName: 'Waze' }]]
+    const [waze] = normalize(raw, grid).pages[0]!
+    expect(waze).toMatchObject({ kind: 'app', bundleId: 'com.waze.iphone', name: 'Waze' })
+    expect(serialize(normalize(raw, grid))).toEqual(raw)
+  })
+
   it('finds the fixtures', () => expect(fixtures.length).toBeGreaterThanOrEqual(7))
 
   it.each(fixtures)('round-trips %s exactly', (file) => {
@@ -26,7 +33,8 @@ describe('normalize / serialize', () => {
     expect(dock.every((i) => i.kind === 'app')).toBe(true)
     expect(kinds.filter((k) => k === 'widget')).toHaveLength(2)
     expect(kinds.filter((k) => k === 'folder')).toHaveLength(1)
-    expect(kinds.filter((k) => k === 'other')).toHaveLength(2)
+    // the two icons that only have a displayIdentifier are apps, not unknown items
+    expect(kinds.filter((k) => k === 'other')).toHaveLength(0)
   })
 
   it('keeps empty pages and one-app folders on the messy fixture', () => {
@@ -40,7 +48,7 @@ describe('normalize / serialize', () => {
     const odd = {
       listType: 'folder',
       displayName: 'Odd',
-      iconLists: [[{ displayIdentifier: 'x' }]]
+      iconLists: [[{ displayName: 'no identifier at all' }]]
     }
     const raw: RawIconState = [[], [odd]]
     const layout = normalize(raw, grid)

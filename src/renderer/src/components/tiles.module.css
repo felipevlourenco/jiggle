@@ -1,5 +1,6 @@
 /* Tiles sit on the phone's background, so their text is white whatever the app theme is. */
 .cell {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -92,4 +93,17 @@
   .skeleton {
     animation: none;
   }
+}
+
+/* Marks an icon that a sort moved (Organize, After frame). */
+.cell[data-moved]::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: calc(50% + 26px);
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--secondary);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
 }

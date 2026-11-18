@@ -12,11 +12,13 @@ function positions(layout: Layout): Map<string, string> {
   return at
 }
 
-// How many apps and folders end up somewhere else: "142 apps will move".
+// The apps and folders that end up somewhere else.
 // `after` must come from `before` (same item ids), as sortLayout's result does.
-export function countMoved(before: Layout, after: Layout): number {
+export function movedIds(before: Layout, after: Layout): Set<string> {
   const was = positions(before)
-  let moved = 0
-  for (const [id, where] of positions(after)) if (was.get(id) !== where) moved++
+  const moved = new Set<string>()
+  for (const [id, where] of positions(after)) if (was.get(id) !== where) moved.add(id)
   return moved
 }
+
+export const countMoved = (before: Layout, after: Layout): number => movedIds(before, after).size

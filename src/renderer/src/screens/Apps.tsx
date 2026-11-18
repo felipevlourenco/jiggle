@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { iconUrl } from '@shared/assets'
 import { APP_LIBRARY, appLocations } from '@shared/layout/locations'
 import type { AppInfo, Device } from '@shared/types'
+import { Thumb } from '../components/Thumb'
 import { useApps, useLayout } from '../state/queries'
 import s from './apps.module.css'
 
@@ -18,23 +18,6 @@ const COLUMNS: { key: Key; label: string }[] = [
 ]
 const text = (row: Row, key: Key): string =>
   key === 'developer' ? (row.developer ?? 'Unknown') : row[key]
-
-function Thumb({ udid, app }: { udid: string; app: AppInfo }) {
-  const [failed, setFailed] = useState(false)
-  return failed ? (
-    <span className={`${s.thumb} ${s.letter}`} aria-hidden="true">
-      {app.name.charAt(0).toUpperCase()}
-    </span>
-  ) : (
-    <img
-      className={s.thumb}
-      src={iconUrl(udid, app.bundleId)}
-      alt=""
-      draggable={false}
-      onError={() => setFailed(true)}
-    />
-  )
-}
 
 export function Apps({ device }: { device: Device }) {
   const apps = useApps(device.udid)

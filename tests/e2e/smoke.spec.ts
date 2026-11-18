@@ -196,3 +196,54 @@ test.describe('Apps', () => {
     await app.close()
   })
 })
+
+test.describe('Organize', () => {
+  test('previews A–Z before/after without applying, and the pager moves both frames', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+
+    await expect(win.getByTestId('summary')).toHaveText(/^\d+ of \d+ apps will move/)
+    const before = win.getByRole('figure', { name: 'Before' })
+    const after = win.getByRole('figure', { name: 'After' })
+    await expect(before).toBeVisible()
+    await expect(after).toBeVisible()
+    // coral dots only on After; the messy fixture is not sorted, so something moves
+    expect(await before.locator('[data-moved]').count()).toBe(0)
+    await expect(after.locator('[data-moved]').first()).toBeVisible()
+
+    await win.getByRole('radio', { name: /Category/ }).click()
+    await expect(win.getByRole('radio', { name: /Category/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    await win.getByRole('radio', { name: 'Sort around widgets' }).click()
+    await expect(win.getByRole('radio', { name: 'Sort around widgets' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+
+    // one pager drives both frames
+    await win.getByRole('button', { name: 'Next page' }).click()
+    await expect(
+      win.getByRole('group', { name: 'Pages' }).locator('[aria-current="page"]')
+    ).toHaveAttribute('aria-label', 'Page 2')
+
+    // the apply sheet is a stub: it opens and cancels
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    await expect(win.getByRole('dialog', { name: 'Apply to iPhone' })).toBeVisible()
+    await win.getByRole('button', { name: 'Cancel' }).click()
+    await expect(win.getByRole('dialog')).toHaveCount(0)
+    await app.close()
+  })
+
+  test('read-only mode turns Apply off', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-ios16' })
+    const win = await app.firstWindow()
+    await win.getByRole('button', { name: /Continue/ }).click()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await expect(win.getByRole('button', { name: 'Apply to iPhone' })).toBeDisabled()
+    await expect(win.getByText(/Apply is turned off for iOS 16/)).toBeVisible()
+    await app.close()
+  })
+})

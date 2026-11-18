@@ -1,15 +1,18 @@
 import type { AppItem, Grid, Layout, LayoutItem, RawIconState, RawItem } from '../types'
 
-const isApp = (raw: RawItem): boolean =>
-  typeof raw['bundleIdentifier'] === 'string' &&
-  !('listType' in raw) &&
-  !('gridSize' in raw) &&
-  !('elementType' in raw)
-
 const isWidget = (raw: RawItem): boolean => 'gridSize' in raw || 'elementType' in raw
 
+// An app icon names its app by `bundleIdentifier`. Some apps that aren't fully installed (offloaded,
+// or still downloading) only carry `displayIdentifier`: they are still icons that sort like any app.
+const appIdOf = (raw: RawItem): string | undefined => {
+  if (isWidget(raw) || 'listType' in raw) return undefined
+  const id = raw['bundleIdentifier'] ?? raw['displayIdentifier']
+  return typeof id === 'string' ? id : undefined
+}
+const isApp = (raw: RawItem): boolean => appIdOf(raw) !== undefined
+
 const toApp = (raw: RawItem): AppItem => {
-  const bundleId = raw['bundleIdentifier'] as string
+  const bundleId = appIdOf(raw)!
   const name = raw['displayName']
   return {
     kind: 'app',

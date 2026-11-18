@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { AppItem, FolderItem, Layout, LayoutItem, WidgetItem } from '../../types'
-import { countMoved } from '../diff'
+import { countMoved, movedIds } from '../diff'
+import { normalize } from '../normalize'
 import { sortLayout } from '../sort'
 import { validateLayout } from '../validate'
 
@@ -147,6 +150,13 @@ describe('validateLayout and countMoved on a sort', () => {
     }
   )
 
+  it('names the apps and folders that moved, and nothing else', () => {
+    const b = layout([[app('B'), app('A'), app('C')]])
+    const after = sortLayout(b, byName)
+    expect([...movedIds(b, after)].sort()).toEqual(['app.a', 'app.b']) // C stays put
+    expect(countMoved(b, after)).toBe(2)
+  })
+
   it('rejects a missing app, a duplicate app and an over-full page', () => {
     const missing = layout([[widget(), app('Zulu')], [app('Delta')]], [app('Phone')])
     expect(validateLayout(before, missing)).toContainEqual({
@@ -226,4 +236,29 @@ describe('validateLayout and countMoved on a sort', () => {
       { code: 'page-over-capacity', page: 1 }
     ])
   })
+})
+
+describe('sortLayout on a real phone (iphone-widgets fixture)', () => {
+  const raw = JSON.parse(
+    readFileSync(join(__dirname, '../../../../tests/fixtures/iphone-widgets.json'), 'utf8')
+  ).rawState
+  const before = normalize(raw, grid)
+
+  it.each(['keep-pages', 'sort-around'] as const)(
+    '%s: every sorted page is full except the last, and nothing is lost',
+    (widgetMode) => {
+      const after = sortLayout(before, { by: 'name', widgetMode })
+      expect(validateLayout(before, after)).toEqual([])
+      const isSorted = (p: LayoutItem[]): boolean =>
+        p.every((i) => i.kind === 'app' || i.kind === 'folder')
+      const sorted = after.pages.filter(isSorted)
+      sorted.slice(0, -1).forEach((p) => expect(p).toHaveLength(24))
+      // no app left stranded alone on a widget page
+      if (widgetMode === 'sort-around') {
+        after.pages
+          .filter((p) => !isSorted(p))
+          .forEach((p) => expect(p.every((i) => i.kind === 'widget')).toBe(true))
+      }
+    }
+  )
 })

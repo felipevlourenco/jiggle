@@ -4,6 +4,7 @@ import { NAV_ITEMS } from '@shared/nav'
 import { Connect } from './screens/Connect'
 import { Apps } from './screens/Apps'
 import { HomeScreen } from './screens/HomeScreen'
+import { Organize } from './screens/Organize'
 import { useDevices, useDeviceEvents, useLayout } from './state/queries'
 
 const TITLES: Record<string, string> = {
@@ -79,9 +80,12 @@ export function App() {
               />
               {device && <Route path="/home" element={<HomeScreen device={device} />} />}
               {device && <Route path="/apps" element={<Apps device={device} />} />}
-              {NAV_ITEMS.filter((n) => n.path !== '/home' && n.path !== '/apps').map((n) => (
-                <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
-              ))}
+              {device && <Route path="/organize" element={<Organize device={device} />} />}
+              {NAV_ITEMS.filter((n) => !['/home', '/apps', '/organize'].includes(n.path)).map(
+                (n) => (
+                  <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
+                )
+              )}
             </Routes>
           )}
         </section>
