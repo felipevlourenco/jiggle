@@ -359,7 +359,7 @@ interface ApplyPlan {
 
 ## 7. Implementation Steps
 
-Each milestone leaves the app runnable with `npm run dev`. During development, `JIGGLE_MOCK_DEVICE=<fixture>` swaps in `MockBridge`, so UI work doesn't need a phone.
+Each milestone leaves the app runnable with `pnpm dev`. During development, `JIGGLE_MOCK_DEVICE=<fixture>` swaps in `MockBridge`, so UI work doesn't need a phone.
 
 Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check** (numbered steps to try by hand and confirm everything in that milestone really works). Before the first manual check on your real phone, screenshot every home screen page on it, so you can compare after each restore.
 
@@ -376,9 +376,9 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
   - Add `tokens.css` with light and dark variables.
   - Write a Playwright smoke test.
 - **Files touched:** `electron.vite.config.ts`, `src/main/index.ts`, `src/main/windows.ts`, `src/main/menu.ts`, `src/preload/index.ts`, `src/renderer/src/{main,App,router}.tsx`, `src/renderer/src/styles/tokens.css`, `tests/e2e/smoke.spec.ts`
-- **Done when:** `npm run dev` opens a 1280×800 window (minimum 960×640) with the five sidebar items and a working menu bar, and `npm run test:e2e` passes the smoke test.
+- **Done when:** `pnpm dev` opens a 1280×800 window (minimum 960×640) with the five sidebar items and a working menu bar, and `pnpm test:e2e` passes the smoke test.
 - **Manual check:**
-  1. Run `npm run dev`. The window opens at about 1280×800 with the sidebar items Home Screen, Apps, Organize, History and Cleanup.
+  1. Run `pnpm dev`. The window opens at about 1280×800 with the sidebar items Home Screen, Apps, Organize, History and Cleanup.
   2. Drag the window corner to shrink it. It stops at 960×640.
   3. Click each sidebar item. The item highlights and the toolbar title changes to match.
   4. Open every menu bar menu (Jiggle, File, Edit, Device, View, Window, Help). The items match section 6, and the ones not built yet are greyed out.
@@ -397,8 +397,8 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
 - **Files touched:** `src/shared/ipc-contract.ts`, `src/shared/types.ts`, `src/preload/index.ts`, `src/main/ipc/device.ts`, `src/main/services/bridge/{DeviceBridge,MockBridge}.ts`, `src/renderer/src/state/queries.ts`, `tests/fixtures/`
 - **Done when:** with `JIGGLE_MOCK_DEVICE=iphone-basic`, the sidebar header shows "Sam's iPhone · iOS 26.1" from the mock, and a unit test shows main rejecting a malformed IPC payload with a zod error.
 - **Manual check:**
-  1. Run `JIGGLE_MOCK_DEVICE=iphone-basic npm run dev`. The sidebar header shows "Sam's iPhone · iOS 26.1".
-  2. Run `npm run dev` without the variable. The header shows "No device".
+  1. Run `JIGGLE_MOCK_DEVICE=iphone-basic pnpm dev`. The sidebar header shows "Sam's iPhone · iOS 26.1".
+  2. Run `pnpm dev` without the variable. The header shows "No device".
   3. In the DevTools console, type `window.jiggle`. Only the documented API groups appear (device, layout, apps, …). No `ipcRenderer` or Node objects.
   4. In the console, call a handler with a wrong argument, e.g. `await window.jiggle.layout.get(123)`. The promise rejects with a readable validation error, and the app keeps working.
 
@@ -458,7 +458,7 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
   2. Select a few PNGs and press Space (Quick Look). They show the right icons, not blank or broken images.
   3. Quit and relaunch with the phone still connected. The log shows icons loaded from cache, and startup is noticeably faster than the first time.
   4. Check the wallpaper: either your real wallpaper is saved, or the log shows the gradient fallback is used, with no error shown.
-  5. Run `npm test -- normalize`. All round‑trip tests pass, including the fixture made from your own phone.
+  5. Run `pnpm test normalize`. All round‑trip tests pass, including the fixture made from your own phone.
 
 **M6. Home screen preview**
 
@@ -511,7 +511,7 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
     - dock within its maximum
     - widget raw dicts unchanged
   - Write `diff.ts`, which counts moved items.
-  - Add a dev script, `npm run engine:preview -- <file.plist> [--by name|category] [--widgets keep-pages|sort-around]`, that prints the sorted layout page by page, the same way as the POC.
+  - Add a dev script, `pnpm engine:preview <file.plist> [--by name|category] [--widgets keep-pages|sort-around]`, that prints the sorted layout page by page, the same way as the POC.
 - **Files touched:** `src/shared/layout/{sort,validate,diff}.ts`, `src/shared/layout/__tests__/`, `scripts/engine-preview.ts`, `package.json`
 - **Done when:** unit tests pass for:
   - case‑insensitive A–Z
@@ -521,9 +521,9 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
   - both widget modes
   - `validate` rejecting a missing app, a duplicate app and an over‑full page
 - **Manual check:**
-  1. Run `npm test -- layout`. All tests pass.
-  2. Copy your POC `backup.plist` to `tests/fixtures/mine.plist`. Run `npm run engine:preview -- tests/fixtures/mine.plist --by name`, then `python3 homesort.py sort` from the POC folder. Both list the same order page by page.
-  3. Run `npm run engine:preview -- tests/fixtures/mine.plist --by category`. Apps are grouped by category, alphabetical within each group, and folders come first.
+  1. Run `pnpm test layout`. All tests pass.
+  2. Copy your POC `backup.plist` to `tests/fixtures/mine.plist`. Run `pnpm engine:preview tests/fixtures/mine.plist --by name`, then `python3 homesort.py sort` from the POC folder. Both list the same order page by page.
+  3. Run `pnpm engine:preview tests/fixtures/mine.plist --by category`. Apps are grouped by category, alphabetical within each group, and folders come first.
   4. Run both previews again with `--widgets sort-around`. Pages with widgets now show only `<widget/other>`, and the dock line is identical to the original in every run.
 
 **M9. Organize screen with before/after preview**
@@ -619,7 +619,7 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
 - **Manual check:**
   1. Lock the phone while the app is open and click Device > Refresh. The "Unlock your iPhone" message appears, and goes away once you unlock.
   2. Repeat the trust‑declined test from M4. The catalogued message appears.
-  3. Run `JIGGLE_MOCK_DEVICE=iphone-ios16 npm run dev`. The read‑only banner shows, and every Apply/Push button is disabled.
+  3. Run `JIGGLE_MOCK_DEVICE=iphone-ios16 pnpm dev`. The read‑only banner shows, and every Apply/Push button is disabled.
   4. Start an A–Z apply and pull the cable during "Writing to iPhone". The "Apply interrupted" message offers Restore. Reconnect, click Restore, and the phone matches your screenshots.
   5. Run `pkill -f jiggle_engine` while on Home Screen. The engine banner appears, the app recovers by itself, and the preview reloads.
   6. Turn off Wi‑Fi and open Apps. The offline category banner shows, and the table still works.
@@ -796,7 +796,7 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
 - **Manual check:**
   1. On the phone, put two apps in a new folder, then drag one back out. That leaves a one‑app folder.
   2. Open Cleanup. The sidebar badge and the list show that folder as an issue.
-  3. Run `JIGGLE_MOCK_DEVICE=iphone-messy npm run dev`. Cleanup lists 2 empty pages and 3 one‑app folders, 5 issues in total.
+  3. Run `JIGGLE_MOCK_DEVICE=iphone-messy pnpm dev`. Cleanup lists 2 empty pages and 3 one‑app folders, 5 issues in total.
   4. Back on the real phone, uncheck nothing and click Fix Selected. The preview shows the app unwrapped in the folder's old spot. Apply, and the phone matches.
   5. Restore from History. The one‑app folder is back.
 
@@ -898,9 +898,9 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
 ## 9. Build, Packaging & Distribution
 
 - **Dev:**
-  - `npm run dev` (electron-vite with HMR).
+  - `pnpm dev` (electron-vite with HMR).
   - The sidecar runs from `sidecar/.venv` in dev.
-  - `npm run dev:mock` sets `JIGGLE_MOCK_DEVICE=iphone-widgets`.
+  - `pnpm dev:mock` sets `JIGGLE_MOCK_DEVICE=iphone-widgets`.
 - **Sidecar build:**
   - `sidecar/build.sh` runs PyInstaller `--onedir` for the host architecture.
   - The output goes to `resources/sidecar/<arch>/`.

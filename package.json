@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run --passWithNoTests",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "pnpm build && playwright test"
   },
   "dependencies": {
     "react": "^19.3.1",

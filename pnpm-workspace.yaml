@@ -1,0 +1,8 @@
+minimumReleaseAgeExclude:
+  - '@vitest/mocker@5.1.1'
+  - '@vitest/spy@5.1.1'
+  - electron@45.3.4
+  - vitest@5.1.1
+onlyBuiltDependencies:
+  - electron
+  - esbuild
