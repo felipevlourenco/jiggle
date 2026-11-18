@@ -43,10 +43,15 @@ describe('IconService', () => {
     expect(readdirSync(iconsDir(root, 'U1'))).toEqual(['ok.app.png'])
   })
 
-  it('shares one run between concurrent calls for a device', async () => {
-    const { service, getIcons } = setup()
-    await Promise.all([service.sync('U1', ['a.b']), service.sync('U1', ['a.b'])])
-    expect(getIcons).toHaveBeenCalledTimes(1)
+  it('does not refetch for concurrent calls, and still serves a call with different ids', async () => {
+    const { service, root, getIcons } = setup()
+    await Promise.all([
+      service.sync('U1', ['a.b']),
+      service.sync('U1', ['a.b']),
+      service.sync('U1', ['c.d'])
+    ])
+    expect(getIcons).toHaveBeenCalledTimes(2) // a.b once, then c.d
+    expect(readdirSync(iconsDir(root, 'U1')).sort()).toEqual(['a.b.png', 'c.d.png'])
   })
 })
 

@@ -11,6 +11,13 @@ export const useLayout = (udid: string | undefined) =>
     enabled: !!udid
   })
 
+export const useApps = (udid: string | undefined) =>
+  useQuery({
+    queryKey: ['apps', udid],
+    queryFn: () => window.jiggle.apps.list(udid!),
+    enabled: !!udid
+  })
+
 // "Try Again": re-check one device now. A changed state also arrives as `device:changed`.
 export function useRefreshDevice() {
   const qc = useQueryClient()
@@ -28,7 +35,13 @@ export function useDeviceEvents(): void {
       window.jiggle.device.onChanged(() => {
         void qc.invalidateQueries({ queryKey: ['devices'] })
         void qc.invalidateQueries({ queryKey: ['layout'] })
+        void qc.invalidateQueries({ queryKey: ['apps'] })
       }),
+    [qc]
+  )
+  // Categories arrive from the App Store in the background.
+  useEffect(
+    () => window.jiggle.apps.onChanged(() => void qc.invalidateQueries({ queryKey: ['apps'] })),
     [qc]
   )
 }

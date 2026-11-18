@@ -1,4 +1,4 @@
-import type { Device, Grid, RawIconState, Udid } from '@shared/types'
+import type { Device, Grid, InstalledApp, RawIconState, Udid } from '@shared/types'
 
 // Everything the app needs from a device. The Python sidecar implements it in M3;
 // a pure TypeScript engine could replace it later without touching the UI.
@@ -11,6 +11,8 @@ export interface DeviceBridge {
   getIconMetrics(udid: Udid): Promise<Grid | null>
   // PNG per bundle id. Apps whose icon can't be read are left out.
   getIcons(udid: Udid, bundleIds: string[]): Promise<Map<string, Buffer>>
+  // Every app a person can see on the phone, on the home screen or only in the App Library.
+  listApps(udid: Udid): Promise<InstalledApp[]>
   // Returns an unsubscribe function.
   onDevicesChanged(listener: () => void): () => void
 }

@@ -63,3 +63,22 @@ export interface Layout {
 export interface LayoutResult {
   layout: Layout
 }
+
+// What the phone says about an installed app.
+export interface InstalledApp {
+  bundleId: string
+  name: string
+  removable: boolean
+}
+
+export interface AppInfo extends InstalledApp {
+  developer: string | null
+  category: string // "Social Networking", "Apple", "Unknown"
+  categorySource: 'appstore' | 'apple' | 'unknown'
+}
+
+// `lookup`: are categories still being fetched, or is the App Store unreachable?
+export interface AppsResult {
+  apps: AppInfo[]
+  lookup: 'idle' | 'running' | 'offline'
+}

@@ -12,7 +12,8 @@ const BATCH = 20
 // Keeps a disk cache of each device's app icons, so the UI never waits on the phone twice.
 // ponytail: an icon is cached forever; an updated app icon needs the cache cleared (key by iconModDate if it matters).
 export class IconService {
-  private inFlight = new Map<Udid, Promise<void>>()
+  // The latest run per device: a new call waits for it, then fetches only what is still missing.
+  private tail = new Map<Udid, Promise<void>>()
 
   constructor(
     private readonly bridge: DeviceBridge,
@@ -20,13 +21,14 @@ export class IconService {
     private readonly log: Logger
   ) {}
 
-  // Make sure every icon is on disk. Concurrent calls for a device share one run.
+  // Make sure every icon is on disk. Calls for one device run one after another.
   sync(udid: Udid, bundleIds: string[]): Promise<void> {
-    let run = this.inFlight.get(udid)
-    if (!run) {
-      run = this.run(udid, bundleIds).finally(() => this.inFlight.delete(udid))
-      this.inFlight.set(udid, run)
-    }
+    const run = (this.tail.get(udid) ?? Promise.resolve()).then(() => this.run(udid, bundleIds))
+    const tail = run.catch(() => {})
+    this.tail.set(udid, tail)
+    void tail.then(() => {
+      if (this.tail.get(udid) === tail) this.tail.delete(udid)
+    })
     return run
   }
 

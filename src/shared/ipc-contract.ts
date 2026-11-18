@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Device, LayoutResult } from './types'
+import type { AppsResult, Device, LayoutResult } from './types'
 
 const Udid = z.string().min(1)
 
@@ -23,7 +23,8 @@ export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_ }
 export const channels = {
   'device:list': { args: z.tuple([]), result: z.array(Device_) },
   'device:refresh': { args: z.tuple([Udid]), result: z.void() },
-  'layout:get': { args: z.tuple([Udid]), result: z.custom<LayoutResult>() }
+  'layout:get': { args: z.tuple([Udid]), result: z.custom<LayoutResult>() },
+  'apps:list': { args: z.tuple([Udid]), result: z.custom<AppsResult>() }
 } as const
 
 export type ChannelName = keyof typeof channels
@@ -33,9 +34,10 @@ export type ChannelResult<C extends ChannelName> = z.infer<(typeof channels)[C][
 const SidecarStatus = z.enum(['starting', 'ready', 'restarting', 'failed'])
 export type SidecarStatus = z.infer<typeof SidecarStatus>
 
-// Main → renderer events and their payloads. `device:changed` carries none: the renderer refetches.
+// Main → renderer events and their payloads. `device:changed` and `apps:changed` carry none: the renderer refetches.
 export const events = {
   'device:changed': z.undefined(),
+  'apps:changed': z.undefined(),
   'sidecar:status': SidecarStatus
 } as const
 
@@ -53,6 +55,11 @@ export interface JiggleApi {
   }
   layout: {
     get(udid: string): Promise<LayoutResult>
+  }
+  apps: {
+    list(udid: string): Promise<AppsResult>
+    // Categories arrived from the App Store: refetch.
+    onChanged(listener: () => void): () => void
   }
   sidecar: {
     onStatus(listener: (status: SidecarStatus) => void): () => void

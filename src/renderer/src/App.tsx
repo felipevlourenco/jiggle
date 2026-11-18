@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
 import { Connect } from './screens/Connect'
+import { Apps } from './screens/Apps'
 import { HomeScreen } from './screens/HomeScreen'
 import { useDevices, useDeviceEvents, useLayout } from './state/queries'
 
@@ -77,7 +78,8 @@ export function App() {
                 }
               />
               {device && <Route path="/home" element={<HomeScreen device={device} />} />}
-              {NAV_ITEMS.filter((n) => n.path !== '/home').map((n) => (
+              {device && <Route path="/apps" element={<Apps device={device} />} />}
+              {NAV_ITEMS.filter((n) => n.path !== '/home' && n.path !== '/apps').map((n) => (
                 <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
               ))}
             </Routes>

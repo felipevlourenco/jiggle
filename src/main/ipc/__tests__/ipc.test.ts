@@ -2,9 +2,11 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import type { AppsResult } from '@shared/types'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
+import { CategoryService } from '../../services/CategoryService'
 import { IconService } from '../../services/IconService'
 import { registerIpc } from '..'
 import type { IpcLike } from '../handle'
@@ -18,8 +20,21 @@ function setup() {
   const broadcast = vi.fn()
   const bridge = new MockBridge(fixture)
   const silent = { debug() {}, info() {}, warn() {}, error() {} }
-  const icons = new IconService(bridge, mkdtempSync(join(tmpdir(), 'jiggle-')), silent)
-  registerIpc(ipc, bridge, broadcast, icons)
+  const root = mkdtempSync(join(tmpdir(), 'jiggle-'))
+  const icons = new IconService(bridge, root, silent)
+  // Offline: lookups fail at once, so every non-Apple app stays "Unknown".
+  const failing = vi.fn(async () => {
+    throw new TypeError('offline')
+  }) as unknown as typeof fetch
+  const categories = new CategoryService({
+    root,
+    storefront: 'nl',
+    log: silent,
+    onChange() {},
+    fetch: failing,
+    sleep: async () => {}
+  })
+  registerIpc(ipc, bridge, broadcast, icons, categories)
   const call = async (ch: string, ...args: unknown[]) => await handlers.get(ch)!(...args)
   return { call, broadcast }
 }
@@ -31,6 +46,15 @@ describe('IPC validation', () => {
     expect(await call('layout:get', fixture.device.udid)).toEqual({
       layout: normalize(fixture.rawState, gridFor('iPhone'))
     })
+  })
+
+  it('lists apps with a category each, joined from the phone and the layout', async () => {
+    const { call } = setup()
+    const { apps, lookup } = (await call('apps:list', fixture.device.udid)) as AppsResult
+    expect(apps.length).toBeGreaterThan(5)
+    expect(lookup).toBe('running')
+    for (const a of apps)
+      expect(a.category).toBe(a.bundleId.startsWith('com.apple.') ? 'Apple' : 'Unknown')
   })
 
   it('rejects a malformed payload with a readable zod error', async () => {

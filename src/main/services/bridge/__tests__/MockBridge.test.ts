@@ -28,3 +28,13 @@ describe('fixtures', () => {
     expect(await new MockBridge().listDevices()).toEqual([])
   })
 })
+
+describe('MockBridge.listApps', () => {
+  it('lists every home screen app once, Apple apps as not removable', async () => {
+    const f = loadFixture(dir, 'iphone-basic')
+    const apps = await new MockBridge(f).listApps(f.device.udid)
+    expect(new Set(apps.map((a) => a.bundleId)).size).toBe(apps.length)
+    expect(apps.length).toBeGreaterThan(5)
+    for (const a of apps) expect(a.removable).toBe(!a.bundleId.startsWith('com.apple.'))
+  })
+})

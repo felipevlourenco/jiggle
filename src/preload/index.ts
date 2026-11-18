@@ -27,6 +27,10 @@ const api: JiggleApi = {
     onChanged: (listener) => on('device:changed', () => listener())
   },
   layout: { get: (udid) => invoke('layout:get', udid) },
+  apps: {
+    list: (udid) => invoke('apps:list', udid),
+    onChanged: (listener) => on('apps:changed', () => listener())
+  },
   sidecar: { onStatus: (listener) => on('sidecar:status', listener) }
 }
 

@@ -2,7 +2,7 @@ import asyncio
 import sys
 import threading
 
-from jiggle_engine import __version__, devices, springboard
+from jiggle_engine import __version__, apps, devices, springboard
 from jiggle_engine.rpc import RpcError, Server
 
 
@@ -63,6 +63,11 @@ def build_server(write=write_line) -> Server:
         udid, ids = udid_param(params), bundle_ids_param(params)
         async with springboard.open_springboard(udid) as sb:
             return await springboard.read_icons(sb, ids)
+
+    @server.method("list_apps")
+    async def list_apps(params):
+        async with apps.open_installation_proxy(udid_param(params)) as ip:
+            return await apps.read_apps(ip)
 
     return server
 

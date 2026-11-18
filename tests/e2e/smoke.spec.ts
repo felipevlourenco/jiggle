@@ -1,7 +1,10 @@
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
 
 const launch = (env: Record<string, string> = {}) =>
-  electron.launch({ args: ['.'], env: { ...process.env, JIGGLE_MOCK_DEVICE: 'none', ...env } })
+  electron.launch({
+    args: ['.'],
+    env: { ...process.env, JIGGLE_MOCK_DEVICE: 'none', JIGGLE_NO_LOOKUP: '1', ...env }
+  })
 
 test('app shell loads with sidebar, routes and no Node in the renderer', async () => {
   const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
@@ -78,6 +81,7 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
   const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
   const win = await app.firstWindow()
   expect(await win.evaluate('Object.keys(window.jiggle).sort()')).toEqual([
+    'apps',
     'device',
     'layout',
     'sidecar'
@@ -150,6 +154,36 @@ test.describe('Home Screen preview', () => {
     await win.keyboard.press('ArrowLeft', { delay: 5 })
     for (let i = 0; i < 14; i++) await win.keyboard.press('ArrowLeft')
     expect(await width()).toBeLessThan(before * 0.85)
+    await app.close()
+  })
+})
+
+test.describe('Apps', () => {
+  test('lists apps, filters by search, sorts by column, shows each app’s location', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+
+    const rows = win.getByRole('row')
+    await expect(win.getByText(/^\d+ apps$/)).toBeVisible()
+    const all = await rows.count()
+    expect(all).toBeGreaterThan(50)
+    // Apple apps are "Apple" without a lookup; others are Unknown while lookups are off
+    await expect(win.getByRole('row', { name: /Messages/ })).toContainText('Apple')
+    await expect(win.getByRole('row', { name: /Spotify/ })).toContainText('Unknown')
+
+    await win.getByRole('searchbox', { name: 'Search apps' }).fill('spotify')
+    await expect(rows).toHaveCount(2) // header + Spotify
+    await win.getByRole('searchbox', { name: 'Search apps' }).fill('')
+    await expect(rows).toHaveCount(all)
+
+    const category = win.getByRole('columnheader', { name: /Category/ })
+    await category.getByRole('button').click()
+    await expect(category).toHaveAttribute('aria-sort', 'ascending')
+    await category.getByRole('button').click()
+    await expect(category).toHaveAttribute('aria-sort', 'descending')
+
+    await expect(win.getByRole('row', { name: /Phone/ })).toContainText('Dock')
     await app.close()
   })
 })

@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { z } from 'zod'
 import { schemas, type SidecarStatus } from '@shared/ipc-contract'
-import type { Device, DeviceState, Grid, RawIconState, Udid } from '@shared/types'
+import type { Device, DeviceState, Grid, InstalledApp, RawIconState, Udid } from '@shared/types'
 import type { DeviceBridge } from './DeviceBridge'
 
 export interface Logger {
@@ -48,6 +48,9 @@ const Metrics = z.object({
   homeScreenIconDockMaxCount: z.number()
 })
 const Base64Map = z.record(z.string(), z.string())
+const InstalledApps = z.array(
+  z.object({ bundleId: z.string(), name: z.string(), removable: z.boolean() })
+)
 
 // States that can fix themselves without a new plug-in, so we keep re-checking them.
 const POLLED_STATES: DeviceState[] = ['locked', 'trust-pending', 'error']
@@ -154,6 +157,10 @@ export class SidecarBridge implements DeviceBridge {
       await this.request('get_icons', { udid, bundle_ids: bundleIds }, 60_000)
     )
     return new Map(Object.entries(icons).map(([id, b64]) => [id, Buffer.from(b64, 'base64')]))
+  }
+
+  async listApps(udid: Udid): Promise<InstalledApp[]> {
+    return InstalledApps.parse(await this.request('list_apps', { udid }, 30_000))
   }
 
   request<T = unknown>(method: string, params: object = {}, timeoutMs?: number): Promise<T> {

@@ -4,6 +4,7 @@ import log from 'electron-log/main'
 import type { Broadcast } from '@shared/ipc-contract'
 import { registerIpc } from './ipc'
 import { handleAssetProtocol, registerAssetScheme } from './protocol'
+import { CategoryService } from './services/CategoryService'
 import { IconService } from './services/IconService'
 import type { DeviceBridge } from './services/bridge/DeviceBridge'
 import { MockBridge, loadFixture } from './services/bridge/MockBridge'
@@ -53,7 +54,16 @@ if (!app.requestSingleInstanceLock()) {
     const bridge = (mock ?? sidecar) as DeviceBridge
     const userData = app.getPath('userData')
     handleAssetProtocol(userData)
-    registerIpc(ipcMain, bridge, broadcast, new IconService(bridge, userData, log.scope('icons')))
+    const icons = new IconService(bridge, userData, log.scope('icons'))
+    // ponytail: the storefront follows the Mac's region until Settings exists (M16-ish); no lookup on/off switch yet.
+    const categories = new CategoryService({
+      root: userData,
+      storefront: (app.getLocaleCountryCode() || 'us').toLowerCase(),
+      enabled: app.isPackaged || !process.env['JIGGLE_NO_LOOKUP'], // tests and offline dev
+      log: log.scope('categories'),
+      onChange: () => broadcast('apps:changed', undefined)
+    })
+    registerIpc(ipcMain, bridge, broadcast, icons, categories)
     if (sidecar) {
       sidecar.onStatus((status) => broadcast('sidecar:status', status))
       sidecar.start()

@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { schemas } from '@shared/ipc-contract'
-import type { Device, Grid, RawIconState, Udid } from '@shared/types'
+import { gridFor } from '@shared/layout/grid'
+import { normalize } from '@shared/layout/normalize'
+import type { Device, Grid, InstalledApp, LayoutItem, RawIconState, Udid } from '@shared/types'
 import type { DeviceBridge } from './DeviceBridge'
 
 const Fixture = z.object({ device: schemas.Device, rawState: schemas.RawIconState })
@@ -36,6 +38,24 @@ export class MockBridge implements DeviceBridge {
 
   async getIcons(): Promise<Map<string, Buffer>> {
     return new Map()
+  }
+
+  // The mock has no installation proxy: every app on the home screen counts as installed.
+  async listApps(udid: Udid): Promise<InstalledApp[]> {
+    const { dock, pages } = normalize(await this.getIconState(udid), gridFor('iPhone'))
+    const apps = new Map<string, InstalledApp>()
+    const visit = (item: LayoutItem): void => {
+      if (item.kind === 'folder') item.pages.flat().forEach(visit)
+      else if (item.kind === 'app') {
+        apps.set(item.bundleId, {
+          bundleId: item.bundleId,
+          name: item.name,
+          removable: !item.bundleId.startsWith('com.apple.')
+        })
+      }
+    }
+    ;[...dock, ...pages.flat()].forEach(visit)
+    return [...apps.values()]
   }
 
   onDevicesChanged(): () => void {
