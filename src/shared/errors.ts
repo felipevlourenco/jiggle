@@ -33,14 +33,16 @@ export function connectMessage(device: Device | undefined): ConnectMessage {
         title: `Unlock ${device.name} to continue`,
         body: 'Jiggle continues by itself as soon as the screen is unlocked.',
         severity: 'info',
-        illustration: 'lock'
+        illustration: 'lock',
+        steps: CONNECT_STEPS
       }
     case 'trust-pending':
       return {
         title: `Tap Trust on your ${kind}`,
         body: 'If it asks, enter your passcode. Jiggle continues by itself.',
         severity: 'info',
-        illustration: 'trust'
+        illustration: 'trust',
+        steps: CONNECT_STEPS
       }
     case 'trust-declined':
       return {

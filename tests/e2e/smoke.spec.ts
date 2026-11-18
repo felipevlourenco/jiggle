@@ -3,6 +3,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
 
+// Runs in the page, where the DOM's getComputedStyle exists (the tests themselves have no DOM types).
+declare function getComputedStyle(el: unknown): { getPropertyValue(name: string): string }
+
 const launch = (env: Record<string, string> = {}) =>
   electron.launch({
     args: ['.'],
@@ -48,7 +51,8 @@ test('a trusted device opens Home Screen', async () => {
   const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
   const win = await app.firstWindow()
   await expect(win.getByRole('heading', { name: 'Home Screen' })).toBeVisible()
-  await expect(win.getByText("Sam's iPhone · iOS 26.1")).toBeVisible()
+  await expect(win.getByTestId('device-card')).toContainText("Sam's iPhone")
+  await expect(win.getByTestId('device-card')).toContainText('iOS 26.1')
   await app.close()
 })
 
@@ -82,7 +86,8 @@ test('an unsupported iOS needs a click to continue in read-only mode', async () 
 test('shows the mock device in the sidebar header', async () => {
   const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
   const win = await app.firstWindow()
-  await expect(win.getByText("Sam's iPhone · iOS 26.1")).toBeVisible()
+  await expect(win.getByTestId('device-card')).toContainText("Sam's iPhone")
+  await expect(win.getByTestId('device-card')).toContainText('iOS 26.1')
   await app.close()
 })
 
@@ -103,7 +108,8 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
     /Invalid arguments for layout:get/
   )
   // the app keeps working after the rejection
-  await expect(win.getByText("Sam's iPhone · iOS 26.1")).toBeVisible()
+  await expect(win.getByTestId('device-card')).toContainText("Sam's iPhone")
+  await expect(win.getByTestId('device-card')).toContainText('iOS 26.1')
   await app.close()
 })
 
@@ -185,6 +191,13 @@ test.describe('Apps', () => {
     await expect(win.getByRole('row', { name: /Messages/ })).toContainText('Apple')
     await expect(win.getByRole('row', { name: /Spotify/ })).toContainText('Unknown')
 
+    // the toolbar drags the window; its controls must not be part of the drag region
+    expect(
+      await win
+        .getByRole('searchbox', { name: 'Search apps' })
+
+        .evaluate((el) => getComputedStyle(el).getPropertyValue('-webkit-app-region'))
+    ).toBe('no-drag')
     await win.getByRole('searchbox', { name: 'Search apps' }).fill('spotify')
     await expect(rows).toHaveCount(2) // header + Spotify
     await win.getByRole('searchbox', { name: 'Search apps' }).fill('')
@@ -238,6 +251,12 @@ test.describe('Organize', () => {
     ).toHaveAttribute('aria-label', 'Page 2')
 
     // the sheet asks first; cancelling writes nothing
+    expect(
+      await win
+        .getByRole('button', { name: 'Apply to iPhone' })
+
+        .evaluate((el) => getComputedStyle(el).getPropertyValue('-webkit-app-region'))
+    ).toBe('no-drag')
     await win.getByRole('button', { name: 'Apply to iPhone' }).click()
     await expect(win.getByRole('dialog', { name: /Apply Category to Sam/ })).toBeVisible()
     await win.getByRole('button', { name: 'Cancel' }).click()

@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { appError } from '@shared/errors'
 import type { ApplyResult, ApplyStep, SnapshotSummary } from '@shared/types'
+import {
+  CheckIcon,
+  ErrorIcon,
+  FolderIcon,
+  MoveIcon,
+  ShieldIcon,
+  WarnIcon
+} from '../components/icons'
 import s from './apply.module.css'
 
 const STEPS: { step: ApplyStep; label: string }[] = [
@@ -92,16 +100,26 @@ export function ApplySheet({
     >
       {phase.name === 'confirm' && (
         <>
-          <h2>{title}</h2>
-          <ul className={s.lines}>
-            {lines.map((l) => (
-              <li key={l}>{l}</li>
-            ))}
-          </ul>
-          <p className={s.reassure}>
-            <span aria-hidden="true">🛡 </span>
-            Your current layout will be backed up first. You can restore it anytime from History.
-          </p>
+          <div className={s.head}>
+            <h2>{title}</h2>
+          </div>
+          <div className={s.body}>
+            <ul className={s.lines}>
+              {lines.map((l) => (
+                <li key={l}>
+                  {/folder/.test(l) ? <FolderIcon /> : <MoveIcon />}
+                  {l}
+                </li>
+              ))}
+            </ul>
+            <p className="assure">
+              <ShieldIcon />
+              <span>
+                Your current layout will be backed up first. You can restore it anytime from
+                History.
+              </span>
+            </p>
+          </div>
           <div className={s.footer}>
             <button className="btn" onClick={() => dialog.current?.close()}>
               Cancel
@@ -115,41 +133,61 @@ export function ApplySheet({
 
       {phase.name === 'running' && (
         <>
-          <h2>{phase.undo ? 'Restoring your backup…' : 'Applying…'}</h2>
-          <progress
-            className={s.bar}
-            max={STEPS.length}
-            value={current + 1}
-            aria-label="Progress"
-          />
-          <ol className={s.steps}>
-            {STEPS.map(({ step, label }, i) => (
-              <li
-                key={step}
-                className={i === current ? s.now : i < current ? s.past : undefined}
-                aria-current={i === current ? 'step' : undefined}
-              >
-                {label}
-              </li>
-            ))}
-          </ol>
-          {!writing && (
-            <div className={s.footer}>
+          <div className={s.head}>
+            <h2>{phase.undo ? 'Restoring your backup…' : 'Applying…'}</h2>
+            <span className="meta">Keep your iPhone connected and unlocked.</span>
+          </div>
+          <div className={s.body}>
+            <progress
+              className={s.bar}
+              max={STEPS.length}
+              value={current + 1}
+              aria-label="Progress"
+            />
+            <ol className={s.steps}>
+              {STEPS.map(({ step, label }, i) => (
+                <li
+                  key={step}
+                  className={i === current ? s.now : i < current ? s.past : undefined}
+                  aria-current={i === current ? 'step' : undefined}
+                >
+                  <span className={s.mark} aria-hidden="true">
+                    {i < current ? (
+                      <span className={s.ok}>
+                        <CheckIcon size={11} />
+                      </span>
+                    ) : i === current ? (
+                      <span className="spin" />
+                    ) : (
+                      <span className={s.todo} />
+                    )}
+                  </span>
+                  {label}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className={s.footer}>
+            {writing ? (
+              <span className="meta">Cancel is unavailable while writing.</span>
+            ) : (
               <button className="btn" disabled>
                 Cancel
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
 
       {phase.name === 'done' && (
         <>
-          <div className={s.check} aria-hidden="true">
-            ✓
+          <div className={s.done}>
+            <span className={s.check} aria-hidden="true">
+              <CheckIcon size={28} />
+            </span>
+            <h2>{phase.undone ? 'Restored. Your iPhone is back as it was.' : doneMessage}</h2>
           </div>
-          <h2>{phase.undone ? 'Restored. Your iPhone is back as it was.' : doneMessage}</h2>
-          <div className={s.footer}>
+          <div className={`${s.footer} ${s.center}`}>
             {!phase.undone && (
               <button className="btn" onClick={() => void undoWith(phase.backup)}>
                 Undo (Restore Backup)
@@ -164,8 +202,22 @@ export function ApplySheet({
 
       {phase.name === 'error' && (
         <>
-          <h2>{appError(phase.result.code).title}</h2>
-          <p role="alert">{phase.result.message}</p>
+          <div className={s.problem}>
+            <span
+              className={s.problemIcon}
+              style={phase.result.code === 'layout-changed' ? undefined : { color: 'var(--error)' }}
+            >
+              {phase.result.code === 'layout-changed' ? (
+                <WarnIcon size={32} />
+              ) : (
+                <ErrorIcon size={32} />
+              )}
+            </span>
+            <div className={s.problemText}>
+              <h2>{appError(phase.result.code).title}</h2>
+              <p role="alert">{phase.result.message}</p>
+            </div>
+          </div>
           <div className={s.footer}>
             {phase.result.code === 'layout-changed' && onRefresh && (
               <button

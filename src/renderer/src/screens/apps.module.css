@@ -9,37 +9,46 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: none;
 }
 .search {
-  width: 280px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-}
-.search:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
-}
-.count {
-  color: var(--text-secondary);
-}
-.banner {
-  margin: 0;
-  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 240px;
+  height: 28px;
+  padding: 0 8px;
   border-radius: 6px;
   background: var(--surface-2);
+  color: var(--text-secondary);
+}
+.search:focus-within {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+.search input::placeholder {
+  color: var(--text-secondary);
+}
+.looking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
   color: var(--text-secondary);
 }
 .scroll {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
 }
 .table {
   width: 100%;
@@ -47,39 +56,46 @@
 }
 .table th,
 .table td {
-  padding: 6px 12px;
+  height: 32px;
+  padding: 0 12px;
   text-align: left;
   white-space: nowrap;
 }
 .table th {
   position: sticky;
   top: 0;
+  z-index: 1;
+  height: 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.table tbody tr + tr td {
-  border-top: 1px solid var(--border);
+.table tbody tr:hover {
+  background: var(--surface-2);
 }
 .sort {
-  padding: 4px 0;
+  padding: 0;
   border: 0;
   background: none;
   color: var(--text-secondary);
   font: inherit;
+  font-size: 11px;
+  line-height: 14px;
   font-weight: 600;
   cursor: pointer;
 }
 .sort:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+  border-radius: 3px;
 }
 .name {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  font-weight: 500;
 }
 .unknown {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 .status {
   margin: 0;
@@ -94,7 +110,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .message h2 {
   margin: 0;
@@ -103,6 +119,6 @@
   font-weight: 600;
 }
 .message p {
-  margin: 0;
+  margin: 0 0 8px;
   color: var(--text-secondary);
 }

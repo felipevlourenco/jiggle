@@ -3,65 +3,74 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
-.top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
+.group {
+  overflow: hidden;
 }
 .heading {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 600;
+  margin: 0;
+  padding: 10px 14px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 .list {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 .row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+  gap: 12px;
+  height: 52px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
 }
-.damaged {
+.row:last-child {
+  border-bottom: 0;
+}
+.badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--sel);
+  color: var(--primary);
+}
+.badgeBad {
+  background: color-mix(in srgb, var(--error) 14%, transparent);
   color: var(--error);
 }
-.thumb {
-  flex: none;
-  overflow: hidden;
-  border-radius: 10px;
+.grow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.grow strong {
+  font-weight: 600;
 }
 .meta {
+  font-size: 12px;
+  line-height: 16px;
   color: var(--text-secondary);
 }
 .damaged .meta {
-  color: inherit;
-}
-.banner {
-  margin: 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--surface-2);
-  color: var(--text-secondary);
+  color: var(--error);
 }
 .footer {
   margin: 0;
-  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 .status {
   margin: 0;
@@ -76,18 +85,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .message h2 {
   margin: 0;
   font-size: 20px;
+  line-height: 26px;
   font-weight: 600;
 }
 .message p {
-  margin: 0;
+  margin: 0 0 8px;
   color: var(--text-secondary);
-}
-
-.restore {
-  margin-left: auto;
 }

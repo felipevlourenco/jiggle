@@ -7,6 +7,9 @@ import { sortLayout, type SortOptions } from '@shared/layout/sort'
 import { describeIssue, validateLayout } from '@shared/layout/validate'
 import type { AppItem, Device, Layout, LayoutItem } from '@shared/types'
 import { BeforeAfter } from '../components/BeforeAfter'
+import { CheckIcon } from '../components/icons'
+import { ToolbarActions } from '../components/ToolbarSlot'
+import { Banner } from '../components/Banner'
 import { Thumb } from '../components/Thumb'
 import { ApplySheet } from '../sheets/Apply'
 import { useApps, useLayout } from '../state/queries'
@@ -83,7 +86,7 @@ export function Organize({ device }: { device: Device }) {
       <div className={s.message} role="alert">
         <h2>Couldn’t read the home screen</h2>
         <p>Make sure your {device.deviceClass} is unlocked and connected.</p>
-        <button className="btn btn-primary" onClick={() => void layout.refetch()}>
+        <button className="btn btn-primary btn-lg" onClick={() => void layout.refetch()}>
           Try Again
         </button>
       </div>
@@ -93,7 +96,7 @@ export function Organize({ device }: { device: Device }) {
   if (!before || !preview || waitingForCategories) {
     return (
       <p className={s.status} role="status">
-        Building preview…
+        <span className="spin" aria-hidden="true" /> Building preview…
       </p>
     )
   }
@@ -105,26 +108,7 @@ export function Organize({ device }: { device: Device }) {
   const lookup = apps.data?.lookup
   return (
     <div className={s.root}>
-      <div className={s.top}>
-        <div className={s.presets} role="radiogroup" aria-label="Sort by">
-          {PRESETS.map((p) => (
-            <button
-              key={p.by}
-              role="radio"
-              aria-checked={choice.by === p.by}
-              className={s.card}
-              onClick={() => setChoice({ by: p.by })}
-            >
-              <span className={s.strip}>
-                {preview.samples[p.by].map((a) => (
-                  <Thumb key={a.id} udid={device.udid} app={a} />
-                ))}
-              </span>
-              <strong>{p.title}</strong>
-              <span className={s.blurb}>{p.blurb}</span>
-            </button>
-          ))}
-        </div>
+      <ToolbarActions>
         <button
           className="btn btn-primary"
           disabled={readOnly || blocked}
@@ -132,16 +116,42 @@ export function Organize({ device }: { device: Device }) {
         >
           Apply to iPhone
         </button>
+      </ToolbarActions>
+      <div className={s.presets} role="radiogroup" aria-label="Sort by">
+        {PRESETS.map((p) => (
+          <button
+            key={p.by}
+            role="radio"
+            aria-checked={choice.by === p.by}
+            className={s.preset}
+            onClick={() => setChoice({ by: p.by })}
+          >
+            {choice.by === p.by && (
+              <span className={s.chk} aria-hidden="true">
+                <CheckIcon size={10} />
+              </span>
+            )}
+            <span className={s.strip}>
+              {preview.samples[p.by].map((a) => (
+                <Thumb key={a.id} udid={device.udid} app={a} />
+              ))}
+            </span>
+            <span className={s.text}>
+              <span className="headline">{p.title}</span>
+              <span className="meta">{p.blurb}</span>
+            </span>
+          </button>
+        ))}
       </div>
 
       <div className={s.options}>
-        <div className={s.segmented} role="radiogroup" aria-label="Widgets">
+        <span>Widgets</span>
+        <div className="seg" role="radiogroup" aria-label="Widgets">
           {WIDGET_MODES.map(({ mode, label }) => (
             <button
               key={mode}
               role="radio"
               aria-checked={choice.widgetMode === mode}
-              className={s.segment}
               onClick={() => setChoice({ widgetMode: mode })}
             >
               {label}
@@ -151,24 +161,36 @@ export function Organize({ device }: { device: Device }) {
       </div>
 
       {blocked && (
-        <p className={`${s.banner} ${s.error}`} role="alert">
+        <Banner severity="error">
           This layout can’t be applied: {preview.issues.map(describeIssue).join('; ')}.
-        </p>
+        </Banner>
       )}
       {choice.by === 'category' && lookup && lookup !== 'idle' && (
-        <p className={s.banner} role="status">
+        <Banner severity="warning">
           {lookup === 'offline'
             ? 'Can’t reach the App Store, so some apps are grouped as Unknown.'
             : 'Still looking up categories: the preview may change.'}
-        </p>
+        </Banner>
       )}
 
-      <BeforeAfter before={before} after={preview.after} moved={preview.moved} udid={device.udid} />
+      <div className={`${s.stage} card`}>
+        <BeforeAfter
+          before={before}
+          after={preview.after}
+          moved={preview.moved}
+          udid={device.udid}
+        />
+      </div>
 
       <p className={s.summary} data-testid="summary">
-        {preview.movedApps} of {preview.totalApps} apps will move
-        {preview.widgetPages > 0 &&
-          ` · ${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`}
+        <i className={s.dot} aria-hidden="true" />
+        <span>
+          <b>
+            {preview.movedApps} of {preview.totalApps} apps will move
+          </b>
+          {preview.widgetPages > 0 &&
+            ` · ${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`}
+        </span>
       </p>
 
       {applying && (

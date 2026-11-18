@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CheckIcon } from './icons'
 import s from './toast.module.css'
 
 const SHOW_MS = 3500
@@ -14,7 +15,12 @@ export function Toast() {
   }, [message])
   return (
     <div className={s.region} role="status" aria-live="polite">
-      {message && <div className={s.toast}>{message}</div>}
+      {message && (
+        <div className={s.toast}>
+          <CheckIcon size={14} />
+          {message}
+        </div>
+      )}
     </div>
   )
 }

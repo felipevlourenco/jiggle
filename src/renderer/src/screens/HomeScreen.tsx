@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type WheelEvent } from 'react'
+import { useNavigate } from 'react-router'
+import { gridFor } from '@shared/layout/grid'
 import { summarize } from '@shared/layout/summarize'
 import type { Device } from '@shared/types'
 import { Dock } from '../components/Dock'
@@ -19,6 +21,7 @@ const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' 
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n))
 
 export function HomeScreen({ device }: { device: Device }) {
+  const navigate = useNavigate()
   const { data, isPending, isError, refetch, isRefetching } = useLayout(device.udid)
   const [page, setPage] = useState(0)
   const [chosenZoom, setChosenZoom] = useState<number>()
@@ -95,7 +98,10 @@ export function HomeScreen({ device }: { device: Device }) {
         </p>
         <div className={s.stage} ref={stageRef}>
           <PhoneFrame zoom={zoom}>
-            <div className={p.grid}>
+            <div
+              className={p.grid}
+              style={{ gridTemplateColumns: `repeat(${gridFor(device.deviceClass).columns}, 1fr)` }}
+            >
               {Array.from({ length: 24 }, (_, i) => (
                 <div key={i} className={t.cell}>
                   <div className={t.skeleton} />
@@ -115,7 +121,10 @@ export function HomeScreen({ device }: { device: Device }) {
       <div className={s.root}>
         <div className={s.message}>
           <h2>This home screen is empty</h2>
-          <p>Your apps live in the App Library.</p>
+          <p>Your apps live in the App Library. Sort them back with Organize.</p>
+          <button className="btn btn-primary btn-lg" onClick={() => navigate('/organize')}>
+            Open Organize
+          </button>
         </div>
       </div>
     )

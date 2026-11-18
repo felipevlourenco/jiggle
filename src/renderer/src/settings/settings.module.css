@@ -1,55 +1,103 @@
+/* The window title bar is the system's; the tab strip is the toolbar under it. */
 .root {
-  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--background);
 }
 .tabs {
   display: flex;
   justify-content: center;
   gap: 4px;
-  margin-bottom: 16px;
+  flex: none;
+  padding: 6px 12px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--border);
 }
 .tab {
-  padding: 4px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 84px;
+  height: 50px;
   border: 0;
   border-radius: 6px;
   background: none;
   color: var(--text-secondary);
   font: inherit;
-  cursor: pointer;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
 }
 .tab[aria-selected='true'] {
   background: var(--surface-2);
-  color: var(--text);
-  font-weight: 600;
+  color: var(--primary);
 }
 .tab:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
 }
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.row {
-  display: flex;
+.form {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 14px;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  padding: 24px 32px;
+}
+.fl {
+  text-align: right;
+}
+.hint {
+  grid-column: 2;
+  margin-top: -8px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--text-secondary);
 }
 .region {
   width: 48px;
   text-align: center;
   text-transform: lowercase;
 }
-.region[aria-invalid='true'] {
-  outline: 2px solid var(--error);
-}
-.check {
+.inline {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
+}
+.privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 28px;
+  overflow: auto;
+}
+.privacy :global(.assure) {
+  gap: 12px;
+  padding: 14px 16px;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.split {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
 .help {
   margin: 0;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--text-secondary);
 }

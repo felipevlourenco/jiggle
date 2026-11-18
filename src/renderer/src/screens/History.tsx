@@ -1,15 +1,11 @@
-import { useMemo, useState } from 'react'
-import { gridFor } from '@shared/layout/grid'
-import { normalize } from '@shared/layout/normalize'
+import { useState } from 'react'
 import type { SnapshotEntry, SnapshotSummary } from '@shared/types'
-import { PageGrid } from '../components/PageGrid'
-import { PhoneFrame } from '../components/PhoneFrame'
+import { BackUpIcon, HistoryIcon, WarnIcon } from '../components/icons'
+import { Banner } from '../components/Banner'
+import { ToolbarActions } from '../components/ToolbarSlot'
 import { ApplySheet } from '../sheets/Apply'
 import { useBackUp, useSnapshots } from '../state/queries'
 import s from './history.module.css'
-
-const THUMB_ZOOM = 0.13
-const grid = gridFor('iPhone')
 
 const time = (d: Date): string => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 const when = (iso: string, today: boolean): string => {
@@ -20,20 +16,6 @@ const when = (iso: string, today: boolean): string => {
 }
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 const isToday = (iso: string): boolean => new Date(iso).toDateString() === new Date().toDateString()
-
-function Thumbnail({ snapshot }: { snapshot: SnapshotSummary }) {
-  const items = useMemo(
-    () => normalize([[], snapshot.page1], grid).pages[0] ?? [],
-    [snapshot.page1]
-  )
-  return (
-    <div className={s.thumb} aria-hidden="true">
-      <PhoneFrame zoom={THUMB_ZOOM}>
-        <PageGrid items={items} grid={grid} udid={snapshot.udid} />
-      </PhoneFrame>
-    </div>
-  )
-}
 
 function Row({
   entry,
@@ -47,8 +29,10 @@ function Row({
   if (entry.damaged) {
     return (
       <li className={`${s.row} ${s.damaged}`}>
-        <span aria-hidden="true">⚠︎</span>
-        <div>
+        <span className={`${s.badge} ${s.badgeBad}`} aria-hidden="true">
+          <WarnIcon size={15} />
+        </span>
+        <div className={s.grow}>
           <strong>Damaged backup</strong>
           <div className={s.meta}>
             {when(entry.createdAt, today)} · This backup file is damaged and can’t be restored.
@@ -59,15 +43,17 @@ function Row({
   }
   return (
     <li className={s.row}>
-      <Thumbnail snapshot={entry} />
-      <div>
+      <span className={s.badge} aria-hidden="true">
+        <HistoryIcon size={15} />
+      </span>
+      <div className={s.grow}>
         <strong>{entry.name ?? entry.reason ?? 'Backup'}</strong>
         <div className={s.meta}>
           {when(entry.createdAt, today)} · {plural(entry.appCount, 'app')} ·{' '}
           {plural(entry.pageCount, 'page')}
         </div>
       </div>
-      <button className={`btn ${s.restore}`} disabled={!onRestore} onClick={onRestore}>
+      <button className="btn" disabled={!onRestore} onClick={onRestore}>
         Restore
       </button>
     </li>
@@ -86,12 +72,13 @@ export function History({
   const { data, isPending, isError, refetch } = useSnapshots(udid)
   const backUp = useBackUp()
   const [restoring, setRestoring] = useState<SnapshotSummary>()
-  const button = (
+  const button = (large: boolean) => (
     <button
-      className="btn btn-primary"
+      className={`btn btn-primary${large ? ' btn-lg' : ''}`}
       disabled={!canBackUp || !udid || backUp.isPending}
       onClick={() => udid && backUp.mutate(udid)}
     >
+      {!large && <BackUpIcon size={14} />}
       {backUp.isPending ? 'Backing up…' : 'Back Up Now'}
     </button>
   )
@@ -100,7 +87,7 @@ export function History({
     return (
       <div className={s.message} role="alert">
         <h2>Couldn’t read your backups</h2>
-        <button className="btn btn-primary" onClick={() => void refetch()}>
+        <button className="btn btn-primary btn-lg" onClick={() => void refetch()}>
           Try Again
         </button>
       </div>
@@ -118,7 +105,7 @@ export function History({
       <div className={s.message}>
         <h2>No backups yet</h2>
         <p>Jiggle backs up automatically before every change.</p>
-        {button}
+        {button(true)}
       </div>
     )
   }
@@ -127,8 +114,8 @@ export function History({
   const earlier = data.filter((e) => !isToday(e.createdAt))
   const group = (title: string, entries: SnapshotEntry[], isTodayGroup: boolean) =>
     entries.length > 0 && (
-      <section>
-        <h2 className={s.heading}>{title}</h2>
+      <section className={`${s.group} card`}>
+        <h3 className={s.heading}>{title}</h3>
         <ul className={s.list}>
           {entries.map((e) => (
             <Row
@@ -144,15 +131,11 @@ export function History({
 
   return (
     <div className={s.root}>
-      <div className={s.top}>
-        <h2 className={s.title}>Automatic backups</h2>
-        {button}
-      </div>
+      <ToolbarActions>{button(false)}</ToolbarActions>
       {!canBackUp && (
-        <p className={s.banner}>
-          No iPhone connected. You can look at your backups, not change anything.
-        </p>
+        <Banner>No iPhone connected. You can look at your backups, not change anything.</Banner>
       )}
+      <h2 className="headline">Automatic backups</h2>
       {group('Today', today, true)}
       {group('Earlier', earlier, false)}
       <p className={s.footer}>Jiggle keeps the last 50 automatic backups for each device.</p>

@@ -6,9 +6,13 @@
   gap: 12px;
 }
 .strip {
-  margin: 0;
+  flex: none;
+  margin: -20px -24px 0;
+  padding: 0 20px;
+  line-height: 36px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
-  text-align: center;
 }
 .stage {
   flex: 1;
@@ -27,21 +31,28 @@
   gap: 4px;
 }
 .arrow {
+  display: grid;
+  place-items: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border);
+  padding: 0;
+  border: 0;
   border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
+  background: none;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1;
 }
+.arrow:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
 .arrow:disabled {
-  opacity: 0.35;
+  color: var(--text-tertiary);
 }
 .arrow:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
 }
 .zoom {
   justify-self: end;
@@ -70,7 +81,7 @@
   font-weight: 600;
 }
 .message p {
-  margin: 0;
+  margin: 0 0 8px;
   color: var(--text-secondary);
 }
 .status {

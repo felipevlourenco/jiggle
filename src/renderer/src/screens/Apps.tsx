@@ -3,7 +3,9 @@ import { APP_LIBRARY, appLocations } from '@shared/layout/locations'
 import type { AppInfo, Device } from '@shared/types'
 import { appError } from '@shared/errors'
 import { Banner } from '../components/Banner'
+import { SearchIcon } from '../components/icons'
 import { Thumb } from '../components/Thumb'
+import { ToolbarActions } from '../components/ToolbarSlot'
 import { useApps, useLayout } from '../state/queries'
 import s from './apps.module.css'
 
@@ -56,7 +58,7 @@ export function Apps({ device }: { device: Device }) {
       <div className={s.message}>
         <h2>Couldn’t read the app list</h2>
         <p>Make sure your {device.deviceClass} is unlocked and connected.</p>
-        <button className="btn btn-primary" onClick={() => void apps.refetch()}>
+        <button className="btn btn-primary btn-lg" onClick={() => void apps.refetch()}>
           Try Again
         </button>
       </div>
@@ -73,16 +75,20 @@ export function Apps({ device }: { device: Device }) {
   const lookup = apps.data.lookup
   return (
     <div className={s.root}>
+      <ToolbarActions>
+        <label className={s.search}>
+          <SearchIcon size={14} />
+          <input
+            type="search"
+            placeholder="Search apps"
+            aria-label="Search apps"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+      </ToolbarActions>
       <div className={s.bar}>
-        <input
-          type="search"
-          className={s.search}
-          placeholder="Search apps"
-          aria-label="Search apps"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <span className={s.count}>
+        <span className="meta">
           {shown.length === rows.length
             ? `${rows.length} apps`
             : `${shown.length} of ${rows.length} apps`}
@@ -94,11 +100,11 @@ export function Apps({ device }: { device: Device }) {
         </Banner>
       )}
       {lookup === 'running' && (
-        <p className={s.banner} role="status">
-          Looking up categories…
+        <p className={s.looking} role="status">
+          <span className="spin" aria-hidden="true" /> Looking up categories…
         </p>
       )}
-      <div className={s.scroll}>
+      <div className={`${s.scroll} card`}>
         <table className={s.table}>
           <thead>
             <tr>
@@ -134,7 +140,15 @@ export function Apps({ device }: { device: Device }) {
             ))}
           </tbody>
         </table>
-        {shown.length === 0 && <p className={s.status}>No apps match “{query}”.</p>}
+        {shown.length === 0 && (
+          <div className="empty">
+            <h2>No apps match “{query}”</h2>
+            <p>Check the spelling, or search by developer.</p>
+            <button className="btn" onClick={() => setQuery('')}>
+              Clear Search
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

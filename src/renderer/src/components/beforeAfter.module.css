@@ -20,29 +20,41 @@
   gap: 6px;
 }
 .side figcaption {
+  font-size: 11px;
+  line-height: 14px;
   font-weight: 600;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 .pager {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  color: var(--text-secondary);
 }
 .arrow {
+  display: grid;
+  place-items: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border);
+  padding: 0;
+  border: 0;
   border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
+  background: none;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1;
 }
+.arrow:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
 .arrow:disabled {
-  opacity: 0.35;
+  color: var(--text-tertiary);
 }
 .arrow:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
 }

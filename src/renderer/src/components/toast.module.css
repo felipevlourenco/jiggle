@@ -8,9 +8,17 @@
   pointer-events: none;
 }
 .toast {
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: var(--text);
-  color: var(--background);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 16px 6px 14px;
+  border-radius: 10px;
+  background: var(--toast);
+  color: var(--toast-text);
+  box-shadow: var(--sh-lg);
+  font-weight: 500;
+}
+.toast svg {
+  color: #3ccb75;
 }

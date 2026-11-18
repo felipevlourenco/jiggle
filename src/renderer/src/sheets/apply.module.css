@@ -1,66 +1,162 @@
 .sheet {
-  width: 420px;
-  padding: 24px;
-  border: 1px solid var(--border);
+  width: 520px;
+  max-width: calc(100vw - 48px);
+  margin: auto;
+  padding: 0;
+  border: 0;
   border-radius: 14px;
   background: var(--surface);
   color: var(--text);
+  box-shadow: var(--sh-lg);
+  overflow: hidden;
 }
 .sheet::backdrop {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--scrim);
 }
-.sheet h2 {
-  margin: 0 0 12px;
-  font-size: 18px;
-  line-height: 24px;
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 24px 4px;
+}
+.head h2,
+.done h2,
+.problemText h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 20px;
   font-weight: 600;
 }
-.sheet p {
-  margin: 0 0 16px;
-  color: var(--text-secondary);
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 24px 16px;
 }
 .lines {
-  margin: 0 0 16px;
-  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.reassure {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--surface-2);
+.lines li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lines svg {
+  flex: none;
+  color: var(--primary);
 }
 .footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  padding: 12px 24px 20px;
+}
+.center {
+  justify-content: center;
+  padding-top: 20px;
 }
 .bar {
   width: 100%;
-  margin-bottom: 12px;
-  accent-color: var(--primary);
+  height: 6px;
+  appearance: none;
+  border: 0;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.bar::-webkit-progress-bar {
+  background: var(--surface-2);
+}
+.bar::-webkit-progress-value {
+  background: var(--primary);
+  border-radius: 3px;
 }
 .steps {
-  margin: 0 0 16px;
-  padding-left: 20px;
-  color: var(--text-tertiary);
-}
-.steps .past {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   color: var(--text-secondary);
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .steps .now {
   color: var(--text);
-  font-weight: 700;
+  font-weight: 600;
+}
+.mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.ok {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+}
+.todo {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-tertiary);
+}
+.done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 24px 8px;
+  text-align: center;
+}
+.done h2 {
+  margin-top: 6px;
+  font-size: 20px;
+  line-height: 26px;
+  letter-spacing: -0.2px;
 }
 .check {
   display: grid;
   place-items: center;
   width: 56px;
   height: 56px;
-  margin: 0 auto 12px;
   border-radius: 50%;
   background: var(--success);
   color: #fff;
-  font-size: 28px;
 }
-.sheet:has(.check) h2 {
-  text-align: center;
+.problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 24px 8px;
+}
+.problemIcon {
+  display: flex;
+  flex: none;
+  color: var(--warning);
+}
+.problemText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.problemText p {
+  margin: 0;
+  color: var(--text-secondary);
 }

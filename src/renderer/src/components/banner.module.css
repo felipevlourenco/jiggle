@@ -1,17 +1,31 @@
 .banner {
+  --c: var(--info);
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex: none;
   margin: 0 0 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--surface-2);
-  color: var(--text-secondary);
-}
-.banner strong {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c) 11%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 34%, transparent);
   color: var(--text);
 }
+.icon {
+  display: flex;
+  flex: none;
+  color: var(--c);
+}
+.text {
+  flex: 1;
+  min-width: 0;
+}
+.text strong {
+  font-weight: 600;
+}
 .warning {
-  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+  --c: var(--warning);
 }
 .error {
-  background: color-mix(in srgb, var(--error) 14%, var(--surface));
+  --c: var(--error);
 }
