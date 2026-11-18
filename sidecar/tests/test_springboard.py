@@ -5,7 +5,7 @@ import plistlib
 
 from jiggle_engine.__main__ import build_server
 from jiggle_engine.plistjson import from_json, to_json
-from jiggle_engine.springboard import read_icon_state, read_icons
+from jiggle_engine.springboard import read_icon_state, read_icons, write_icon_state
 
 
 def test_plist_json_round_trip_keeps_dates_and_data():
@@ -26,6 +26,9 @@ class FakeSB:
 
     async def get_icon_state(self):
         return self.state
+
+    async def set_icon_state(self, state):
+        self.written = state
 
     async def get_icon_pngdata(self, bundle_id):
         if bundle_id not in self.icons:
@@ -51,3 +54,24 @@ async def test_springboard_commands_validate_params_before_touching_a_phone():
     await server.handle_line('{"id": 2, "method": "get_icons", "params": {"udid": "U"}}')
     await server.handle_line('{"id": 3, "method": "get_icons", "params": {"udid": "U", "bundle_ids": [1]}}')
     assert [m["error"]["code"] for m in out] == ["invalid_params"] * 3
+
+
+async def test_write_icon_state_sends_exactly_what_was_read():
+    state = [[{"d": datetime.datetime(2026, 1, 1), "blob": b"\x00\x01"}], [{"bundleIdentifier": "a.b"}]]
+    sb = FakeSB(state=state)
+    await write_icon_state(sb, await read_icon_state(sb))
+    assert plistlib.dumps(sb.written) == plistlib.dumps(state)  # dates and bytes survive the JSON trip
+
+
+async def test_set_icon_state_validates_its_params_before_touching_a_phone():
+    out = []
+    server = build_server(lambda line: out.append(json.loads(line)))
+    for params in (
+        '{"udid": "U"}',
+        '{"udid": "U", "state": []}',
+        '{"udid": "U", "state": [1]}',
+        '{"udid": "U", "state": [[1]]}',
+        '{"state": [[{}]]}',
+    ):
+        await server.handle_line('{"id": 1, "method": "set_icon_state", "params": %s}' % params)
+    assert [m["error"]["code"] for m in out] == ["invalid_params"] * 5

@@ -7,7 +7,7 @@ const todo = (label: string, accelerator?: string): MenuItemConstructorOptions =
   enabled: false
 })
 
-export function buildMenu(handlers: { backUpNow: () => void }): void {
+export function buildMenu(handlers: { backUpNow: () => void; restoreLast: () => void }): void {
   const template: MenuItemConstructorOptions[] = [
     {
       label: 'Jiggle',
@@ -43,7 +43,7 @@ export function buildMenu(handlers: { backUpNow: () => void }): void {
       submenu: [
         todo('Refresh', 'Cmd+R'),
         { id: 'backup', label: 'Back Up Now', click: handlers.backUpNow },
-        todo('Restore Last Backup…')
+        { id: 'restore-last', label: 'Restore Last Backup…', click: handlers.restoreLast }
       ]
     },
     {

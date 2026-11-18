@@ -7,6 +7,7 @@ import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
 import { CategoryService } from '../../services/CategoryService'
+import { ApplyService } from '../../services/ApplyService'
 import { IconService } from '../../services/IconService'
 import { SnapshotService } from '../../services/SnapshotService'
 import { registerIpc } from '..'
@@ -35,7 +36,9 @@ function setup() {
     fetch: failing,
     sleep: async () => {}
   })
-  registerIpc(ipc, bridge, broadcast, icons, categories, new SnapshotService(root, silent))
+  const snapshots = new SnapshotService(root, silent)
+  const apply = new ApplyService({ bridge, snapshots, broadcast, log: silent })
+  registerIpc(ipc, bridge, broadcast, icons, categories, snapshots, apply)
   const call = async (ch: string, ...args: unknown[]) => await handlers.get(ch)!(...args)
   return { call, broadcast }
 }

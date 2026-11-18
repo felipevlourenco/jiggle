@@ -64,3 +64,21 @@ export function validateLayout(before: Layout, after: Layout, removed: string[] 
     issues.push({ code: 'widget-changed' })
   return issues
 }
+
+// For the banner and the Apply sheet.
+export function describeIssue(issue: Issue): string {
+  switch (issue.code) {
+    case 'page-over-capacity':
+      return `page ${issue.page} would have too many items`
+    case 'dock-over-max':
+      return `the dock would have ${issue.count} items`
+    case 'empty-folder':
+      return `the folder “${issue.name}” would be empty`
+    case 'missing-app':
+    case 'duplicate-app':
+    case 'unknown-app':
+      return `${issue.bundleId} would be ${issue.code === 'missing-app' ? 'lost' : issue.code === 'duplicate-app' ? 'duplicated' : 'added'}`
+    case 'widget-changed':
+      return 'a widget would change'
+  }
+}

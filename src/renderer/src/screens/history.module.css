@@ -87,3 +87,7 @@
   margin: 0;
   color: var(--text-secondary);
 }
+
+.restore {
+  margin-left: auto;
+}

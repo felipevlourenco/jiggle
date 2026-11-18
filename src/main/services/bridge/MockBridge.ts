@@ -17,7 +17,12 @@ export function loadFixture(dir: string, name: string): Fixture {
 
 // Serves one recorded device (or none) from memory. Used for dev, tests and E2E.
 export class MockBridge implements DeviceBridge {
-  constructor(private readonly fixture: Fixture | null = null) {}
+  // The mock phone remembers what is written to it, so apply and restore can be tried without a phone.
+  private rawState: RawIconState | null
+
+  constructor(private readonly fixture: Fixture | null = null) {
+    this.rawState = fixture ? structuredClone(fixture.rawState) : null
+  }
 
   async listDevices(): Promise<Device[]> {
     return this.fixture ? [this.fixture.device] : []
@@ -28,7 +33,13 @@ export class MockBridge implements DeviceBridge {
   async getIconState(udid: Udid): Promise<RawIconState> {
     if (!this.fixture || this.fixture.device.udid !== udid)
       throw new Error(`Unknown device: ${udid}`)
-    return this.fixture.rawState
+    return structuredClone(this.rawState!)
+  }
+
+  async setIconState(udid: Udid, state: RawIconState): Promise<void> {
+    if (!this.fixture || this.fixture.device.udid !== udid)
+      throw new Error(`Unknown device: ${udid}`)
+    this.rawState = structuredClone(state)
   }
 
   // The mock has no phone to ask: the UI falls back to the default grid, letter tiles and a gradient.

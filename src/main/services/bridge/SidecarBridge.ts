@@ -159,6 +159,10 @@ export class SidecarBridge implements DeviceBridge {
     return new Map(Object.entries(icons).map(([id, b64]) => [id, Buffer.from(b64, 'base64')]))
   }
 
+  async setIconState(udid: Udid, state: RawIconState): Promise<void> {
+    await this.request('set_icon_state', { udid, state }, 60_000)
+  }
+
   async listApps(udid: Udid): Promise<InstalledApp[]> {
     return InstalledApps.parse(await this.request('list_apps', { udid }, 30_000))
   }

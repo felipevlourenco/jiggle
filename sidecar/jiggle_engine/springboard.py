@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from pymobiledevice3.lockdown import create_using_usbmux
 from pymobiledevice3.services.springboard import SpringBoardServicesService
 
-from jiggle_engine.plistjson import to_json
+from jiggle_engine.plistjson import from_json, to_json
 
 
 @asynccontextmanager
@@ -38,3 +38,8 @@ async def read_icons(sb, bundle_ids: list[str]) -> dict[str, str]:
         except Exception as e:
             print(f"icon {bundle_id}: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
     return icons
+
+
+async def write_icon_state(sb, state: list) -> None:
+    """Write a whole home screen. `state` is the tagged JSON read_icon_state produced (dock first)."""
+    await sb.set_icon_state(from_json(state))

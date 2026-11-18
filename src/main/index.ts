@@ -1,10 +1,12 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import log from 'electron-log/main'
 import type { Broadcast } from '@shared/ipc-contract'
 import { registerIpc } from './ipc'
+import { restoreLastBackup } from './ipc/apply'
 import { backUpActiveDevice } from './ipc/snapshots'
 import { handleAssetProtocol, registerAssetScheme } from './protocol'
+import { ApplyService } from './services/ApplyService'
 import { CategoryService } from './services/CategoryService'
 import { IconService } from './services/IconService'
 import { SnapshotService } from './services/SnapshotService'
@@ -70,14 +72,34 @@ if (!app.requestSingleInstanceLock()) {
       onChange: () => broadcast('apps:changed', undefined)
     })
     const snapshots = new SnapshotService(userData, log.scope('snapshots'))
-    registerIpc(ipcMain, bridge, broadcast, icons, categories, snapshots)
+    const apply = new ApplyService({ bridge, snapshots, broadcast, log: log.scope('apply') })
+    registerIpc(ipcMain, bridge, broadcast, icons, categories, snapshots, apply)
     if (sidecar) {
       sidecar.onStatus((status) => broadcast('sidecar:status', status))
       sidecar.start()
       app.on('before-quit', () => sidecar.stop())
     }
     log.info(`Jiggle ${app.getVersion()} started`)
-    buildMenu({ backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }) })
+    buildMenu({
+      backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }),
+      restoreLast: () =>
+        void restoreLastBackup({
+          bridge,
+          snapshots,
+          apply,
+          broadcast,
+          confirm: async (question) =>
+            (
+              await dialog.showMessageBox({
+                type: 'question',
+                message: question,
+                buttons: ['Restore', 'Cancel'],
+                defaultId: 1,
+                cancelId: 1
+              })
+            ).response === 0
+        })
+    })
     createMainWindow()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

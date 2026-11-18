@@ -1,0 +1,66 @@
+.sheet {
+  width: 420px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+}
+.sheet::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+.sheet h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.sheet p {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+}
+.lines {
+  margin: 0 0 16px;
+  padding-left: 18px;
+}
+.reassure {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.bar {
+  width: 100%;
+  margin-bottom: 12px;
+  accent-color: var(--primary);
+}
+.steps {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: var(--text-tertiary);
+}
+.steps .past {
+  color: var(--text-secondary);
+}
+.steps .now {
+  color: var(--text);
+  font-weight: 700;
+}
+.check {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+  font-size: 28px;
+}
+.sheet:has(.check) h2 {
+  text-align: center;
+}

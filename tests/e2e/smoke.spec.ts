@@ -90,6 +90,7 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
   const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
   const win = await app.firstWindow()
   expect(await win.evaluate('Object.keys(window.jiggle).sort()')).toEqual([
+    'apply',
     'apps',
     'device',
     'layout',
@@ -231,9 +232,9 @@ test.describe('Organize', () => {
       win.getByRole('group', { name: 'Pages' }).locator('[aria-current="page"]')
     ).toHaveAttribute('aria-label', 'Page 2')
 
-    // the apply sheet is a stub: it opens and cancels
+    // the sheet asks first; cancelling writes nothing
     await win.getByRole('button', { name: 'Apply to iPhone' }).click()
-    await expect(win.getByRole('dialog', { name: 'Apply to iPhone' })).toBeVisible()
+    await expect(win.getByRole('dialog', { name: /Apply Category to Sam/ })).toBeVisible()
     await win.getByRole('button', { name: 'Cancel' }).click()
     await expect(win.getByRole('dialog')).toHaveCount(0)
     await app.close()
@@ -282,6 +283,65 @@ test.describe('History', () => {
     await expect(win.getByRole('listitem')).toHaveCount(2)
     await expect(win.getByRole('button', { name: 'Back Up Now' })).toBeDisabled()
     await expect(win.getByText(/No iPhone connected/)).toBeVisible()
+    await app.close()
+  })
+})
+
+test.describe('Apply and restore', () => {
+  const firstIcon = async (win: Page): Promise<string | null> =>
+    win.getByTestId('page').locator('[data-kind="app"]').first().getAttribute('title')
+
+  test('applies A–Z once even on a double click, backs up first, and restores', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await firstIcon(win)
+
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    const sheet = win.getByRole('dialog', { name: /Apply A–Z to Sam/ })
+    await expect(sheet).toContainText('Your current layout will be backed up first')
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).dblclick()
+    await expect(sheet.getByText(/Done! Sam's iPhone is sorted A–Z/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+
+    // the phone now shows the sorted layout
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect.poll(() => firstIcon(win)).not.toBe(original)
+
+    // one backup, named for what it undoes
+    await win.getByRole('link', { name: 'History' }).click()
+    const rows = win.getByRole('listitem')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText('Before A–Z sort')
+
+    // restore it
+    await rows.first().getByRole('button', { name: 'Restore' }).click()
+    const restore = win.getByRole('dialog', { name: /Restore “Before A–Z sort”/ })
+    await restore.getByRole('button', { name: 'Restore', exact: true }).click()
+    await expect(restore.getByText(/Restored/)).toBeVisible()
+    await restore.getByRole('button', { name: 'Close' }).click()
+    await expect(rows).toHaveCount(2) // the undo took a backup of its own
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect.poll(() => firstIcon(win)).toBe(original)
+    await app.close()
+  })
+
+  test('read-only devices cannot restore', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-ro-'))
+    let app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_USER_DATA: userData })
+    let win = await app.firstWindow()
+    await win.getByRole('link', { name: 'History' }).click()
+    await win.getByRole('button', { name: 'Back Up Now' }).click()
+    await expect(win.getByRole('listitem')).toHaveCount(1)
+    await expect(win.getByRole('button', { name: 'Restore' })).toBeEnabled()
+    await app.close()
+
+    // no phone at all: the backup is there, Restore is off
+    app = await launch({ JIGGLE_MOCK_DEVICE: 'none', JIGGLE_USER_DATA: userData })
+    win = await app.firstWindow()
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByRole('button', { name: 'Restore' })).toBeDisabled()
     await app.close()
   })
 })

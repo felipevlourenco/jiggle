@@ -31,6 +31,11 @@ const api: JiggleApi = {
     list: (udid) => invoke('apps:list', udid),
     onChanged: (listener) => on('apps:changed', () => listener())
   },
+  apply: {
+    run: (plan) => invoke('apply:run', plan),
+    restore: (udid, snapshotId) => invoke('apply:restore', udid, snapshotId),
+    onProgress: (listener) => on('apply:progress', listener)
+  },
   snapshots: {
     list: (udid) => invoke('snapshots:list', udid),
     backup: (udid) => invoke('snapshots:backup', udid),

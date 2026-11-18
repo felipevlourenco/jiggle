@@ -84,7 +84,16 @@ export function App() {
               {device && <Route path="/home" element={<HomeScreen device={device} />} />}
               {device && <Route path="/apps" element={<Apps device={device} />} />}
               {device && <Route path="/organize" element={<Organize device={device} />} />}
-              <Route path="/history" element={<History udid={device?.udid} canBackUp={usable} />} />
+              <Route
+                path="/history"
+                element={
+                  <History
+                    udid={device?.udid}
+                    canBackUp={usable}
+                    canRestore={device?.state === 'ready'}
+                  />
+                }
+              />
               {NAV_ITEMS.filter(
                 (n) => !['/home', '/apps', '/organize', '/history'].includes(n.path)
               ).map((n) => (

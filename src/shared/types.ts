@@ -110,3 +110,30 @@ export interface DamagedSnapshot {
   damaged: true
 }
 export type SnapshotEntry = SnapshotSummary | DamagedSnapshot
+
+// A change to write to a device, built in the renderer and re-checked in main.
+export interface ApplyPlan {
+  udid: Udid
+  reason: string // "A–Z sort": the backup is named "Before A–Z sort"
+  // What the person saw as "Before". Main refuses to write if the phone no longer looks like that.
+  beforeSignature: string
+  after: Layout
+  removedFromHomeScreen: string[] // bundleIds sent to the App Library
+}
+
+export type ApplyStep = 'checking' | 'backing-up' | 'writing' | 'verifying'
+
+export type ApplyErrorCode =
+  | 'busy' // another change to this device is running
+  | 'no-device'
+  | 'read-only' // unsupported iOS
+  | 'layout-changed' // the phone changed since the preview
+  | 'invalid' // the new layout failed validation
+  | 'not-found' // no such backup
+  | 'write-failed'
+  | 'verify-failed'
+
+// `backup` is the automatic backup taken first, when there is one: it is how to undo.
+export type ApplyResult =
+  | { ok: true; backup: SnapshotSummary }
+  | { ok: false; code: ApplyErrorCode; message: string; backup?: SnapshotSummary }

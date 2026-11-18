@@ -11,6 +11,8 @@ export interface DeviceBridge {
   getIconMetrics(udid: Udid): Promise<Grid | null>
   // PNG per bundle id. Apps whose icon can't be read are left out.
   getIcons(udid: Udid, bundleIds: string[]): Promise<Map<string, Buffer>>
+  // Writes the whole home screen. The one call that changes a phone: only ApplyService makes it.
+  setIconState(udid: Udid, state: RawIconState): Promise<void>
   // Every app a person can see on the phone, on the home screen or only in the App Library.
   listApps(udid: Udid): Promise<InstalledApp[]>
   // Returns an unsubscribe function.

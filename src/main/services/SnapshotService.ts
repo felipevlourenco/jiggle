@@ -61,6 +61,25 @@ export class SnapshotService {
     return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
   }
 
+  // One snapshot with its full state, for restoring. Throws if it is missing or damaged.
+  async get(udid: Udid, id: string): Promise<Snapshot> {
+    if (!FILE.test(`${id}.json`)) throw new Error('No such backup.')
+    try {
+      return schemas.Snapshot.parse(
+        JSON.parse(await readFile(join(this.dir(udid), `${id}.json`), 'utf8'))
+      )
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT')
+        throw new Error('No such backup.', { cause: err })
+      throw new Error('This backup file is damaged and can’t be restored.', { cause: err })
+    }
+  }
+
+  // The most recent readable snapshot of a device, or undefined.
+  async latest(udid: Udid): Promise<SnapshotSummary | undefined> {
+    return (await this.list(udid)).find((e): e is SnapshotSummary => !e.damaged)
+  }
+
   private dir(udid: Udid): string {
     if (!isSafeUdid(udid)) throw new Error(`Bad device id: ${udid}`)
     return snapshotsDir(this.root, udid)

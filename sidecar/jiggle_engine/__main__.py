@@ -25,6 +25,16 @@ def bundle_ids_param(params: dict) -> list[str]:
     return ids
 
 
+def icon_state_param(params: dict) -> list:
+    state = params.get("state")
+    ok = isinstance(state, list) and all(
+        isinstance(page, list) and all(isinstance(item, dict) for item in page) for page in state
+    )
+    if not ok or not state:
+        raise RpcError("invalid_params", "Needs 'state': [dock, page 1, ...], each a list of dicts")
+    return state
+
+
 def build_server(write=write_line) -> Server:
     server = Server(write)
     watcher: list[asyncio.Task] = []
@@ -63,6 +73,13 @@ def build_server(write=write_line) -> Server:
         udid, ids = udid_param(params), bundle_ids_param(params)
         async with springboard.open_springboard(udid) as sb:
             return await springboard.read_icons(sb, ids)
+
+    @server.method("set_icon_state")
+    async def set_icon_state(params):
+        udid, state = udid_param(params), icon_state_param(params)
+        async with springboard.open_springboard(udid) as sb:
+            await springboard.write_icon_state(sb, state)
+        return {"written": True}
 
     @server.method("list_apps")
     async def list_apps(params):

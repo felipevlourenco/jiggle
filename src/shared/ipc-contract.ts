@@ -1,5 +1,15 @@
 import { z } from 'zod'
-import type { AppsResult, Device, LayoutResult, SnapshotEntry, SnapshotSummary } from './types'
+import type {
+  ApplyPlan,
+  ApplyResult,
+  ApplyStep,
+  AppsResult,
+  Device,
+  Layout,
+  LayoutResult,
+  SnapshotEntry,
+  SnapshotSummary
+} from './types'
 
 const Udid = z.string().min(1)
 
@@ -29,6 +39,20 @@ const Snapshot_ = z.object({
   rawState: RawIconState_
 })
 
+// Main re-checks the layout itself (see ApplyService); this only guards the shape.
+const isLayout = (v: unknown): v is Layout =>
+  typeof v === 'object' &&
+  v !== null &&
+  Array.isArray((v as Layout).dock) &&
+  Array.isArray((v as Layout).pages)
+const ApplyPlan_ = z.object({
+  udid: Udid,
+  reason: z.string().min(1),
+  beforeSignature: z.string(),
+  after: z.custom<Layout>(isLayout),
+  removedFromHomeScreen: z.array(z.string())
+}) satisfies z.ZodType<ApplyPlan>
+
 export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_, Snapshot: Snapshot_ }
 
 // One entry per request channel (`domain:action`): its argument tuple and its result.
@@ -40,7 +64,10 @@ export const channels = {
   'apps:list': { args: z.tuple([Udid]), result: z.custom<AppsResult>() },
   // No udid: every device's snapshots, so History still works with nothing plugged in.
   'snapshots:list': { args: z.tuple([Udid.optional()]), result: z.custom<SnapshotEntry[]>() },
-  'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() }
+  'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() },
+  // Both always resolve: a refusal or failure is an `ok: false` result, not a thrown error.
+  'apply:run': { args: z.tuple([ApplyPlan_]), result: z.custom<ApplyResult>() },
+  'apply:restore': { args: z.tuple([Udid, z.string().min(1)]), result: z.custom<ApplyResult>() }
 } as const
 
 export type ChannelName = keyof typeof channels
@@ -55,6 +82,7 @@ export const events = {
   'device:changed': z.undefined(),
   'apps:changed': z.undefined(),
   'snapshots:changed': z.undefined(),
+  'apply:progress': z.enum(['checking', 'backing-up', 'writing', 'verifying']),
   // A short message to show the person, e.g. "Backed up · 187 apps".
   toast: z.string(),
   'sidecar:status': SidecarStatus
@@ -79,6 +107,11 @@ export interface JiggleApi {
     list(udid: string): Promise<AppsResult>
     // Categories arrived from the App Store: refetch.
     onChanged(listener: () => void): () => void
+  }
+  apply: {
+    run(plan: ApplyPlan): Promise<ApplyResult>
+    restore(udid: string, snapshotId: string): Promise<ApplyResult>
+    onProgress(listener: (step: ApplyStep) => void): () => void
   }
   snapshots: {
     list(udid?: string): Promise<SnapshotEntry[]>

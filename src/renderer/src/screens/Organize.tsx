@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { movedIds } from '@shared/layout/diff'
+import { serialize } from '@shared/layout/serialize'
+import { layoutSignature } from '@shared/layout/signature'
 import { sortLayout, type SortOptions } from '@shared/layout/sort'
-import { validateLayout, type Issue } from '@shared/layout/validate'
+import { describeIssue, validateLayout } from '@shared/layout/validate'
 import type { AppItem, Device, Layout, LayoutItem } from '@shared/types'
 import { BeforeAfter } from '../components/BeforeAfter'
 import { Thumb } from '../components/Thumb'
+import { ApplySheet } from '../sheets/Apply'
 import { useApps, useLayout } from '../state/queries'
 import { useOrganizeChoice } from '../state/store'
 import s from './organize.module.css'
@@ -21,28 +25,12 @@ const WIDGET_MODES: { mode: SortOptions['widgetMode']; label: string }[] = [
 const appsOf = (items: LayoutItem[]): AppItem[] =>
   items.flatMap((i) => (i.kind === 'app' ? [i] : i.kind === 'folder' ? i.pages.flat() : []))
 
-function describeIssue(issue: Issue): string {
-  switch (issue.code) {
-    case 'page-over-capacity':
-      return `page ${issue.page} would have too many items`
-    case 'dock-over-max':
-      return `the dock would have ${issue.count} items`
-    case 'empty-folder':
-      return `the folder “${issue.name}” would be empty`
-    case 'missing-app':
-    case 'duplicate-app':
-    case 'unknown-app':
-      return `${issue.bundleId} would be ${issue.code === 'missing-app' ? 'lost' : issue.code === 'duplicate-app' ? 'duplicated' : 'added'}`
-    case 'widget-changed':
-      return 'a widget would change'
-  }
-}
-
 export function Organize({ device }: { device: Device }) {
   const layout = useLayout(device.udid)
   const apps = useApps(device.udid)
   const [choice, setChoice] = useOrganizeChoice()
-  const sheet = useRef<HTMLDialogElement>(null)
+  const qc = useQueryClient()
+  const [applying, setApplying] = useState(false)
 
   const categories = useMemo(
     () => new Map(apps.data?.apps.map((a) => [a.bundleId, a.category])),
@@ -75,9 +63,6 @@ export function Organize({ device }: { device: Device }) {
     }
   }, [before, categories, choice])
 
-  // The apply sheet is a stub until M11.
-  useEffect(() => () => sheet.current?.close(), [])
-
   if (layout.isError) {
     return (
       <div className={s.message} role="alert">
@@ -98,6 +83,7 @@ export function Organize({ device }: { device: Device }) {
     )
   }
 
+  const presetTitle = PRESETS.find((p) => p.by === choice.by)!.title
   const readOnly = device.state === 'unsupported-os'
   const blocked = preview.issues.length > 0
   const lookup = apps.data?.lookup
@@ -126,7 +112,7 @@ export function Organize({ device }: { device: Device }) {
         <button
           className="btn btn-primary"
           disabled={readOnly || blocked}
-          onClick={() => sheet.current?.showModal()}
+          onClick={() => setApplying(true)}
         >
           Apply to iPhone
         </button>
@@ -174,15 +160,30 @@ export function Organize({ device }: { device: Device }) {
           ` · ${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`}
       </p>
 
-      <dialog ref={sheet} className={s.sheet} aria-label="Apply to iPhone">
-        <h2>Apply is coming soon</h2>
-        <p>
-          Nothing has been written to your {device.deviceClass}. Applying arrives in a later step.
-        </p>
-        <button className="btn btn-primary" onClick={() => sheet.current?.close()}>
-          Cancel
-        </button>
-      </dialog>
+      {applying && (
+        <ApplySheet
+          title={`Apply ${presetTitle} to ${device.name}?`}
+          lines={[
+            `${preview.movedApps} apps will move`,
+            ...(preview.widgetPages > 0
+              ? [`${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`]
+              : [])
+          ]}
+          doneMessage={`Done! ${device.name} is sorted ${presetTitle}.`}
+          udid={device.udid}
+          run={() =>
+            window.jiggle.apply.run({
+              udid: device.udid,
+              reason: `${presetTitle} sort`,
+              beforeSignature: layoutSignature(serialize(before)),
+              after: preview.after,
+              removedFromHomeScreen: []
+            })
+          }
+          onRefresh={() => void qc.invalidateQueries({ queryKey: ['layout'] })}
+          onClose={() => setApplying(false)}
+        />
+      )}
     </div>
   )
 }

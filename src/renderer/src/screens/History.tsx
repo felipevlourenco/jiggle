@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import type { SnapshotEntry, SnapshotSummary } from '@shared/types'
 import { PageGrid } from '../components/PageGrid'
 import { PhoneFrame } from '../components/PhoneFrame'
+import { ApplySheet } from '../sheets/Apply'
 import { useBackUp, useSnapshots } from '../state/queries'
 import s from './history.module.css'
 
@@ -34,7 +35,15 @@ function Thumbnail({ snapshot }: { snapshot: SnapshotSummary }) {
   )
 }
 
-function Row({ entry, today }: { entry: SnapshotEntry; today: boolean }) {
+function Row({
+  entry,
+  today,
+  onRestore
+}: {
+  entry: SnapshotEntry
+  today: boolean
+  onRestore?: () => void // undefined: no phone to restore to
+}) {
   if (entry.damaged) {
     return (
       <li className={`${s.row} ${s.damaged}`}>
@@ -58,13 +67,25 @@ function Row({ entry, today }: { entry: SnapshotEntry; today: boolean }) {
           {plural(entry.pageCount, 'page')}
         </div>
       </div>
+      <button className={`btn ${s.restore}`} disabled={!onRestore} onClick={onRestore}>
+        Restore
+      </button>
     </li>
   )
 }
 
-export function History({ udid, canBackUp }: { udid: string | undefined; canBackUp: boolean }) {
+export function History({
+  udid,
+  canBackUp,
+  canRestore
+}: {
+  udid: string | undefined
+  canBackUp: boolean // a phone we can read
+  canRestore: boolean // a phone we may write to (not read-only)
+}) {
   const { data, isPending, isError, refetch } = useSnapshots(udid)
   const backUp = useBackUp()
+  const [restoring, setRestoring] = useState<SnapshotSummary>()
   const button = (
     <button
       className="btn btn-primary"
@@ -110,7 +131,12 @@ export function History({ udid, canBackUp }: { udid: string | undefined; canBack
         <h2 className={s.heading}>{title}</h2>
         <ul className={s.list}>
           {entries.map((e) => (
-            <Row key={e.id} entry={e} today={isTodayGroup} />
+            <Row
+              key={e.id}
+              entry={e}
+              today={isTodayGroup}
+              onRestore={canRestore && !e.damaged ? () => setRestoring(e) : undefined}
+            />
           ))}
         </ul>
       </section>
@@ -130,6 +156,19 @@ export function History({ udid, canBackUp }: { udid: string | undefined; canBack
       {group('Today', today, true)}
       {group('Earlier', earlier, false)}
       <p className={s.footer}>Jiggle keeps the last 50 automatic backups for each device.</p>
+      {restoring && (
+        <ApplySheet
+          title={`Restore “${restoring.name ?? restoring.reason ?? 'backup'}”?`}
+          lines={[
+            `Back to ${when(restoring.createdAt, isToday(restoring.createdAt))}: ${plural(restoring.appCount, 'app')} on ${plural(restoring.pageCount, 'page')}`
+          ]}
+          confirmLabel="Restore"
+          doneMessage="Restored. Your iPhone is back as it was."
+          udid={restoring.udid}
+          run={() => window.jiggle.apply.restore(restoring.udid, restoring.id)}
+          onClose={() => setRestoring(undefined)}
+        />
+      )}
     </div>
   )
 }
