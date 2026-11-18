@@ -29,8 +29,7 @@ describe('IPC validation', () => {
     const { call } = setup()
     expect(await call('device:list')).toEqual([fixture.device])
     expect(await call('layout:get', fixture.device.udid)).toEqual({
-      layout: normalize(fixture.rawState, gridFor('iPhone')),
-      hasWallpaper: false // the mock has no wallpaper
+      layout: normalize(fixture.rawState, gridFor('iPhone'))
     })
   })
 

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type WheelEvent } from 'react'
-import { wallpaperUrl } from '@shared/assets'
 import { summarize } from '@shared/layout/summarize'
 import type { Device } from '@shared/types'
 import { Dock } from '../components/Dock'
@@ -109,7 +108,7 @@ export function HomeScreen({ device }: { device: Device }) {
     )
   }
 
-  const { layout, hasWallpaper } = data
+  const { layout } = data
   const summary = summarize(layout)
   if (layout.pages.length === 0 && layout.dock.length === 0) {
     return (
@@ -130,7 +129,7 @@ export function HomeScreen({ device }: { device: Device }) {
       </p>
 
       <div className={s.stage} ref={stageRef} onWheel={onWheel}>
-        <PhoneFrame zoom={zoom} wallpaper={hasWallpaper ? wallpaperUrl(device.udid) : undefined}>
+        <PhoneFrame zoom={zoom}>
           <PageGrid
             key={current}
             items={layout.pages[current] ?? []}

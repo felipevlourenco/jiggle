@@ -24,7 +24,7 @@ export function registerLayoutIpc(ipc: IpcLike, bridge: DeviceBridge, icons: Ico
     ])
     const deviceClass = devices.find((d) => d.udid === udid)?.deviceClass ?? 'iPhone'
     const layout = normalize(raw, gridFor(deviceClass, reported))
-    const { hasWallpaper } = await icons.sync(udid, bundleIdsOf(layout))
-    return { layout, hasWallpaper }
+    await icons.sync(udid, bundleIdsOf(layout))
+    return { layout }
   })
 }

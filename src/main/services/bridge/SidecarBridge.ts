@@ -156,14 +156,6 @@ export class SidecarBridge implements DeviceBridge {
     return new Map(Object.entries(icons).map(([id, b64]) => [id, Buffer.from(b64, 'base64')]))
   }
 
-  async getWallpaper(udid: Udid): Promise<Buffer | null> {
-    const b64 = z
-      .string()
-      .nullable()
-      .parse(await this.request('get_wallpaper', { udid }, 60_000))
-    return b64 ? Buffer.from(b64, 'base64') : null
-  }
-
   request<T = unknown>(method: string, params: object = {}, timeoutMs?: number): Promise<T> {
     const stdin = this.child?.stdin
     if (!stdin?.writable) return Promise.reject(new Error('Engine is not running'))

@@ -10,7 +10,7 @@ export function registerAssetScheme(): void {
   ])
 }
 
-// Serves cached icons and wallpapers, so the renderer never touches the filesystem.
+// Serves cached icons, so the renderer never touches the filesystem.
 export function handleAssetProtocol(root: string): void {
   protocol.handle(ASSET_SCHEME, async (request) => {
     const file = resolveAssetUrl(root, request.url)

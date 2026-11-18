@@ -5,7 +5,7 @@ import plistlib
 
 from jiggle_engine.__main__ import build_server
 from jiggle_engine.plistjson import from_json, to_json
-from jiggle_engine.springboard import read_icon_state, read_icons, read_wallpaper
+from jiggle_engine.springboard import read_icon_state, read_icons
 
 
 def test_plist_json_round_trip_keeps_dates_and_data():
@@ -21,8 +21,8 @@ def test_plist_json_round_trip_keeps_dates_and_data():
 
 
 class FakeSB:
-    def __init__(self, icons=None, wallpaper=b"WALL", state=None):
-        self.icons, self.wallpaper, self.state = icons or {}, wallpaper, state or []
+    def __init__(self, icons=None, state=None):
+        self.icons, self.state = icons or {}, state or []
 
     async def get_icon_state(self):
         return self.state
@@ -31,11 +31,6 @@ class FakeSB:
         if bundle_id not in self.icons:
             raise RuntimeError("no such app")
         return self.icons[bundle_id]
-
-    async def get_wallpaper_pngdata(self):
-        if self.wallpaper is None:
-            raise RuntimeError("no wallpaper")
-        return self.wallpaper
 
 
 async def test_read_icon_state_is_json_safe():
@@ -47,11 +42,6 @@ async def test_read_icons_skips_unreadable_apps():
     sb = FakeSB(icons={"a.b": b"PNG-A", "c.d": b"PNG-C"})
     got = await read_icons(sb, ["a.b", "missing", "c.d"])
     assert {k: base64.b64decode(v) for k, v in got.items()} == {"a.b": b"PNG-A", "c.d": b"PNG-C"}
-
-
-async def test_read_wallpaper_is_none_when_unavailable():
-    assert base64.b64decode(await read_wallpaper(FakeSB())) == b"WALL"
-    assert await read_wallpaper(FakeSB(wallpaper=None)) is None
 
 
 async def test_springboard_commands_validate_params_before_touching_a_phone():

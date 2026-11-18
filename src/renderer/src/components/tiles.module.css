@@ -1,4 +1,4 @@
-/* Tiles sit on the phone's wallpaper, so their text is white whatever the app theme is. */
+/* Tiles sit on the phone's background, so their text is white whatever the app theme is. */
 .cell {
   display: flex;
   align-items: flex-start;

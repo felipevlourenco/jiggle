@@ -41,8 +41,6 @@ createInterface({ input: process.stdin }).on('line', (line) => {
     const icons = {}
     for (const b of params.bundle_ids) icons[b] = Buffer.from('png-' + b).toString('base64')
     send({ id, result: icons })
-  } else if (method === 'get_wallpaper') {
-    send({ id, result: null })
   } else if (method === 'detach') {
     send({ id, result: {} })
     send({ event: 'device_detached', data: { udid: 'U1' } })

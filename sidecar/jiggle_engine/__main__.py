@@ -64,11 +64,6 @@ def build_server(write=write_line) -> Server:
         async with springboard.open_springboard(udid) as sb:
             return await springboard.read_icons(sb, ids)
 
-    @server.method("get_wallpaper")
-    async def get_wallpaper(params):
-        async with springboard.open_springboard(udid_param(params)) as sb:
-            return await springboard.read_wallpaper(sb)
-
     return server
 
 

@@ -59,8 +59,7 @@ export interface Layout {
   grid: Grid
 }
 
-// What `layout:get` returns: the layout, plus whether a wallpaper image is cached for it.
+// What `layout:get` returns: the layout (no wallpaper: the phone only gives a stale image or a screenshot).
 export interface LayoutResult {
   layout: Layout
-  hasWallpaper: boolean
 }

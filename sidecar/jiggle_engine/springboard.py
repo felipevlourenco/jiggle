@@ -38,12 +38,3 @@ async def read_icons(sb, bundle_ids: list[str]) -> dict[str, str]:
         except Exception as e:
             print(f"icon {bundle_id}: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
     return icons
-
-
-async def read_wallpaper(sb) -> str | None:
-    """Base64 PNG of the home screen wallpaper, or None if the phone won't give it."""
-    try:
-        return base64.b64encode(await sb.get_wallpaper_pngdata()).decode("ascii")
-    except Exception as e:
-        print(f"wallpaper: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
-        return None

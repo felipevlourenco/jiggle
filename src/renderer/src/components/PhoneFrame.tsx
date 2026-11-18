@@ -8,23 +8,17 @@ export const FRAME_HEIGHT = PHONE.height + PHONE.bezel * 2
 
 interface Props {
   zoom: number
-  wallpaper?: string // none: a neutral gradient shows instead
   children: ReactNode
 }
 
-export function PhoneFrame({ zoom, wallpaper, children }: Props) {
+export function PhoneFrame({ zoom, children }: Props) {
   return (
     <div className={s.sizer} style={{ width: FRAME_WIDTH * zoom, height: FRAME_HEIGHT * zoom }}>
       <div
         className={s.device}
         style={{ width: FRAME_WIDTH, height: FRAME_HEIGHT, transform: `scale(${zoom})` }}
       >
-        <div
-          className={s.screen}
-          style={wallpaper ? { backgroundImage: `url(${wallpaper})` } : undefined}
-        >
-          {children}
-        </div>
+        <div className={s.screen}>{children}</div>
       </div>
     </div>
   )

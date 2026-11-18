@@ -38,10 +38,6 @@ export class MockBridge implements DeviceBridge {
     return new Map()
   }
 
-  async getWallpaper(): Promise<Buffer | null> {
-    return null
-  }
-
   onDevicesChanged(): () => void {
     return () => {}
   }

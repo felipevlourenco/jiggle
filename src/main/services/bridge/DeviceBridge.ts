@@ -11,7 +11,6 @@ export interface DeviceBridge {
   getIconMetrics(udid: Udid): Promise<Grid | null>
   // PNG per bundle id. Apps whose icon can't be read are left out.
   getIcons(udid: Udid, bundleIds: string[]): Promise<Map<string, Buffer>>
-  getWallpaper(udid: Udid): Promise<Buffer | null>
   // Returns an unsubscribe function.
   onDevicesChanged(listener: () => void): () => void
 }

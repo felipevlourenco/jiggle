@@ -82,7 +82,7 @@ describe('SidecarBridge', () => {
     expect(await state()).toBe('ready')
   })
 
-  it('reads icon state, grid, icons and wallpaper', async () => {
+  it('reads icon state, grid, icons', async () => {
     const statuses = create()
     bridge.start()
     await until(statuses, 'ready')
@@ -90,7 +90,6 @@ describe('SidecarBridge', () => {
     expect(await bridge.getIconMetrics('U1')).toEqual({ columns: 4, rows: 6, dockMax: 4 })
     const icons = await bridge.getIcons('U1', ['a.b', 'c.d'])
     expect(icons.get('c.d')?.toString()).toBe('png-c.d')
-    expect(await bridge.getWallpaper('U1')).toBeNull()
   })
 
   it('reports failed when the engine never starts', async () => {
