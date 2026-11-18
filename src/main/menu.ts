@@ -11,13 +11,15 @@ export function buildMenu(handlers: {
   backUpNow: () => void
   restoreLast: () => void
   openSettings: () => void
+  checkForUpdates: () => void
 }): void {
   const template: MenuItemConstructorOptions[] = [
     {
       label: 'Jiggle',
       submenu: [
         { role: 'about' },
-        todo('Check for Updates…'),
+        // Dev builds have no release feed to ask.
+        { label: 'Check for Updates…', enabled: app.isPackaged, click: handlers.checkForUpdates },
         { type: 'separator' },
         { id: 'settings', label: 'Settings…', accelerator: 'Cmd+,', click: handlers.openSettings },
         { type: 'separator' },

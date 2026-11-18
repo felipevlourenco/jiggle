@@ -58,7 +58,8 @@ const Settings_ = z.object({
   theme: z.enum(['system', 'light', 'dark']),
   storefront: z.string().regex(/^[a-z]{2}$/),
   backupRetention: z.number().int().min(5).max(200),
-  categoryLookupEnabled: z.boolean()
+  categoryLookupEnabled: z.boolean(),
+  updateCheckEnabled: z.boolean()
 }) satisfies z.ZodType<Settings>
 
 export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_, Snapshot: Snapshot_ }

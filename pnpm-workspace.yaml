@@ -3,6 +3,7 @@ minimumReleaseAgeExclude:
   - '@vitest/spy@5.1.1'
   - electron@45.3.4
   - vitest@5.1.1
-onlyBuiltDependencies:
-  - electron
-  - esbuild
+allowBuilds:
+  electron: true
+  esbuild: true
+  electron-winstaller: false # Windows-only, pulled in by electron-builder

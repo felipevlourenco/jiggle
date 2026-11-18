@@ -95,7 +95,8 @@ describe('IPC validation', () => {
       theme: 'system',
       storefront: 'nl',
       backupRetention: 50,
-      categoryLookupEnabled: true
+      categoryLookupEnabled: true,
+      updateCheckEnabled: true
     })
     expect(await call('settings:set', { theme: 'dark', backupRetention: 10 })).toMatchObject({
       theme: 'dark',

@@ -1,0 +1,26 @@
+appId: com.felipevlourenco.jiggle
+productName: Jiggle
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+# The frozen engine for the arch being built (sidecar/build.sh writes resources/sidecar/<arch>).
+extraResources:
+  - from: resources/sidecar/${arch}
+    to: sidecar
+mac:
+  category: public.app-category.utilities
+  target: [dmg, zip]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Reads APPLE_API_KEY (path to the .p8), APPLE_API_KEY_ID and APPLE_API_ISSUER.
+  notarize: true
+  artifactName: ${productName}-${version}-${arch}.${ext}
+publish:
+  provider: github
+  owner: felipevlourenco
+  repo: jiggle

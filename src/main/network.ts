@@ -1,8 +1,15 @@
 import type { Session } from 'electron'
 import type { Logger } from './services/bridge/SidecarBridge'
 
-// The only internet host the app talks to: Apple's public iTunes Lookup (categories and developers).
-export const ALLOWED_HOSTS = ['itunes.apple.com']
+// Apple's public iTunes Lookup (categories and developers), and the GitHub Releases hosts the updater
+// reads release info from and downloads new versions from.
+export const ALLOWED_HOSTS = [
+  'itunes.apple.com',
+  'github.com',
+  'api.github.com',
+  'objects.githubusercontent.com',
+  'release-assets.githubusercontent.com'
+]
 
 const LOCAL_SCHEMES = ['file:', 'jiggle-icon:', 'devtools:', 'data:', 'blob:', 'about:']
 

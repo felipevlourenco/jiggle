@@ -8,7 +8,9 @@ describe('isAllowedUrl', () => {
       'jiggle-icon://icons/AB/a.png',
       'devtools://devtools/bundled/x.js',
       'data:image/png;base64,AAAA',
-      'https://itunes.apple.com/lookup?bundleId=a.b'
+      'https://itunes.apple.com/lookup?bundleId=a.b',
+      'https://github.com/felipevlourenco/jiggle/releases/download/v0.1.1/latest-mac.yml',
+      'https://objects.githubusercontent.com/x'
     ]) {
       expect(isAllowedUrl(url), url).toBe(true)
     }

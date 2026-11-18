@@ -116,7 +116,20 @@ function Privacy({ settings, save }: { settings: Settings; save: (p: Partial<Set
       <p className={s.help}>
         Jiggle asks Apple’s public App Store service for each app’s category and developer. Only app
         identifiers are sent, never your layout or your name. With this off, Jiggle makes no network
-        requests at all and categories show as Unknown.
+        requests for categories and they show as Unknown.
+      </p>
+      <label className={s.check}>
+        <input
+          type="checkbox"
+          checked={settings.updateCheckEnabled}
+          onChange={(e) => save({ updateCheckEnabled: e.target.checked })}
+        />
+        <span>Check for updates at launch</span>
+      </label>
+      <p className={s.help}>
+        Jiggle asks GitHub whether a newer version exists and sends nothing about you or your phone.
+        With both options off, Jiggle makes no network requests at all. Jiggle &gt; Check for
+        Updates… still works when you choose it.
       </p>
       <div className={s.row}>
         <button className="btn" disabled={clear.isPending} onClick={() => clear.mutate()}>

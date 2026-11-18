@@ -16,6 +16,7 @@ import { SnapshotService } from './services/SnapshotService'
 import type { DeviceBridge } from './services/bridge/DeviceBridge'
 import { MockBridge, loadFixture } from './services/bridge/MockBridge'
 import { SidecarBridge } from './services/bridge/SidecarBridge'
+import { createUpdater } from './updater'
 import { createMainWindow, openSettingsWindow } from './windows'
 import { buildMenu } from './menu'
 
@@ -112,8 +113,10 @@ if (!app.requestSingleInstanceLock()) {
       app.on('before-quit', () => sidecar.stop())
     }
     log.info(`Jiggle ${app.getVersion()} started`)
+    const updater = createUpdater(log.scope('updater'))
     buildMenu({
       openSettings: openSettingsWindow,
+      checkForUpdates: () => void updater.check(true),
       backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }),
       restoreLast: () =>
         void restoreLastBackup({
@@ -134,6 +137,7 @@ if (!app.requestSingleInstanceLock()) {
         })
     })
     createMainWindow()
+    if (settings.get().updateCheckEnabled) void updater.check(false)
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
     })

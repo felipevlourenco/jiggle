@@ -24,7 +24,8 @@ export class SettingsService {
       theme: 'system',
       storefront: defaultStorefront,
       backupRetention: 50,
-      categoryLookupEnabled: true
+      categoryLookupEnabled: true,
+      updateCheckEnabled: true
     }
     this.current = { ...defaults, ...this.readValid(defaults) }
   }

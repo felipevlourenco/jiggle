@@ -1,0 +1,81 @@
+# Push a tag like v0.1.1 (it must match package.json's version) to build, sign and notarize both
+# architectures and create a DRAFT GitHub release. Publishing the draft is what makes the update go live.
+#
+# Secrets: CSC_LINK (base64 of the Developer ID Application .p12), CSC_KEY_PASSWORD,
+#          APPLE_API_KEY_P8 (contents of the App Store Connect API key .p8), APPLE_API_KEY_ID, APPLE_API_ISSUER.
+name: release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { arch: arm64, runner: macos-latest }
+          - { arch: x64, runner: macos-15-intel }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches package.json
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - uses: astral-sh/setup-uv@v6
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --python 3.12 --group dev
+        working-directory: sidecar
+      - run: pnpm typecheck && pnpm lint && pnpm test
+      - run: .venv/bin/python -m pytest
+        working-directory: sidecar
+      # Freezes the engine for this runner's architecture into resources/sidecar/<arch>.
+      - run: bash sidecar/build.sh
+      - name: Build, sign and notarize
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          echo "${{ secrets.APPLE_API_KEY_P8 }}" > "$RUNNER_TEMP/key.p8"
+          export APPLE_API_KEY="$RUNNER_TEMP/key.p8"
+          pnpm exec electron-vite build
+          pnpm exec electron-builder --mac --${{ matrix.arch }} --publish never
+          rm "$RUNNER_TEMP/key.p8"
+      - name: Gatekeeper check
+        run: |
+          APP=$(ls -d dist/mac*/Jiggle.app)
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          spctl -a -vv "$APP"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jiggle-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.blockmap
+            dist/latest-mac.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      # Each runner wrote a latest-mac.yml for its own arch; the updater needs one listing both.
+      - run: |
+          mkdir release
+          cp artifacts/*/*.dmg artifacts/*/*.zip artifacts/*/*.blockmap release/
+          node scripts/merge-latest-mac.mjs artifacts/jiggle-arm64/latest-mac.yml artifacts/jiggle-x64/latest-mac.yml > release/latest-mac.yml
+      - run: gh release create "$GITHUB_REF_NAME" release/* --draft --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

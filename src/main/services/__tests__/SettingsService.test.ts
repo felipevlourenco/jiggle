@@ -13,7 +13,8 @@ describe('SettingsService', () => {
       theme: 'system',
       storefront: 'br',
       backupRetention: 50,
-      categoryLookupEnabled: true
+      categoryLookupEnabled: true,
+      updateCheckEnabled: true
     })
   })
 

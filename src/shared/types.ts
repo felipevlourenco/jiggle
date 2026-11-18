@@ -151,5 +151,6 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark'
   storefront: string // two letters: "nl"
   backupRetention: number // automatic backups kept per device
-  categoryLookupEnabled: boolean // off: the app makes no network requests at all
+  categoryLookupEnabled: boolean // off (with updateCheckEnabled): the app makes no network requests at all
+  updateCheckEnabled: boolean // look for a new Jiggle on GitHub at launch
 }
