@@ -3,6 +3,8 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import { NAV_ITEMS } from '@shared/nav'
 import { Connect } from './screens/Connect'
 import { Apps } from './screens/Apps'
+import { Toast } from './components/Toast'
+import { History } from './screens/History'
 import { HomeScreen } from './screens/HomeScreen'
 import { Organize } from './screens/Organize'
 import { useDevices, useDeviceEvents, useLayout } from './state/queries'
@@ -32,7 +34,8 @@ export function App() {
   // Connect is shown whenever there is no usable device, and left as soon as there is one.
   useEffect(() => {
     if (!isSuccess) return
-    if (!usable && pathname !== '/connect') navigate('/connect', { replace: true })
+    if (!usable && pathname !== '/connect' && pathname !== '/history')
+      navigate('/connect', { replace: true })
     if (usable && pathname === '/connect') navigate('/home', { replace: true })
   }, [isSuccess, usable, pathname, navigate])
 
@@ -49,7 +52,7 @@ export function App() {
         </div>
         <nav>
           {NAV_ITEMS.map((n) =>
-            usable ? (
+            usable || n.offline ? (
               <NavLink key={n.path} to={n.path} className="nav-item">
                 {n.label}
               </NavLink>
@@ -81,15 +84,17 @@ export function App() {
               {device && <Route path="/home" element={<HomeScreen device={device} />} />}
               {device && <Route path="/apps" element={<Apps device={device} />} />}
               {device && <Route path="/organize" element={<Organize device={device} />} />}
-              {NAV_ITEMS.filter((n) => !['/home', '/apps', '/organize'].includes(n.path)).map(
-                (n) => (
-                  <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
-                )
-              )}
+              <Route path="/history" element={<History udid={device?.udid} canBackUp={usable} />} />
+              {NAV_ITEMS.filter(
+                (n) => !['/home', '/apps', '/organize', '/history'].includes(n.path)
+              ).map((n) => (
+                <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
+              ))}
             </Routes>
           )}
         </section>
       </main>
+      <Toast />
     </div>
   )
 }

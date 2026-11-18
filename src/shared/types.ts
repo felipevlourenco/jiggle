@@ -82,3 +82,31 @@ export interface AppsResult {
   apps: AppInfo[]
   lookup: 'idle' | 'running' | 'offline'
 }
+
+// A saved copy of a device's icon state. Restoring writes `rawState` back unchanged.
+export interface Snapshot {
+  id: string // ULID: sorts by time
+  udid: Udid
+  kind: 'auto-backup' | 'saved-layout'
+  name: string | null // "Work" for saved layouts
+  reason: string | null // "Before A–Z sort" for auto-backups
+  createdAt: string // ISO
+  osVersion: string
+  appCount: number
+  pageCount: number
+  rawState: RawIconState
+}
+
+// What History lists: everything but the big `rawState`, plus page 1 for the thumbnail.
+export interface SnapshotSummary extends Omit<Snapshot, 'rawState'> {
+  page1: RawItem[]
+  damaged: false
+}
+// A file that can't be read back. It is listed so the person knows, but can't be restored.
+export interface DamagedSnapshot {
+  id: string
+  udid: Udid
+  createdAt: string // the file's modified time
+  damaged: true
+}
+export type SnapshotEntry = SnapshotSummary | DamagedSnapshot

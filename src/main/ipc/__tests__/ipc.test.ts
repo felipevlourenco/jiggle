@@ -2,12 +2,13 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import type { AppsResult } from '@shared/types'
+import type { AppsResult, SnapshotSummary } from '@shared/types'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
 import { CategoryService } from '../../services/CategoryService'
 import { IconService } from '../../services/IconService'
+import { SnapshotService } from '../../services/SnapshotService'
 import { registerIpc } from '..'
 import type { IpcLike } from '../handle'
 
@@ -34,7 +35,7 @@ function setup() {
     fetch: failing,
     sleep: async () => {}
   })
-  registerIpc(ipc, bridge, broadcast, icons, categories)
+  registerIpc(ipc, bridge, broadcast, icons, categories, new SnapshotService(root, silent))
   const call = async (ch: string, ...args: unknown[]) => await handlers.get(ch)!(...args)
   return { call, broadcast }
 }
@@ -55,6 +56,23 @@ describe('IPC validation', () => {
     expect(lookup).toBe('running')
     for (const a of apps)
       expect(a.category).toBe(a.bundleId.startsWith('com.apple.') ? 'Apple' : 'Unknown')
+  })
+
+  it('backs up the phone, tells the window, and lists the backup', async () => {
+    const { call, broadcast } = setup()
+    expect(await call('snapshots:list', fixture.device.udid)).toEqual([])
+    const made = (await call('snapshots:backup', fixture.device.udid)) as SnapshotSummary
+    expect(made).toMatchObject({ kind: 'auto-backup', reason: 'Manual backup', damaged: false })
+    expect(broadcast).toHaveBeenCalledWith('snapshots:changed', undefined)
+    expect(broadcast).toHaveBeenCalledWith('toast', `Backed up · ${made.appCount} apps`)
+    expect(await call('snapshots:list')).toHaveLength(1) // no udid: every device
+    await expect(call('snapshots:list', '../evil')).rejects.toThrow('Bad device id')
+  })
+
+  it('toasts instead of going quiet when the backup fails', async () => {
+    const { call, broadcast } = setup()
+    await expect(call('snapshots:backup', 'UNKNOWN-1')).rejects.toThrow()
+    expect(broadcast).toHaveBeenCalledWith('toast', expect.stringContaining('Couldn’t back up'))
   })
 
   it('rejects a malformed payload with a readable zod error', async () => {

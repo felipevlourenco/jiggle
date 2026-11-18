@@ -18,6 +18,17 @@ export const useApps = (udid: string | undefined) =>
     enabled: !!udid
   })
 
+// A device's snapshots, or every device's when there is none (History works with nothing plugged in).
+export const useSnapshots = (udid: string | undefined) =>
+  useQuery({
+    queryKey: ['snapshots', udid ?? 'all'],
+    queryFn: () => window.jiggle.snapshots.list(udid)
+  })
+
+// The result comes back as a toast from main, so there is nothing to handle here.
+export const useBackUp = () =>
+  useMutation({ mutationFn: (udid: string) => window.jiggle.snapshots.backup(udid) })
+
 // "Try Again": re-check one device now. A changed state also arrives as `device:changed`.
 export function useRefreshDevice() {
   const qc = useQueryClient()
@@ -37,6 +48,13 @@ export function useDeviceEvents(): void {
         void qc.invalidateQueries({ queryKey: ['layout'] })
         void qc.invalidateQueries({ queryKey: ['apps'] })
       }),
+    [qc]
+  )
+  useEffect(
+    () =>
+      window.jiggle.snapshots.onChanged(
+        () => void qc.invalidateQueries({ queryKey: ['snapshots'] })
+      ),
     [qc]
   )
   // Categories arrive from the App Store in the background.

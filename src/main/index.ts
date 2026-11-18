@@ -3,9 +3,11 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import log from 'electron-log/main'
 import type { Broadcast } from '@shared/ipc-contract'
 import { registerIpc } from './ipc'
+import { backUpActiveDevice } from './ipc/snapshots'
 import { handleAssetProtocol, registerAssetScheme } from './protocol'
 import { CategoryService } from './services/CategoryService'
 import { IconService } from './services/IconService'
+import { SnapshotService } from './services/SnapshotService'
 import type { DeviceBridge } from './services/bridge/DeviceBridge'
 import { MockBridge, loadFixture } from './services/bridge/MockBridge'
 import { SidecarBridge } from './services/bridge/SidecarBridge'
@@ -67,14 +69,15 @@ if (!app.requestSingleInstanceLock()) {
       log: log.scope('categories'),
       onChange: () => broadcast('apps:changed', undefined)
     })
-    registerIpc(ipcMain, bridge, broadcast, icons, categories)
+    const snapshots = new SnapshotService(userData, log.scope('snapshots'))
+    registerIpc(ipcMain, bridge, broadcast, icons, categories, snapshots)
     if (sidecar) {
       sidecar.onStatus((status) => broadcast('sidecar:status', status))
       sidecar.start()
       app.on('before-quit', () => sidecar.stop())
     }
     log.info(`Jiggle ${app.getVersion()} started`)
-    buildMenu()
+    buildMenu({ backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }) })
     createMainWindow()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

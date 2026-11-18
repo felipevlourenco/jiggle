@@ -93,7 +93,9 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
     'apps',
     'device',
     'layout',
-    'sidecar'
+    'sidecar',
+    'snapshots',
+    'toast'
   ])
   await expect(win.evaluate('window.jiggle.layout.get(123)')).rejects.toThrow(
     /Invalid arguments for layout:get/
@@ -244,6 +246,42 @@ test.describe('Organize', () => {
     await win.getByRole('link', { name: 'Organize' }).click()
     await expect(win.getByRole('button', { name: 'Apply to iPhone' })).toBeDisabled()
     await expect(win.getByText(/Apply is turned off for iOS 16/)).toBeVisible()
+    await app.close()
+  })
+})
+
+test.describe('History', () => {
+  test('Back Up Now (button and menu) lists backups that survive a relaunch, even with no phone', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-history-'))
+    let app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_USER_DATA: userData })
+    let win = await app.firstWindow()
+
+    // the Home Screen strip has the counts a backup should show
+    const strip = await win.getByText(/\d+ apps · \d+ pages/).innerText()
+    const [, apps, pages] = strip.match(/(\d+) apps · (\d+) pages/)!
+
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByRole('heading', { name: 'No backups yet' })).toBeVisible()
+
+    await win.getByRole('button', { name: 'Back Up Now' }).click()
+    await expect(win.getByText(`Backed up · ${apps} apps`)).toBeVisible()
+    const rows = win.getByRole('listitem')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText(`${apps} apps · ${pages} pages`)
+    await expect(rows.first()).toContainText('Manual backup')
+
+    // Device > Back Up Now does the same thing
+    await app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('backup')!.click())
+    await expect(rows).toHaveCount(2)
+    await app.close()
+
+    // relaunch without a phone: the backups are still there to look at
+    app = await launch({ JIGGLE_MOCK_DEVICE: 'none', JIGGLE_USER_DATA: userData })
+    win = await app.firstWindow()
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByRole('listitem')).toHaveCount(2)
+    await expect(win.getByRole('button', { name: 'Back Up Now' })).toBeDisabled()
+    await expect(win.getByText(/No iPhone connected/)).toBeVisible()
     await app.close()
   })
 })
