@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Device, RawIconState } from './types'
+import type { Device, LayoutResult } from './types'
 
 const Udid = z.string().min(1)
 
@@ -23,7 +23,7 @@ export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_ }
 export const channels = {
   'device:list': { args: z.tuple([]), result: z.array(Device_) },
   'device:refresh': { args: z.tuple([Udid]), result: z.void() },
-  'layout:get': { args: z.tuple([Udid]), result: RawIconState_ }
+  'layout:get': { args: z.tuple([Udid]), result: z.custom<LayoutResult>() }
 } as const
 
 export type ChannelName = keyof typeof channels
@@ -52,7 +52,7 @@ export interface JiggleApi {
     onChanged(listener: () => void): () => void
   }
   layout: {
-    get(udid: string): Promise<RawIconState>
+    get(udid: string): Promise<LayoutResult>
   }
   sidecar: {
     onStatus(listener: (status: SidecarStatus) => void): () => void

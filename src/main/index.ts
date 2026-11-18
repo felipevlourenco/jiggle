@@ -3,11 +3,15 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import log from 'electron-log/main'
 import type { Broadcast } from '@shared/ipc-contract'
 import { registerIpc } from './ipc'
+import { handleAssetProtocol, registerAssetScheme } from './protocol'
+import { IconService } from './services/IconService'
 import type { DeviceBridge } from './services/bridge/DeviceBridge'
 import { MockBridge, loadFixture } from './services/bridge/MockBridge'
 import { SidecarBridge } from './services/bridge/SidecarBridge'
 import { createMainWindow } from './windows'
 import { buildMenu } from './menu'
+
+registerAssetScheme()
 
 // JIGGLE_MOCK_DEVICE=<fixture> serves a recorded device, "none" an empty one. Ignored in packaged builds.
 function createMock(): MockBridge | null {
@@ -46,7 +50,10 @@ if (!app.requestSingleInstanceLock()) {
     }
     const mock = createMock()
     const sidecar = mock ? null : createSidecar()
-    registerIpc(ipcMain, (mock ?? sidecar) as DeviceBridge, broadcast)
+    const bridge = (mock ?? sidecar) as DeviceBridge
+    const userData = app.getPath('userData')
+    handleAssetProtocol(userData)
+    registerIpc(ipcMain, bridge, broadcast, new IconService(bridge, userData, log.scope('icons')))
     if (sidecar) {
       sidecar.onStatus((status) => broadcast('sidecar:status', status))
       sidecar.start()

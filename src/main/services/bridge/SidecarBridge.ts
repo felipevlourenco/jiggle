@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { z } from 'zod'
 import { schemas, type SidecarStatus } from '@shared/ipc-contract'
-import type { Device, DeviceState, RawIconState, Udid } from '@shared/types'
+import type { Device, DeviceState, Grid, RawIconState, Udid } from '@shared/types'
 import type { DeviceBridge } from './DeviceBridge'
 
 export interface Logger {
@@ -42,6 +42,12 @@ const Message = z.object({
   data: z.unknown().optional()
 })
 const DeviceEvent = z.object({ udid: z.string() })
+const Metrics = z.object({
+  homeScreenIconColumns: z.number(),
+  homeScreenIconRows: z.number(),
+  homeScreenIconDockMaxCount: z.number()
+})
+const Base64Map = z.record(z.string(), z.string())
 
 // States that can fix themselves without a new plug-in, so we keep re-checking them.
 const POLLED_STATES: DeviceState[] = ['locked', 'trust-pending', 'error']
@@ -125,8 +131,37 @@ export class SidecarBridge implements DeviceBridge {
     await this.probe(udid, 0)
   }
 
-  async getIconState(): Promise<RawIconState> {
-    throw new Error('Reading the icon state arrives in M5')
+  async getIconState(udid: Udid): Promise<RawIconState> {
+    return schemas.RawIconState.parse(await this.request('get_icon_state', { udid }, 30_000))
+  }
+
+  async getIconMetrics(udid: Udid): Promise<Grid | null> {
+    try {
+      const m = Metrics.parse(await this.request('get_icon_metrics', { udid }, 15_000))
+      return {
+        columns: m.homeScreenIconColumns,
+        rows: m.homeScreenIconRows,
+        dockMax: m.homeScreenIconDockMaxCount
+      }
+    } catch (err) {
+      this.opts.log.warn('icon metrics unavailable:', (err as Error).message)
+      return null
+    }
+  }
+
+  async getIcons(udid: Udid, bundleIds: string[]): Promise<Map<string, Buffer>> {
+    const icons = Base64Map.parse(
+      await this.request('get_icons', { udid, bundle_ids: bundleIds }, 60_000)
+    )
+    return new Map(Object.entries(icons).map(([id, b64]) => [id, Buffer.from(b64, 'base64')]))
+  }
+
+  async getWallpaper(udid: Udid): Promise<Buffer | null> {
+    const b64 = z
+      .string()
+      .nullable()
+      .parse(await this.request('get_wallpaper', { udid }, 60_000))
+    return b64 ? Buffer.from(b64, 'base64') : null
   }
 
   request<T = unknown>(method: string, params: object = {}, timeoutMs?: number): Promise<T> {

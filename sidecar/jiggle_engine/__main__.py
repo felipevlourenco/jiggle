@@ -2,13 +2,27 @@ import asyncio
 import sys
 import threading
 
-from jiggle_engine import __version__, devices
+from jiggle_engine import __version__, devices, springboard
 from jiggle_engine.rpc import RpcError, Server
 
 
 def write_line(line: str) -> None:
     sys.stdout.write(line + "\n")
     sys.stdout.flush()
+
+
+def udid_param(params: dict) -> str:
+    udid = params.get("udid")
+    if not isinstance(udid, str) or not udid:
+        raise RpcError("invalid_params", "Needs a 'udid' string")
+    return udid
+
+
+def bundle_ids_param(params: dict) -> list[str]:
+    ids = params.get("bundle_ids")
+    if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
+        raise RpcError("invalid_params", "Needs 'bundle_ids': a list of strings")
+    return ids
 
 
 def build_server(write=write_line) -> Server:
@@ -25,16 +39,35 @@ def build_server(write=write_line) -> Server:
 
     @server.method("device_info")
     async def device_info(params):
-        udid = params.get("udid")
-        if not isinstance(udid, str) or not udid:
-            raise RpcError("invalid_params", "device_info needs a 'udid' string")
-        return await devices.device_info(udid)
+        return await devices.device_info(udid_param(params))
 
     @server.method("watch")
     async def watch(_params):
         if not watcher:  # idempotent: one watcher per process
             watcher.append(asyncio.create_task(devices.watch(server.emit)))
         return {"watching": True}
+
+    # The SpringBoard commands: validate the params first, then open the service and read.
+    @server.method("get_icon_state")
+    async def get_icon_state(params):
+        async with springboard.open_springboard(udid_param(params)) as sb:
+            return await springboard.read_icon_state(sb)
+
+    @server.method("get_icon_metrics")
+    async def get_icon_metrics(params):
+        async with springboard.open_springboard(udid_param(params)) as sb:
+            return await springboard.read_icon_metrics(sb)
+
+    @server.method("get_icons")
+    async def get_icons(params):
+        udid, ids = udid_param(params), bundle_ids_param(params)
+        async with springboard.open_springboard(udid) as sb:
+            return await springboard.read_icons(sb, ids)
+
+    @server.method("get_wallpaper")
+    async def get_wallpaper(params):
+        async with springboard.open_springboard(udid_param(params)) as sb:
+            return await springboard.read_wallpaper(sb)
 
     return server
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
 import { Connect } from './screens/Connect'
-import { useDevices, useDeviceEvents } from './state/queries'
+import { useDevices, useDeviceEvents, useLayout } from './state/queries'
 
 const TITLES: Record<string, string> = {
   '/connect': 'Connect',
@@ -22,6 +22,8 @@ export function App() {
   const usable =
     device?.state === 'ready' ||
     (device?.state === 'unsupported-os' && device.udid === readOnlyUdid)
+  // Load the layout (and cache its icons) as soon as a device is usable; screens share the result.
+  useLayout(usable ? device?.udid : undefined)
   const title = TITLES[pathname] ?? 'Jiggle'
 
   // Connect is shown whenever there is no usable device, and left as soon as there is one.

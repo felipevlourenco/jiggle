@@ -6,17 +6,13 @@ Run from the repo root: python3 scripts/make-fixtures.py
 import copy
 import json
 import plistlib
-from datetime import datetime
+import sys
 from pathlib import Path
 
+sys.path.insert(0, "sidecar")
+from jiggle_engine.plistjson import to_json  # noqa: E402  (same tagging the engine uses)
+
 OUT = Path("tests/fixtures")
-
-
-def to_json(o):
-    # plist dates have no JSON form; the sidecar will send ISO strings too
-    if isinstance(o, datetime):
-        return o.isoformat()
-    raise TypeError(type(o))
 
 
 def is_widget(i):
@@ -46,7 +42,7 @@ def device(n, name, product, model, os, state="ready"):
 
 def write(name, dev, state):
     (OUT / f"{name}.json").write_text(
-        json.dumps({"device": dev, "rawState": state}, indent=2, default=to_json) + "\n"
+        json.dumps({"device": dev, "rawState": to_json(state)}, indent=2) + "\n"
     )
 
 

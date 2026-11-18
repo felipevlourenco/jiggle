@@ -1,0 +1,49 @@
+"""Read the home screen through SpringBoard services. Every reader takes an open service,
+so tests can hand it a fake; `open_springboard` is the only part that needs a phone."""
+import base64
+import sys
+from contextlib import asynccontextmanager
+
+from pymobiledevice3.lockdown import create_using_usbmux
+from pymobiledevice3.services.springboard import SpringBoardServicesService
+
+from jiggle_engine.plistjson import to_json
+
+
+@asynccontextmanager
+async def open_springboard(udid: str, connect=create_using_usbmux):
+    lockdown = await connect(serial=udid, autopair=False, connection_type="USB")
+    try:
+        async with SpringBoardServicesService(lockdown) as sb:
+            yield sb
+    finally:
+        await lockdown.close()
+
+
+async def read_icon_state(sb) -> list:
+    """[dock, page 1, page 2, ...] exactly as the phone reports it, as tagged JSON."""
+    return to_json(await sb.get_icon_state())
+
+
+async def read_icon_metrics(sb) -> dict:
+    return await sb.get_homescreen_icon_metrics()
+
+
+async def read_icons(sb, bundle_ids: list[str]) -> dict[str, str]:
+    """bundle id -> base64 PNG. An app whose icon can't be read is left out."""
+    icons: dict[str, str] = {}
+    for bundle_id in bundle_ids:
+        try:
+            icons[bundle_id] = base64.b64encode(await sb.get_icon_pngdata(bundle_id)).decode("ascii")
+        except Exception as e:
+            print(f"icon {bundle_id}: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+    return icons
+
+
+async def read_wallpaper(sb) -> str | None:
+    """Base64 PNG of the home screen wallpaper, or None if the phone won't give it."""
+    try:
+        return base64.b64encode(await sb.get_wallpaper_pngdata()).decode("ascii")
+    except Exception as e:
+        print(f"wallpaper: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        return None

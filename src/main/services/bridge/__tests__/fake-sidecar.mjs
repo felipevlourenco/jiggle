@@ -1,4 +1,4 @@
-/* global process */
+/* global process, Buffer */
 // A stand-in for the Python engine: same stdio protocol, scripted behaviour.
 import { createInterface } from 'node:readline'
 
@@ -27,6 +27,22 @@ createInterface({ input: process.stdin }).on('line', (line) => {
         state: n <= 2 ? 'trust-pending' : 'ready'
       }
     })
+  } else if (method === 'get_icon_state') {
+    send({
+      id,
+      result: [[{ bundleIdentifier: 'a.b', displayName: 'A' }], [{ listType: 'folder' }]]
+    })
+  } else if (method === 'get_icon_metrics') {
+    send({
+      id,
+      result: { homeScreenIconColumns: 4, homeScreenIconRows: 6, homeScreenIconDockMaxCount: 4 }
+    })
+  } else if (method === 'get_icons') {
+    const icons = {}
+    for (const b of params.bundle_ids) icons[b] = Buffer.from('png-' + b).toString('base64')
+    send({ id, result: icons })
+  } else if (method === 'get_wallpaper') {
+    send({ id, result: null })
   } else if (method === 'detach') {
     send({ id, result: {} })
     send({ event: 'device_detached', data: { udid: 'U1' } })
