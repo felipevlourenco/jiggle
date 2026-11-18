@@ -107,3 +107,36 @@
   background: var(--secondary);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
 }
+
+/* Edit mode: icons jiggle, can be picked up, and show a ring when a keyboard focuses them. */
+.draggable {
+  cursor: grab;
+  border-radius: 14px;
+  touch-action: none;
+}
+.draggable:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+.jiggle .tile > .icon,
+.jiggle .tile > .folder {
+  animation: jiggle 0.26s ease-in-out infinite alternate;
+}
+.jiggle .cell:nth-child(2n) .tile > .icon,
+.jiggle .cell:nth-child(2n) .tile > .folder {
+  animation-delay: -0.13s;
+}
+@keyframes jiggle {
+  from {
+    transform: rotate(-2.2deg);
+  }
+  to {
+    transform: rotate(2.2deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jiggle .tile > .icon,
+  .jiggle .tile > .folder {
+    animation: none;
+  }
+}

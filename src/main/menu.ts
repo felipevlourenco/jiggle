@@ -37,8 +37,8 @@ export function buildMenu(handlers: {
     {
       label: 'Edit',
       submenu: [
-        todo('Undo', 'Cmd+Z'),
-        todo('Redo', 'Shift+Cmd+Z'),
+        todo('Undo'),
+        todo('Redo'),
         { type: 'separator' },
         todo('Select All', 'Cmd+A'),
         todo('Find', 'Cmd+F')

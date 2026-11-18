@@ -311,6 +311,143 @@ test.describe('History', () => {
   })
 })
 
+test.describe('Edit mode (drag and drop)', () => {
+  const titles = (win: Page, scope = win.getByTestId('page')) =>
+    scope.locator('[data-kind]').evaluateAll((els) => els.map((e) => e.getAttribute('title')))
+  const cell = (win: Page, title: string) =>
+    win.getByTestId('page').locator(`[data-kind][title="${title}"]`)
+  const centre = async (loc: ReturnType<typeof cell>) => {
+    const b = (await loc.boundingBox())!
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+  }
+  const dragTo = async (
+    win: Page,
+    from: { x: number; y: number },
+    to: { x: number; y: number }
+  ) => {
+    await win.mouse.move(from.x, from.y)
+    await win.mouse.down()
+    await win.mouse.move(from.x + 12, from.y + 12, { steps: 3 })
+    await win.mouse.move(to.x, to.y, { steps: 10 })
+    await win.mouse.up()
+  }
+
+  test('drags an icon from page 2 to page 1, undoes, redoes, and pushes it to the phone', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await titles(win)
+    await win.getByRole('button', { name: 'Edit' }).click()
+    await expect(win.getByRole('button', { name: 'Done' })).toBeVisible()
+    await win.getByRole('button', { name: 'Next page' }).click()
+    const moving = (await titles(win))[0]!
+    const from = await centre(cell(win, moving))
+
+    // hold the icon at the left edge until the page turns, then drop it in slot 1
+    const phone = (await win.getByTestId('page').boundingBox())!
+    await win.mouse.move(from.x, from.y)
+    await win.mouse.down()
+    await win.mouse.move(from.x + 12, from.y + 12, { steps: 3 })
+    await win.mouse.move(phone.x + 8, phone.y + 200, { steps: 10 })
+    await expect(
+      win.getByRole('group', { name: 'Pages' }).locator('[aria-current="page"]')
+    ).toHaveAttribute('aria-label', 'Page 1', { timeout: 3000 })
+    const first = await centre(win.getByTestId('page').locator('[data-kind]').first())
+    await win.mouse.move(first.x, first.y, { steps: 10 })
+    await win.mouse.up()
+    // dnd-kit swallows clicks for a moment after a drop, so a person never clicks that fast
+    await win.waitForTimeout(150)
+
+    expect((await titles(win))[0]).toBe(moving)
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+    await win.keyboard.press('Meta+z')
+    expect(await titles(win)).toEqual(original)
+    await win.keyboard.press('Shift+Meta+z')
+    expect((await titles(win))[0]).toBe(moving)
+
+    await win.getByRole('button', { name: 'Push to iPhone' }).click()
+    const sheet = win.getByRole('dialog', { name: /Push 1 change to Sam/ })
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done! Sam's iPhone matches your edits/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+    // the phone has it now, and the draft is gone
+    await expect(win.getByRole('button', { name: 'Edit' })).toBeVisible()
+    await expect(win.getByText(/change/)).toHaveCount(0)
+    expect((await titles(win))[0]).toBe(moving)
+    await app.close()
+  })
+
+  test('moves an icon with the keyboard: Space picks it up, arrows move it, Space drops it', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const [a, b] = await titles(win)
+    await win.getByRole('button', { name: 'Edit' }).click()
+    await win.getByTestId('page').getByRole('button', { name: a! }).focus()
+    // (a beat between keys: the move is applied after each render)
+    await win.keyboard.press('Space')
+    await win.waitForTimeout(150)
+    await win.keyboard.press('ArrowRight')
+    await win.waitForTimeout(150)
+    await win.keyboard.press('Space')
+    await expect.poll(async () => (await titles(win)).slice(0, 2)).toEqual([b, a])
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+    await app.close()
+  })
+
+  test('takes an app out of a folder, puts it back in, and discard drops the draft', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await titles(win)
+    await win.getByRole('button', { name: 'Edit' }).click()
+
+    // open the folder and drag its first app out, onto slot 1
+    const folder = win.getByTestId('page').locator('[data-kind="folder"]').first()
+    const name = (await folder.getAttribute('title'))!
+    await folder.click()
+    const panel = win.getByRole('dialog', { name: `Folder ${name}` })
+    await expect(panel).toBeVisible()
+    const inside = panel.locator('[aria-roledescription="draggable"]').first()
+    const app1 = (await inside.locator('[data-kind]').getAttribute('title'))!
+    const src = (await inside.boundingBox())!
+    const slot1 = await centre(win.getByTestId('page').locator('[data-kind]').first())
+    await dragTo(win, { x: src.x + src.width / 2, y: src.y + src.height / 2 }, slot1)
+    await expect.poll(async () => (await titles(win))[0]).toBe(app1)
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+
+    // and back into the folder
+    await dragTo(win, await centre(cell(win, app1)), await centre(folder))
+    await expect.poll(async () => await titles(win)).toEqual(original)
+    await expect(win.getByText('Editing · 2 changes')).toBeVisible()
+
+    await win.getByRole('button', { name: 'Discard' }).click()
+    await expect(win.getByText(/change/)).toHaveCount(0)
+    await app.close()
+  })
+
+  test('refuses a drop into a full folder', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await win.getByRole('button', { name: 'Edit' }).click()
+    const folder = win.getByTestId('page').locator('[data-kind="folder"]').first()
+    const mover = (await titles(win))[0]!
+    await dragTo(win, await centre(cell(win, mover)), await centre(folder))
+    await expect(win.getByText(/Can’t move it there/)).toBeVisible()
+    expect((await titles(win))[0]).toBe(mover)
+    await app.close()
+  })
+
+  test('read-only devices cannot be edited', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-ios16' })
+    const win = await app.firstWindow()
+    await win.getByRole('button', { name: /Continue/ }).click()
+    await expect(win.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    await app.close()
+  })
+})
+
 test.describe('Apply and restore', () => {
   const firstIcon = async (win: Page): Promise<string | null> =>
     win.getByTestId('page').locator('[data-kind="app"]').first().getAttribute('title')

@@ -127,3 +127,18 @@ export const LockIcon = icon(
   </>,
   { stroke: 1.6 }
 )
+export const PencilIcon = icon(<path d="M11 2.5l2.5 2.5L6 12.5 3 13l.5-3z" />, { join: true })
+export const UndoIcon = icon(
+  <>
+    <path d="M5.5 3.5L2.5 6.5l3 3" />
+    <path d="M2.5 6.5h7a3.5 3.5 0 010 7H7.5" />
+  </>,
+  { cap: true }
+)
+export const RedoIcon = icon(
+  <>
+    <path d="M10.5 3.5l3 3-3 3" />
+    <path d="M13.5 6.5h-7a3.5 3.5 0 000 7h2" />
+  </>,
+  { cap: true }
+)

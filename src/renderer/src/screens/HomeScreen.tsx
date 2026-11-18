@@ -1,15 +1,25 @@
 import { useCallback, useEffect, useRef, useState, type WheelEvent } from 'react'
 import { useNavigate } from 'react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { compact } from '@shared/layout/edit'
 import { gridFor } from '@shared/layout/grid'
+import { serialize } from '@shared/layout/serialize'
+import { layoutSignature } from '@shared/layout/signature'
 import { summarize } from '@shared/layout/summarize'
-import type { Device } from '@shared/types'
+import { describeIssue, validateLayout } from '@shared/layout/validate'
+import type { Device, FolderItem, Layout } from '@shared/types'
 import { Dock } from '../components/Dock'
+import { EditorDnd, FlipZones, FolderPanel } from '../components/Editor'
 import { PageDots } from '../components/PageDots'
 import { PageGrid } from '../components/PageGrid'
+import { ToolbarActions } from '../components/ToolbarSlot'
+import { RedoIcon, UndoIcon, PencilIcon } from '../components/icons'
 import { FRAME_HEIGHT, PhoneFrame } from '../components/PhoneFrame'
 import t from '../components/tiles.module.css'
 import p from '../components/phone.module.css'
+import { draftActions, useDraft } from '../state/draft'
 import { useLayout } from '../state/queries'
+import { ApplySheet } from '../sheets/Apply'
 import s from './home.module.css'
 
 const MIN_ZOOM = 0.3
@@ -27,7 +37,22 @@ export function HomeScreen({ device }: { device: Device }) {
   const [chosenZoom, setChosenZoom] = useState<number>()
   const [stageHeight, setStageHeight] = useState(0)
 
-  const pageCount = data?.layout.pages.length ?? 0
+  const qc = useQueryClient()
+  const editor = useDraft()
+  const [openFolder, setOpenFolder] = useState<string | null>(null)
+  // What is being pushed, kept apart from the draft: a successful push resets the draft while the sheet
+  // is still showing "Done".
+  const [pushing, setPushing] = useState<{
+    changes: number
+    beforeSignature: string
+    after: Layout
+  } | null>(null)
+  // The draft belongs to one phone and to the layout it started from.
+  const mine = editor.draft && editor.udid === device.udid ? editor.draft : null
+  const editing = !!mine && editor.editing
+  const shown = mine?.present ?? data?.layout
+
+  const pageCount = shown?.pages.length ?? 0
   const current = clamp(page, 0, Math.max(0, pageCount - 1))
   const goTo = useCallback(
     (to: number) => setPage(clamp(to, 0, Math.max(0, pageCount - 1))),
@@ -43,6 +68,29 @@ export function HomeScreen({ device }: { device: Device }) {
   }, [])
   const fit = stageHeight ? clamp((stageHeight - 8) / FRAME_HEIGHT, MIN_ZOOM, 1) : 0.7
   const zoom = chosenZoom ?? fit
+
+  // A draft for another phone, or for a layout the phone no longer has (it changed, or a push went through).
+  const baseSignature = mine ? layoutSignature(serialize(mine.base)) : null
+  const phoneSignature = data ? layoutSignature(serialize(data.layout)) : null
+  useEffect(() => {
+    if (editor.draft && editor.udid !== device.udid) draftActions.reset()
+    else if (baseSignature && phoneSignature && baseSignature !== phoneSignature)
+      draftActions.reset()
+  }, [editor.draft, editor.udid, device.udid, baseSignature, phoneSignature])
+
+  // ⌘Z / ⇧⌘Z
+  useEffect(() => {
+    if (!mine) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (!e.metaKey || e.key.toLowerCase() !== 'z') return
+      if ((e.target as HTMLElement).closest('input, textarea')) return
+      e.preventDefault()
+      if (e.shiftKey) draftActions.redo()
+      else draftActions.undo()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mine])
 
   // ⌘← / ⌘→
   useEffect(() => {
@@ -114,7 +162,7 @@ export function HomeScreen({ device }: { device: Device }) {
     )
   }
 
-  const { layout } = data
+  const layout = shown!
   const summary = summarize(layout)
   if (layout.pages.length === 0 && layout.dock.length === 0) {
     return (
@@ -130,24 +178,133 @@ export function HomeScreen({ device }: { device: Device }) {
     )
   }
 
+  const folder = openFolder
+    ? ([...layout.dock, ...layout.pages.flat()].find(
+        (i) => i.id === openFolder && i.kind === 'folder'
+      ) as FolderItem | undefined)
+    : undefined
+  const changes = mine?.past.length ?? 0
+  const issues = mine ? validateLayout(mine.base, compact(mine.present)) : []
+  const canEdit = device.state === 'ready'
+
   return (
     <div className={s.root}>
+      <ToolbarActions>
+        {mine && changes > 0 && (
+          <>
+            <span className="pill" role="status">
+              <i />
+              {editing ? 'Editing · ' : ''}
+              {plural(changes, 'change')}
+            </span>
+            <span className="vsep" />
+          </>
+        )}
+        <button
+          className={`tbtn${editing ? ' on' : ''}`}
+          disabled={!canEdit}
+          title={canEdit ? undefined : 'Editing is turned off for this iOS version'}
+          onClick={() =>
+            editing ? draftActions.done() : draftActions.edit(device.udid, data!.layout)
+          }
+        >
+          <PencilIcon size={15} />
+          {editing ? 'Done' : 'Edit'}
+        </button>
+        {mine && (
+          <>
+            <button
+              className="tbtn"
+              aria-label="Undo"
+              disabled={mine.past.length === 0}
+              onClick={draftActions.undo}
+            >
+              <UndoIcon size={15} />
+            </button>
+            <button
+              className="tbtn"
+              aria-label="Redo"
+              disabled={mine.future.length === 0}
+              onClick={draftActions.redo}
+            >
+              <RedoIcon size={15} />
+            </button>
+          </>
+        )}
+        {mine && changes > 0 && (
+          <>
+            <button className="btn btn-quiet" onClick={draftActions.reset}>
+              Discard
+            </button>
+            <button
+              className="btn btn-primary"
+              disabled={issues.length > 0}
+              title={issues.length > 0 ? issues.map(describeIssue).join('; ') : undefined}
+              onClick={() =>
+                setPushing({
+                  changes,
+                  beforeSignature: layoutSignature(serialize(mine.base)),
+                  after: compact(mine.present)
+                })
+              }
+            >
+              Push to iPhone
+            </button>
+          </>
+        )}
+      </ToolbarActions>
+      {pushing && (
+        <ApplySheet
+          title={`Push ${plural(pushing.changes, 'change')} to ${device.name}?`}
+          lines={[plural(pushing.changes, 'manual change')]}
+          doneMessage={`Done! ${device.name} matches your edits.`}
+          udid={device.udid}
+          run={() =>
+            window.jiggle.apply.run({
+              udid: device.udid,
+              reason: 'Manual edit',
+              beforeSignature: pushing.beforeSignature,
+              after: pushing.after,
+              removedFromHomeScreen: []
+            })
+          }
+          onRefresh={() => {
+            draftActions.reset()
+            void qc.invalidateQueries({ queryKey: ['layout'] })
+          }}
+          onClose={() => setPushing(null)}
+        />
+      )}
       <p className={s.strip}>
         {plural(summary.apps, 'app')} · {plural(summary.pages, 'page')} ·{' '}
         {plural(summary.widgets, 'widget')}
       </p>
 
-      <div className={s.stage} ref={stageRef} onWheel={onWheel}>
-        <PhoneFrame zoom={zoom}>
-          <PageGrid
-            key={current}
-            items={layout.pages[current] ?? []}
-            grid={layout.grid}
-            udid={device.udid}
-          />
-          <Dock items={layout.dock} udid={device.udid} />
-        </PhoneFrame>
-      </div>
+      <EditorDnd
+        layout={layout}
+        zoom={zoom}
+        udid={device.udid}
+        onChange={draftActions.change}
+        onFlip={(dir) => goTo(current + dir)}
+        onDone={() => setOpenFolder(null)}
+      >
+        <div className={s.stage} ref={stageRef} onWheel={onWheel}>
+          <PhoneFrame zoom={zoom}>
+            <PageGrid
+              key={current}
+              items={layout.pages[current] ?? []}
+              grid={layout.grid}
+              udid={device.udid}
+              edit={editing ? { page: current, onOpenFolder: setOpenFolder } : undefined}
+            />
+            <Dock items={layout.dock} udid={device.udid} edit={editing} />
+            {editing && <FlipZones />}
+            {editing && folder && (
+              <FolderPanel folder={folder} udid={device.udid} onClose={() => setOpenFolder(null)} />
+            )}
+          </PhoneFrame>
+        </div>
+      </EditorDnd>
 
       <div className={s.controls}>
         <span />
