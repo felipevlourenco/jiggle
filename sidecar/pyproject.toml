@@ -1,0 +1,17 @@
+[project]
+name = "jiggle-engine"
+version = "0.1.0"
+description = "Device engine for Jiggle: JSON-RPC over stdio on top of pymobiledevice3"
+requires-python = ">=3.10"
+dependencies = ["pymobiledevice3"]
+
+[dependency-groups]
+dev = ["pytest", "pytest-asyncio", "pyinstaller"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.setuptools]
+packages = ["jiggle_engine"]

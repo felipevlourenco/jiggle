@@ -6,3 +6,8 @@ playwright-report
 .DS_Store
 sidecar/.venv
 *.tsbuildinfo
+resources/sidecar
+sidecar/build
+sidecar/__pycache__
+__pycache__
+.pytest_cache

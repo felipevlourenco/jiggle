@@ -1,21 +1,32 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ChannelArgs, ChannelName, ChannelResult, JiggleApi } from '@shared/ipc-contract'
+import type {
+  ChannelArgs,
+  ChannelName,
+  ChannelResult,
+  EventName,
+  EventPayload,
+  JiggleApi
+} from '@shared/ipc-contract'
 
 // Type-only imports: a sandboxed preload can't load zod at runtime. Main validates every call.
 const invoke = <C extends ChannelName>(channel: C, ...args: ChannelArgs<C>) =>
   ipcRenderer.invoke(channel, ...args) as Promise<ChannelResult<C>>
 
+// Subscribe to a main → renderer event. Returns an unsubscribe function.
+const on = <E extends EventName>(event: E, listener: (payload: EventPayload<E>) => void) => {
+  // Don't hand the IpcRendererEvent to the page.
+  const wrapped = (_e: unknown, payload: EventPayload<E>): void => listener(payload)
+  ipcRenderer.on(event, wrapped)
+  return () => ipcRenderer.removeListener(event, wrapped)
+}
+
 const api: JiggleApi = {
   device: {
     list: () => invoke('device:list'),
-    onChanged: (listener) => {
-      // Don't hand the IpcRendererEvent to the page.
-      const wrapped = (): void => listener()
-      ipcRenderer.on('device:changed', wrapped)
-      return () => ipcRenderer.removeListener('device:changed', wrapped)
-    }
+    onChanged: (listener) => on('device:changed', () => listener())
   },
-  layout: { get: (udid) => invoke('layout:get', udid) }
+  layout: { get: (udid) => invoke('layout:get', udid) },
+  sidecar: { onStatus: (listener) => on('sidecar:status', listener) }
 }
 
 contextBridge.exposeInMainWorld('jiggle', api)

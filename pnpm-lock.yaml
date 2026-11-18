@@ -11,6 +11,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.107.2
         version: 5.107.2(@types/react@19.3.0)(react@19.3.1)
+      electron-log:
+        specifier: ^5.4.4
+        version: 5.4.4
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -595,6 +598,10 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  electron-log@5.4.4:
+    resolution: {integrity: sha512-istWgaXjBfURBSS8LWVW9C3jsc6+ac+tY1lXrQEOTp0lVj+a4OlO1Tmqb36GgnEUDv92DGC9VI1HNXwJinWpgA==}
+    engines: {node: '>= 14'}
 
   electron-to-chromium@1.5.487:
     resolution: {integrity: sha512-qWotOhQYeYEj+DK4+Y+cfPj44qiC6ETIiWtJLfmDJydED2BJJ7loPA4SfBbbrMI6X/X3tryJgxnY9nxsO545Zw==}
@@ -1715,6 +1722,8 @@ snapshots:
   deep-is@0.1.4: {}
 
   detect-libc@2.1.2: {}
+
+  electron-log@5.4.4: {}
 
   electron-to-chromium@1.5.487: {}
 

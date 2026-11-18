@@ -1,7 +1,10 @@
 import { test, expect, _electron as electron } from '@playwright/test'
 
+const launch = (env: Record<string, string> = {}) =>
+  electron.launch({ args: ['.'], env: { ...process.env, JIGGLE_MOCK_DEVICE: 'none', ...env } })
+
 test('app shell loads with sidebar, routes and no Node in the renderer', async () => {
-  const app = await electron.launch({ args: ['.'] })
+  const app = await launch()
   const win = await app.firstWindow()
 
   const sizes = await app.evaluate(({ BrowserWindow }) => {
@@ -18,9 +21,6 @@ test('app shell loads with sidebar, routes and no Node in the renderer', async (
   expect(await win.evaluate('typeof require')).toBe('undefined')
   await app.close()
 })
-
-const launch = (env: Record<string, string> = {}) =>
-  electron.launch({ args: ['.'], env: { ...process.env, JIGGLE_MOCK_DEVICE: '', ...env } })
 
 test('shows No device when no mock device is set', async () => {
   const app = await launch()
@@ -39,7 +39,11 @@ test('shows the mock device in the sidebar header', async () => {
 test('window.jiggle exposes only the API groups and rejects bad payloads', async () => {
   const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
   const win = await app.firstWindow()
-  expect(await win.evaluate('Object.keys(window.jiggle).sort()')).toEqual(['device', 'layout'])
+  expect(await win.evaluate('Object.keys(window.jiggle).sort()')).toEqual([
+    'device',
+    'layout',
+    'sidecar'
+  ])
   await expect(win.evaluate('window.jiggle.layout.get(123)')).rejects.toThrow(
     /Invalid arguments for layout:get/
   )

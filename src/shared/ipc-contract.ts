@@ -29,8 +29,18 @@ export type ChannelName = keyof typeof channels
 export type ChannelArgs<C extends ChannelName> = z.infer<(typeof channels)[C]['args']>
 export type ChannelResult<C extends ChannelName> = z.infer<(typeof channels)[C]['result']>
 
-// Main → renderer events. They carry no payload: the renderer refetches.
-export type EventName = 'device:changed'
+const SidecarStatus = z.enum(['starting', 'ready', 'restarting', 'failed'])
+export type SidecarStatus = z.infer<typeof SidecarStatus>
+
+// Main → renderer events and their payloads. `device:changed` carries none: the renderer refetches.
+export const events = {
+  'device:changed': z.undefined(),
+  'sidecar:status': SidecarStatus
+} as const
+
+export type EventName = keyof typeof events
+export type EventPayload<E extends EventName> = z.infer<(typeof events)[E]>
+export type Broadcast = <E extends EventName>(event: E, payload: EventPayload<E>) => void
 
 // What preload exposes as `window.jiggle`.
 export interface JiggleApi {
@@ -40,5 +50,8 @@ export interface JiggleApi {
   }
   layout: {
     get(udid: string): Promise<RawIconState>
+  }
+  sidecar: {
+    onStatus(listener: (status: SidecarStatus) => void): () => void
   }
 }
