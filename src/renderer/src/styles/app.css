@@ -1,0 +1,92 @@
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  font: 400 13px/18px var(--font);
+  color: var(--text);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100%;
+}
+.sidebar {
+  background: transparent;
+  border-right: 1px solid var(--border);
+  padding: 0 12px;
+}
+.drag {
+  -webkit-app-region: drag;
+}
+.sidebar .drag {
+  height: 52px;
+}
+.device-header {
+  padding: 4px 8px 16px;
+}
+.device-name {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-item {
+  display: block;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+}
+.nav-item:hover {
+  background: var(--surface-2);
+}
+.nav-item.active {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+}
+.nav-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  min-width: 0;
+}
+.toolbar {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.toolbar h1 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.screen {
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+}
+.placeholder {
+  color: var(--text-secondary);
+}
