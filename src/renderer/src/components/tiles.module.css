@@ -1,0 +1,93 @@
+/* Tiles sit on the phone's wallpaper, so their text is white whatever the app theme is. */
+.cell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+}
+.cellWide {
+  align-items: center;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+.icon {
+  display: block;
+  width: var(--icon, 64px);
+  height: var(--icon, 64px);
+  border-radius: 22.4%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.18);
+  user-select: none;
+}
+.fallback {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: calc(var(--icon, 64px) * 0.45);
+}
+.label {
+  margin-top: 5px;
+  max-width: 88px;
+  font: 500 10px/12px var(--font);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), 0 0 6px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.folder {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  align-content: start;
+  width: 64px;
+  height: 64px;
+  padding: 6px;
+  border-radius: 22.4%;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(14px);
+  --icon: 15px;
+}
+.widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 30px);
+  height: calc(100% - 26px);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(14px);
+  color: #fff;
+  font: 500 12px/16px var(--font);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.skeleton {
+  width: 64px;
+  height: 64px;
+  border-radius: 22.4%;
+  background: rgba(255, 255, 255, 0.25);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

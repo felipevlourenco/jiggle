@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
 import { Connect } from './screens/Connect'
+import { HomeScreen } from './screens/HomeScreen'
 import { useDevices, useDeviceEvents, useLayout } from './state/queries'
 
 const TITLES: Record<string, string> = {
@@ -75,7 +76,8 @@ export function App() {
                   />
                 }
               />
-              {NAV_ITEMS.map((n) => (
+              {device && <Route path="/home" element={<HomeScreen device={device} />} />}
+              {NAV_ITEMS.filter((n) => n.path !== '/home').map((n) => (
                 <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
               ))}
             </Routes>

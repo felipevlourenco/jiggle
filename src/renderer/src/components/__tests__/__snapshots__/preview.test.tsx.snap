@@ -1,0 +1,836 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PageGrid on the iphone-widgets fixture > matches the snapshot of the two widget pages 1`] = `
+<div>
+  <div
+    class="_grid_8aef4c"
+    data-testid="page"
+    style="grid-template-columns: repeat(4, 1fr);"
+  >
+    <div
+      class="_cell_dc1737 _cellWide_dc1737"
+      style="grid-area: 1 / 1 / span 2 / span 4;"
+    >
+      <div
+        class="_widget_dc1737"
+        data-kind="widget"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="16"
+          stroke="currentColor"
+          stroke-width="1.5"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <rect
+            height="7"
+            rx="2"
+            width="10"
+            x="3"
+            y="7"
+          />
+          <path
+            d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
+          />
+        </svg>
+        Widget
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Messages"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.MobileSMS.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Messages
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="FaceTime"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.facetime.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          FaceTime
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Clock"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.mobiletimer.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Clock
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Maps"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.Maps.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Maps
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Photos"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.mobileslideshow.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Photos
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Calendar"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.mobilecal.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Calendar
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="App Store"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.AppStore.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          App Store
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Weather"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.weather.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Weather
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Rain Radar"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.example.rainradar.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Rain Radar
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Wallet"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.Passbook.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Wallet
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="folder"
+        title="Utilities"
+      >
+        <div
+          class="_folder_dc1737"
+        >
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.VoiceMemos.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.compass.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.measure.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.calculator.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.DocumentsApp.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.mobilesafari.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.Health.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.Bridge.png"
+          />
+          <img
+            alt=""
+            class="_icon_dc1737"
+            draggable="false"
+            src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.mobilenotes.png"
+          />
+        </div>
+        <span
+          class="_label_dc1737"
+        >
+          Utilities
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Settings"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.Preferences.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Settings
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Find My"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.findmy.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Find My
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Contacts"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.MobileAddressBook.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Contacts
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Camera"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.apple.camera.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Camera
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Google Home"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.Chromecast.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Google Home
+        </span>
+      </div>
+    </div>
+  </div>
+  <div
+    class="_grid_8aef4c"
+    data-testid="page"
+    style="grid-template-columns: repeat(4, 1fr);"
+  >
+    <div
+      class="_cell_dc1737 _cellWide_dc1737"
+      style="grid-area: 1 / 1 / span 2 / span 4;"
+    >
+      <div
+        class="_widget_dc1737"
+        data-kind="widget"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="16"
+          stroke="currentColor"
+          stroke-width="1.5"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <rect
+            height="7"
+            rx="2"
+            width="10"
+            x="3"
+            y="7"
+          />
+          <path
+            d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
+          />
+        </svg>
+        Widget
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Bank Three"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.example.bankthree.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Bank Three
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Bank One"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.example.bankone.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Bank One
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Bank Two"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.example.banktwo.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Bank Two
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 3 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Mobile Plan"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.example.mobileplan.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Mobile Plan
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Gmail"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.Gmail.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Gmail
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Google Calendar"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.calendar.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Google Calendar
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Google Keep"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.Keep.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Google Keep
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 4 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Google Photos"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.photos.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Google Photos
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Drive"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.Drive.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Drive
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Google Translate"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.Translate.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Google Translate
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Google Maps"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.Maps.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Google Maps
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 5 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="YouTube"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.google.ios.youtube.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          YouTube
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 1 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Reddit"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.reddit.Reddit.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Reddit
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 2 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Instagram"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.burbn.instagram.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Instagram
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 3 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Spotify"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.spotify.client.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Spotify
+        </span>
+      </div>
+    </div>
+    <div
+      class="_cell_dc1737 "
+      style="grid-area: 6 / 4 / span 1 / span 1;"
+    >
+      <div
+        class="_tile_dc1737"
+        data-kind="app"
+        title="Design Quiz"
+      >
+        <img
+          alt=""
+          class="_icon_dc1737"
+          draggable="false"
+          src="jiggle-icon://icons/00008130-000A1B2C3D4E0002/com.example.designquiz.png"
+        />
+        <span
+          class="_label_dc1737"
+        >
+          Design Quiz
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+`;

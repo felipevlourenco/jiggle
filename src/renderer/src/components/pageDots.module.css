@@ -1,0 +1,29 @@
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.dot {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+.active::before {
+  background: var(--primary);
+}
+.dot:focus-visible {
+  outline: 2px solid var(--primary);
+}

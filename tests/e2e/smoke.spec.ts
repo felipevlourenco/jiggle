@@ -1,4 +1,4 @@
-import { test, expect, _electron as electron } from '@playwright/test'
+import { test, expect, _electron as electron, type Page } from '@playwright/test'
 
 const launch = (env: Record<string, string> = {}) =>
   electron.launch({ args: ['.'], env: { ...process.env, JIGGLE_MOCK_DEVICE: 'none', ...env } })
@@ -88,4 +88,68 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
   // the app keeps working after the rejection
   await expect(win.getByText("Sam's iPhone · iOS 26.1")).toBeVisible()
   await app.close()
+})
+
+test.describe('Home Screen preview', () => {
+  // retrying assertion: React updates a beat after the click, key press or wheel event
+  const pageIs = (win: Page, n: number) =>
+    expect(
+      win.getByRole('group', { name: 'Pages' }).locator('[aria-current="page"]')
+    ).toHaveAttribute('aria-label', `Page ${n}`)
+
+  test('shows pages, a widget placeholder, and navigates every way', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-widgets' })
+    const win = await app.firstWindow()
+    await expect(win.getByText(/\d+ apps · 6 pages · 2 widgets/)).toBeVisible()
+
+    const dots = win.getByRole('group', { name: 'Pages' }).getByRole('button')
+    await expect(dots).toHaveCount(6)
+
+    // page 1 has the medium widget; the dock has icons without labels
+    await expect(win.getByText('Widget', { exact: true })).toHaveCount(1)
+    await expect(win.getByTestId('dock').locator('[data-kind="app"]')).toHaveCount(4)
+    await pageIs(win, 1)
+    await expect(win.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+
+    await win.getByRole('button', { name: 'Next page' }).click()
+    await pageIs(win, 2)
+    await win.keyboard.press('Meta+ArrowRight')
+    await pageIs(win, 3)
+    await win.keyboard.press('Meta+ArrowLeft')
+    await pageIs(win, 2)
+    await dots.nth(5).click()
+    await pageIs(win, 6)
+    await expect(win.getByRole('button', { name: 'Next page' })).toBeDisabled()
+
+    await app.close()
+  })
+
+  test('a trackpad swipe turns one page, even with inertia events after it', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-widgets' })
+    const win = await app.firstWindow()
+    const dots = win.getByRole('group', { name: 'Pages' })
+    await expect(dots).toBeVisible()
+
+    await win.mouse.move(640, 400)
+    await win.mouse.wheel(80, 0)
+    await win.mouse.wheel(60, 0) // same swipe: must not skip a page
+    await pageIs(win, 2)
+    await win.waitForTimeout(300) // wheel events stopped: the next swipe counts
+    await win.mouse.wheel(-80, 0)
+    await pageIs(win, 1)
+    await app.close()
+  })
+
+  test('the zoom slider scales the phone', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-widgets' })
+    const win = await app.firstWindow()
+    const width = async () => (await win.getByTestId('dock').boundingBox())!.width
+    await expect(win.getByTestId('dock')).toBeVisible()
+    const before = await width()
+    await win.getByRole('slider').focus()
+    await win.keyboard.press('ArrowLeft', { delay: 5 })
+    for (let i = 0; i < 14; i++) await win.keyboard.press('ArrowLeft')
+    expect(await width()).toBeLessThan(before * 0.85)
+    await app.close()
+  })
 })
