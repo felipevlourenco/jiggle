@@ -3,11 +3,14 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import { NAV_ITEMS } from '@shared/nav'
 import { Connect } from './screens/Connect'
 import { Apps } from './screens/Apps'
+import { Banner } from './components/Banner'
 import { Toast } from './components/Toast'
 import { History } from './screens/History'
 import { HomeScreen } from './screens/HomeScreen'
 import { Organize } from './screens/Organize'
-import { useDevices, useDeviceEvents, useLayout } from './state/queries'
+import { SettingsWindow } from './settings/SettingsWindow'
+import { appError } from '@shared/errors'
+import { useDevices, useDeviceEvents, useLayout, useSidecarStatus } from './state/queries'
 
 const TITLES: Record<string, string> = {
   '/connect': 'Connect',
@@ -15,10 +18,16 @@ const TITLES: Record<string, string> = {
 }
 
 export function App() {
+  // The Settings window loads this same page at #/settings.
+  return useLocation().pathname === '/settings' ? <SettingsWindow /> : <Shell />
+}
+
+function Shell() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { data: devices, isSuccess } = useDevices()
   useDeviceEvents()
+  const engine = useSidecarStatus()
 
   // Until the device switcher exists (M20), the active device is the first one.
   const device = devices?.[0]
@@ -68,6 +77,21 @@ export function App() {
         <header className="toolbar drag">
           <h1>{title}</h1>
         </header>
+        {engine === 'restarting' && (
+          <Banner severity="warning" title={appError('engine-restarting').title}>
+            {appError('engine-restarting').message}
+          </Banner>
+        )}
+        {engine === 'failed' && (
+          <Banner severity="error" title={appError('engine-failed').title}>
+            {appError('engine-failed').message}
+          </Banner>
+        )}
+        {usable && device?.state === 'unsupported-os' && (
+          <Banner severity="warning" title={appError('read-only').title}>
+            {appError('read-only', { version: device.osVersion }).message}
+          </Banner>
+        )}
         <section className="screen">
           {isSuccess && (
             <Routes>

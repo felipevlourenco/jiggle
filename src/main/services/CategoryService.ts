@@ -13,8 +13,8 @@ interface CacheEntry {
 
 interface Options {
   root: string
-  storefront: string // "nl"
-  enabled?: boolean // false: never touch the network (default true)
+  storefront: () => string // "nl", read each time so a settings change applies at once
+  enabled?: () => boolean // false: never touch the network (default true)
   log: Logger
   onChange: () => void // some categories arrived
   fetch?: typeof fetch
@@ -59,7 +59,7 @@ export class CategoryService {
       const hit = this.cached(app.bundleId)
       if (!hit) {
         if (
-          this.opts.enabled !== false &&
+          this.enabled() &&
           !this.failed.has(app.bundleId) &&
           !this.queue.includes(app.bundleId)
         ) {
@@ -86,9 +86,21 @@ export class CategoryService {
     return { apps: infos, lookup }
   }
 
+  private enabled(): boolean {
+    return this.opts.enabled?.() !== false
+  }
+
+  // Forget everything fetched so far (Settings > Privacy > Clear Cache).
+  async clear(): Promise<void> {
+    this.queue.length = 0
+    this.failed.clear()
+    for (const id of Object.keys(this.cache)) delete this.cache[id]
+    await this.save()
+  }
+
   private cached(bundleId: string): CacheEntry | undefined {
     const hit = this.cache[bundleId]
-    return hit?.storefront === this.opts.storefront ? hit : undefined
+    return hit?.storefront === this.opts.storefront() ? hit : undefined
   }
 
   private async drain(): Promise<void> {
@@ -96,9 +108,13 @@ export class CategoryService {
     this.offline = false
     let done = 0
     const { log } = this.opts
-    log.info(`categories: ${this.queue.length} to look up in "${this.opts.storefront}"`)
+    log.info(`categories: ${this.queue.length} to look up in "${this.opts.storefront()}"`)
     try {
       for (let id = this.queue.shift(); id; id = this.queue.shift()) {
+        if (!this.enabled()) {
+          this.queue.length = 0 // switched off while running: no more requests
+          break
+        }
         const entry = await this.lookup(id)
         if (!entry) {
           this.failed.add(id)
@@ -125,7 +141,7 @@ export class CategoryService {
 
   // One request, retried with backoff. null: gave up.
   private async lookup(bundleId: string): Promise<CacheEntry | null> {
-    const url = `https://itunes.apple.com/lookup?bundleId=${encodeURIComponent(bundleId)}&country=${this.opts.storefront}`
+    const url = `https://itunes.apple.com/lookup?bundleId=${encodeURIComponent(bundleId)}&country=${this.opts.storefront()}`
     for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
       try {
         this.opts.log.info(`lookup ${bundleId}`)
@@ -136,7 +152,7 @@ export class CategoryService {
         }
         const hit = body.results?.[0]
         return {
-          storefront: this.opts.storefront,
+          storefront: this.opts.storefront(),
           category: hit?.primaryGenreName ?? null,
           developer: hit?.artistName ?? null,
           fetchedAt: new Date().toISOString()
@@ -146,7 +162,10 @@ export class CategoryService {
           `lookup ${bundleId} failed (${attempt}/${ATTEMPTS}):`,
           (err as Error).message
         )
-        if (err instanceof TypeError) this.offline = true // fetch itself failed: no network
+        if (err instanceof TypeError) {
+          this.offline = true // fetch itself failed: no network
+          this.opts.log.warn(`[lookup-offline] ${bundleId}`)
+        }
         if (attempt < ATTEMPTS) await this.sleep(1000 * 2 ** (attempt - 1))
       }
     }

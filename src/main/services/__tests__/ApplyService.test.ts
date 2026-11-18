@@ -114,6 +114,37 @@ describe('ApplyService.apply', () => {
     expect(await t.phone()).toBe(layoutSignature(t.original))
   })
 
+  it('says "Apply interrupted" and keeps a restorable backup when the phone is unplugged mid-write', async () => {
+    const t = setup()
+    const devices = await t.bridge.listDevices()
+    vi.spyOn(t.bridge, 'setIconState').mockRejectedValue(new Error('usbmux: device gone'))
+    // the phone is there for the checks, gone by the time the write has failed
+    vi.spyOn(t.bridge, 'listDevices').mockResolvedValueOnce(devices).mockResolvedValue([])
+    const result = await t.service.apply(t.plan())
+    expect(result).toMatchObject({ ok: false, code: 'interrupted' })
+    expect(result.ok ? '' : result.message).toMatch(
+      /disconnected while writing.*restore the backup from \d/
+    )
+    // reconnected: the backup puts the original layout back
+    vi.restoreAllMocks()
+    const restored = await t.service.restore(t.udid, (!result.ok && result.backup!.id) as string)
+    expect(restored.ok).toBe(true)
+    expect(await t.phone()).toBe(layoutSignature(t.original))
+  })
+
+  it('logs every refusal with its error code', async () => {
+    const warn = vi.fn()
+    const t = setup()
+    const logged = new ApplyService({
+      bridge: t.bridge,
+      snapshots: t.snapshots,
+      broadcast: t.broadcast,
+      log: { ...silent, warn }
+    })
+    await logged.apply(t.plan({ beforeSignature: 'something else' }))
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[layout-changed]'))
+  })
+
   it('does not write at all if the backup cannot be saved', async () => {
     const t = setup()
     writeFileSync(join(t.root, 'devices'), 'a file where the folder should be') // mkdir will fail

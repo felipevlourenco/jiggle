@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs'
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import writeFileAtomic from 'write-file-atomic'
 import type { IconColor, Udid } from '@shared/types'
 import type { DeviceBridge } from './bridge/DeviceBridge'
 import type { Logger } from './bridge/SidecarBridge'
-import { iconColorsPath, iconsDir, isSafeBundleId } from './storage/paths'
+import { iconColorsPath, iconsDir, isSafeBundleId, isSafeUdid } from './storage/paths'
 
 const BATCH = 20
 
@@ -55,6 +55,16 @@ export class IconService {
     }
     if (missing.length) this.log.info(`icons: fetched ${fetched} of ${missing.length}`)
     await this.syncColors(udid, ids)
+  }
+
+  // Delete every device's cached icons and colors; they are fetched again when needed.
+  async clear(): Promise<void> {
+    const udids = await readdir(join(this.root, 'devices')).catch(() => [] as string[])
+    for (const udid of udids.filter(isSafeUdid)) {
+      await rm(iconsDir(this.root, udid), { recursive: true, force: true })
+      await rm(iconColorsPath(this.root, udid), { force: true })
+    }
+    this.log.info('icon cache cleared')
   }
 
   // bundle id -> dominant color (null: the icon couldn't be read). Empty until the icons are synced.

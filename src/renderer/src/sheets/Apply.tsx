@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { appError } from '@shared/errors'
 import type { ApplyResult, ApplyStep, SnapshotSummary } from '@shared/types'
 import s from './apply.module.css'
 
@@ -163,7 +164,7 @@ export function ApplySheet({
 
       {phase.name === 'error' && (
         <>
-          <h2>Couldn’t finish</h2>
+          <h2>{appError(phase.result.code).title}</h2>
           <p role="alert">{phase.result.message}</p>
           <div className={s.footer}>
             {phase.result.code === 'layout-changed' && onRefresh && (

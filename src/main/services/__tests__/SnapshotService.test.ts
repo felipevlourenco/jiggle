@@ -59,7 +59,7 @@ describe('SnapshotService', () => {
   })
 
   it('never prunes saved layouts', async () => {
-    const { service, dir } = setup({ keepAutoBackups: 2 })
+    const { service, dir } = setup({ keepAutoBackups: () => 2 })
     const saved = await service.create({
       ...input,
       kind: 'saved-layout',

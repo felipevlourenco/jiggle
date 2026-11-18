@@ -139,9 +139,17 @@ export type ApplyErrorCode =
   | 'invalid' // the new layout failed validation
   | 'not-found' // no such backup
   | 'write-failed'
+  | 'interrupted' // the phone was unplugged while writing
   | 'verify-failed'
 
 // `backup` is the automatic backup taken first, when there is one: it is how to undo.
 export type ApplyResult =
   | { ok: true; backup: SnapshotSummary }
   | { ok: false; code: ApplyErrorCode; message: string; backup?: SnapshotSummary }
+
+export interface Settings {
+  theme: 'system' | 'light' | 'dark'
+  storefront: string // two letters: "nl"
+  backupRetention: number // automatic backups kept per device
+  categoryLookupEnabled: boolean // off: the app makes no network requests at all
+}

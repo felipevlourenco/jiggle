@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -84,6 +84,20 @@ describe('IconService colors', () => {
     expect(await service.colors('U1')).toEqual({})
     await service.sync('U1', ['a.b'])
     expect(await service.colors('U1')).toEqual({})
+  })
+})
+
+describe('IconService.clear', () => {
+  it('deletes cached icons and colors for every device, and nothing else', async () => {
+    const { service, root } = setup(() => ({ h: 0, s: 1, l: 0.5 }))
+    await service.sync('A1', ['a.b'])
+    await service.sync('B2', ['c.d'])
+    writeFileSync(join(root, 'devices', 'A1', 'snapshots.json'), 'keep me')
+    await service.clear()
+    expect(existsSync(iconsDir(root, 'A1'))).toBe(false)
+    expect(existsSync(iconsDir(root, 'B2'))).toBe(false)
+    expect(await service.colors('A1')).toEqual({})
+    expect(readFileSync(join(root, 'devices', 'A1', 'snapshots.json'), 'utf8')).toBe('keep me')
   })
 })
 

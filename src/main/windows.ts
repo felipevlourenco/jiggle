@@ -29,8 +29,42 @@ export function createMainWindow(): BrowserWindow {
   })
   win.webContents.on('will-navigate', (e) => e.preventDefault())
 
-  const devUrl = process.env['ELECTRON_RENDERER_URL']
-  if (devUrl) win.loadURL(devUrl)
-  else win.loadFile(join(__dirname, '../renderer/index.html'))
+  loadRenderer(win)
   return win
+}
+
+// The same page for every window; `route` picks the screen ("/settings").
+function loadRenderer(win: BrowserWindow, route?: string): void {
+  const devUrl = process.env['ELECTRON_RENDERER_URL']
+  if (devUrl) win.loadURL(route ? `${devUrl}#${route}` : devUrl)
+  else win.loadFile(join(__dirname, '../renderer/index.html'), route ? { hash: route } : undefined)
+}
+
+let settingsWindow: BrowserWindow | undefined
+
+// One Settings window: ⌘, again just brings it forward.
+export function openSettingsWindow(): void {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.show()
+    settingsWindow.focus()
+    return
+  }
+  settingsWindow = new BrowserWindow({
+    width: 520,
+    height: 380,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    title: 'Settings',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  })
+  settingsWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  settingsWindow.webContents.on('will-navigate', (e) => e.preventDefault())
+  loadRenderer(settingsWindow, '/settings')
 }

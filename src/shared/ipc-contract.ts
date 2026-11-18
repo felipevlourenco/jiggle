@@ -7,6 +7,7 @@ import type {
   Device,
   Layout,
   LayoutResult,
+  Settings,
   SnapshotEntry,
   SnapshotSummary
 } from './types'
@@ -53,6 +54,13 @@ const ApplyPlan_ = z.object({
   removedFromHomeScreen: z.array(z.string())
 }) satisfies z.ZodType<ApplyPlan>
 
+const Settings_ = z.object({
+  theme: z.enum(['system', 'light', 'dark']),
+  storefront: z.string().regex(/^[a-z]{2}$/),
+  backupRetention: z.number().int().min(5).max(200),
+  categoryLookupEnabled: z.boolean()
+}) satisfies z.ZodType<Settings>
+
 export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_, Snapshot: Snapshot_ }
 
 // One entry per request channel (`domain:action`): its argument tuple and its result.
@@ -66,6 +74,14 @@ export const channels = {
   'snapshots:list': { args: z.tuple([Udid.optional()]), result: z.custom<SnapshotEntry[]>() },
   'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() },
   // Both always resolve: a refusal or failure is an `ok: false` result, not a thrown error.
+  'settings:get': { args: z.tuple([]), result: z.custom<Settings>() },
+  'settings:set': { args: z.tuple([Settings_.partial()]), result: z.custom<Settings>() },
+  // Forget the category and icon caches (they are re-fetched when needed).
+  'settings:clear-cache': { args: z.tuple([]), result: z.void() },
+  'sidecar:get': {
+    args: z.tuple([]),
+    result: z.enum(['starting', 'ready', 'restarting', 'failed'])
+  },
   'apply:run': { args: z.tuple([ApplyPlan_]), result: z.custom<ApplyResult>() },
   'apply:restore': { args: z.tuple([Udid, z.string().min(1)]), result: z.custom<ApplyResult>() }
 } as const
@@ -82,6 +98,7 @@ export const events = {
   'device:changed': z.undefined(),
   'apps:changed': z.undefined(),
   'snapshots:changed': z.undefined(),
+  'settings:changed': z.custom<Settings>(),
   'apply:progress': z.enum(['checking', 'backing-up', 'writing', 'verifying']),
   // A short message to show the person, e.g. "Backed up · 187 apps".
   toast: z.string(),
@@ -121,7 +138,14 @@ export interface JiggleApi {
   toast: {
     onShow(listener: (message: string) => void): () => void
   }
+  settings: {
+    get(): Promise<Settings>
+    set(patch: Partial<Settings>): Promise<Settings>
+    clearCache(): Promise<void>
+    onChanged(listener: (settings: Settings) => void): () => void
+  }
   sidecar: {
+    status(): Promise<SidecarStatus>
     onStatus(listener: (status: SidecarStatus) => void): () => void
   }
 }

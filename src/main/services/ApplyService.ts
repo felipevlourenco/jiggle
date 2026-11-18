@@ -1,3 +1,4 @@
+import { appError, type ErrorVars } from '@shared/errors'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import { serialize } from '@shared/layout/serialize'
@@ -25,12 +26,6 @@ interface Deps {
   log: Logger
 }
 
-const fail = (code: ApplyErrorCode, message: string, backup?: SnapshotSummary): ApplyResult => ({
-  ok: false,
-  code,
-  message,
-  backup
-})
 const reason = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 
 // The only place that writes to a phone. Every change goes through the same steps, one at a time per device:
@@ -41,29 +36,28 @@ export class ApplyService {
 
   constructor(private readonly deps: Deps) {}
 
+  // A refusal or failure, worded by the error catalog and logged with its code.
+  private fail(code: ApplyErrorCode, vars: ErrorVars = {}, backup?: SnapshotSummary): ApplyResult {
+    const { message } = appError(code, vars)
+    this.deps.log.warn(`apply failed [${code}]: ${message}`)
+    return { ok: false, code, message, backup }
+  }
+
   apply(plan: ApplyPlan): Promise<ApplyResult> {
     return this.exclusive(plan.udid, async (device) => {
       const current = await this.read(plan.udid, 'checking')
-      if (typeof current === 'string') return fail('no-device', current)
-      if (layoutSignature(current) !== plan.beforeSignature) {
-        return fail(
-          'layout-changed',
-          'Your iPhone’s layout changed since the preview. Refresh and try again.'
-        )
-      }
+      if (typeof current === 'string') return this.fail('no-device', { detail: current })
+      if (layoutSignature(current) !== plan.beforeSignature) return this.fail('layout-changed')
       let after: RawIconState
       try {
         const before = normalize(current, gridFor(device.deviceClass))
         const issues = validateLayout(before, plan.after, plan.removedFromHomeScreen)
         if (issues.length) {
-          return fail(
-            'invalid',
-            `This layout can’t be applied: ${issues.map(describeIssue).join('; ')}.`
-          )
+          return this.fail('invalid', { detail: `${issues.map(describeIssue).join('; ')}.` })
         }
         after = serialize(plan.after)
       } catch (err) {
-        return fail('invalid', `This layout can’t be applied: ${reason(err)}`)
+        return this.fail('invalid', { detail: reason(err) })
       }
       return this.writeAndVerify(device, current, `Before ${plan.reason}`, after)
     })
@@ -75,10 +69,10 @@ export class ApplyService {
       try {
         target = await this.deps.snapshots.get(udid, snapshotId)
       } catch (err) {
-        return fail('not-found', reason(err))
+        return this.fail('not-found', { detail: reason(err) })
       }
       const current = await this.read(udid, 'checking')
-      if (typeof current === 'string') return fail('no-device', current)
+      if (typeof current === 'string') return this.fail('no-device', { detail: current })
       const what = target.name ?? target.reason ?? 'backup'
       return this.writeAndVerify(device, current, `Before restoring “${what}”`, target.rawState)
     })
@@ -105,7 +99,9 @@ export class ApplyService {
       })
     } catch (err) {
       // No backup, no write.
-      return fail('write-failed', `Couldn’t save a backup, so nothing was changed: ${reason(err)}`)
+      return this.fail('write-failed', {
+        detail: `Couldn’t save a backup, so nothing was changed: ${reason(err)}`
+      })
     }
     broadcast('snapshots:changed', undefined)
 
@@ -114,9 +110,20 @@ export class ApplyService {
       await bridge.setIconState(device.udid, next)
     } catch (err) {
       log.error('apply: write failed:', reason(err))
-      return fail(
+      // Unplugged mid-write: the backup is the way back once the phone is reconnected.
+      const stillThere = (await bridge.listDevices().catch(() => [])).some(
+        (d) => d.udid === device.udid
+      )
+      if (!stillThere) {
+        const time = new Date(backup.createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+        return this.fail('interrupted', { time }, backup)
+      }
+      return this.fail(
         'write-failed',
-        `Couldn’t write to the iPhone: ${reason(err)}. If it is locked, unlock it and try again.`,
+        { detail: `Couldn’t write to the iPhone: ${reason(err)}` },
         backup
       )
     }
@@ -124,11 +131,7 @@ export class ApplyService {
     this.step('verifying')
     const readBack = await this.read(device.udid)
     if (typeof readBack === 'string' || layoutSignature(readBack) !== layoutSignature(next)) {
-      return fail(
-        'verify-failed',
-        'The iPhone doesn’t show the new layout exactly. Your old layout is backed up in History.',
-        backup
-      )
+      return this.fail('verify-failed', {}, backup)
     }
     log.info(`apply: ${backupReason} done, backup ${backup.id}`)
     return { ok: true, backup }
@@ -153,20 +156,19 @@ export class ApplyService {
     udid: Udid,
     work: (device: Device) => Promise<ApplyResult>
   ): Promise<ApplyResult> {
-    if (this.busy.has(udid))
-      return fail('busy', 'Another change to this iPhone is already running.')
+    if (this.busy.has(udid)) return this.fail('busy')
     this.busy.add(udid)
     try {
       const device = (await this.deps.bridge.listDevices()).find((d) => d.udid === udid)
-      if (!device) return fail('no-device', 'The iPhone isn’t connected.')
+      if (!device) return this.fail('no-device', { detail: 'The iPhone isn’t connected.' })
       if (device.state === 'unsupported-os') {
-        return fail('read-only', `Changes are turned off for iOS ${device.osVersion}.`)
+        return this.fail('read-only', { version: device.osVersion })
       }
-      if (device.state !== 'ready') return fail('no-device', 'Unlock your iPhone and try again.')
+      if (device.state !== 'ready') return this.fail('no-device')
       return await work(device)
     } catch (err) {
       this.deps.log.error('apply: unexpected error:', reason(err))
-      return fail('write-failed', reason(err))
+      return this.fail('write-failed', { detail: reason(err) })
     } finally {
       this.busy.delete(udid)
     }

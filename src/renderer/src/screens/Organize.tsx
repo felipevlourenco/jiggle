@@ -150,11 +150,6 @@ export function Organize({ device }: { device: Device }) {
         </div>
       </div>
 
-      {readOnly && (
-        <p className={s.banner} role="alert">
-          Apply is turned off for iOS {device.osVersion}.
-        </p>
-      )}
       {blocked && (
         <p className={`${s.banner} ${s.error}`} role="alert">
           This layout can’t be applied: {preview.issues.map(describeIssue).join('; ')}.

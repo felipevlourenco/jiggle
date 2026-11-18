@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { APP_LIBRARY, appLocations } from '@shared/layout/locations'
 import type { AppInfo, Device } from '@shared/types'
+import { appError } from '@shared/errors'
+import { Banner } from '../components/Banner'
 import { Thumb } from '../components/Thumb'
 import { useApps, useLayout } from '../state/queries'
 import s from './apps.module.css'
@@ -87,10 +89,9 @@ export function Apps({ device }: { device: Device }) {
         </span>
       </div>
       {lookup === 'offline' && (
-        <p className={s.banner} role="status">
-          Can’t reach the App Store, so some categories show as Unknown. They’ll fill in next launch
-          once you’re online.
-        </p>
+        <Banner severity="warning" title={appError('lookup-offline').title}>
+          {appError('lookup-offline').message}
+        </Banner>
       )}
       {lookup === 'running' && (
         <p className={s.banner} role="status">

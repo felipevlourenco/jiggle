@@ -7,7 +7,11 @@ const todo = (label: string, accelerator?: string): MenuItemConstructorOptions =
   enabled: false
 })
 
-export function buildMenu(handlers: { backUpNow: () => void; restoreLast: () => void }): void {
+export function buildMenu(handlers: {
+  backUpNow: () => void
+  restoreLast: () => void
+  openSettings: () => void
+}): void {
   const template: MenuItemConstructorOptions[] = [
     {
       label: 'Jiggle',
@@ -15,7 +19,7 @@ export function buildMenu(handlers: { backUpNow: () => void; restoreLast: () => 
         { role: 'about' },
         todo('Check for Updates…'),
         { type: 'separator' },
-        todo('Settings…', 'Cmd+,'),
+        { id: 'settings', label: 'Settings…', accelerator: 'Cmd+,', click: handlers.openSettings },
         { type: 'separator' },
         { role: 'quit' }
       ]

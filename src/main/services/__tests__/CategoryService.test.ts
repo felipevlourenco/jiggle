@@ -17,16 +17,18 @@ const respond = (url: string) => {
 
 function setup(
   fetchImpl: (url: string) => Promise<Response> = async (u) => respond(u),
-  root?: string
+  root?: string,
+  extra: { enabled?: () => boolean; storefront?: () => string } = {}
 ) {
   const dir = root ?? mkdtempSync(join(tmpdir(), 'jiggle-cat-'))
   const fetchMock = vi.fn(fetchImpl)
   const onChange = vi.fn()
   const service = new CategoryService({
     root: dir,
-    storefront: 'nl',
+    storefront: () => 'nl',
     log: silent,
     onChange,
+    ...extra,
     fetch: fetchMock as unknown as typeof fetch,
     sleep: async () => {}
   })
@@ -68,6 +70,45 @@ describe('CategoryService', () => {
     expect(got.apps.map((x) => x.category)).toEqual(['Music', 'Unknown'])
   })
 
+  it('makes no request at all when lookups are switched off', async () => {
+    const { service, fetchMock } = setup(undefined, undefined, { enabled: () => false })
+    const result = service.resolve([app('com.spotify.client')])
+    await settle()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(result.lookup).toBe('idle')
+    expect(result.apps[0]).toMatchObject({ category: 'Unknown' })
+  })
+
+  it('stops mid-way when lookups are switched off, and follows a changed region', async () => {
+    let on = true
+    let region = 'nl'
+    const { service, fetchMock } = setup(
+      async (u) => {
+        on = false // switched off after the first request
+        return respond(u)
+      },
+      undefined,
+      { enabled: () => on, storefront: () => region }
+    )
+    service.resolve([app('a.a'), app('b.b'), app('c.c')])
+    await settle()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    on = true
+    region = 'us'
+    service.resolve([app('a.a')])
+    await settle()
+    expect(fetchMock.mock.calls.at(-1)![0]).toContain('country=us') // a "nl" answer isn't reused for "us"
+  })
+
+  it('forgets everything on clear', async () => {
+    const { service, dir } = setup()
+    service.resolve([app('com.spotify.client')])
+    await settle()
+    await service.clear()
+    expect(service.resolve([app('com.spotify.client')]).apps[0]!.category).toBe('Unknown')
+    expect(readFileSync(join(dir, 'category-cache.json'), 'utf8')).toBe('{}')
+  })
+
   it('looks the apps up one at a time', async () => {
     let active = 0
     let peak = 0
@@ -103,7 +144,7 @@ describe('CategoryService', () => {
     await settle()
     const b = new CategoryService({
       root: a.dir,
-      storefront: 'us',
+      storefront: () => 'us',
       log: silent,
       onChange() {},
       fetch: vi.fn(async (u: string) => respond(u)) as unknown as typeof fetch,

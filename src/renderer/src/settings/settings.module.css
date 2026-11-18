@@ -1,0 +1,55 @@
+.root {
+  padding: 16px 24px;
+}
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.tab {
+  padding: 4px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.tab[aria-selected='true'] {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+}
+.tab:focus-visible {
+  outline: 2px solid var(--primary);
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.region {
+  width: 48px;
+  text-align: center;
+  text-transform: lowercase;
+}
+.region[aria-invalid='true'] {
+  outline: 2px solid var(--error);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.help {
+  margin: 0;
+  color: var(--text-secondary);
+}

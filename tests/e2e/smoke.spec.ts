@@ -94,6 +94,7 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
     'apps',
     'device',
     'layout',
+    'settings',
     'sidecar',
     'snapshots',
     'toast'
@@ -346,6 +347,98 @@ test.describe('Apply and restore', () => {
     win = await app.firstWindow()
     await win.getByRole('link', { name: 'History' }).click()
     await expect(win.getByRole('button', { name: 'Restore' })).toBeDisabled()
+    await app.close()
+  })
+})
+
+test.describe('Hardening', () => {
+  test('a page request to any host but the App Store lookup is blocked', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    const outcome = (url: string) =>
+      win.evaluate(async (u) => {
+        try {
+          await fetch(u, { mode: 'no-cors' })
+          return 'sent'
+        } catch {
+          return 'blocked'
+        }
+      }, url)
+    expect(await outcome('https://example.com/')).toBe('blocked')
+    expect(await outcome('http://itunes.apple.com.evil.test/')).toBe('blocked')
+    await app.close()
+  })
+
+  test('the engine banner appears when the engine stops, and goes when it is back', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const send = (status: string) =>
+      app.evaluate(
+        ({ BrowserWindow }, s) =>
+          BrowserWindow.getAllWindows()[0]!.webContents.send('sidecar:status', s),
+        status
+      )
+    await send('restarting')
+    await expect(
+      win.getByRole('status').filter({ hasText: 'The device engine stopped' })
+    ).toBeVisible()
+    await send('failed')
+    await expect(win.getByRole('alert').filter({ hasText: 'won’t start' })).toBeVisible()
+    await send('ready')
+    await expect(win.getByText('The device engine')).toHaveCount(0)
+    await app.close()
+  })
+
+  test('read-only mode shows its banner and turns Apply off', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-ios16' })
+    const win = await app.firstWindow()
+    await win.getByRole('button', { name: /Continue/ }).click()
+    await expect(win.getByText('Apply is turned off for iOS 16.7')).toBeVisible()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await expect(win.getByRole('button', { name: 'Apply to iPhone' })).toBeDisabled()
+    await app.close()
+  })
+
+  test('Settings (⌘,): appearance applies at once and the choices survive a relaunch', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-settings-'))
+    const open = async () => {
+      const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_USER_DATA: userData })
+      await app.firstWindow() // the main window, so Settings is the second
+      const opened = app.waitForEvent('window')
+      await app.evaluate(({ Menu }) =>
+        Menu.getApplicationMenu()!.getMenuItemById('settings')!.click()
+      )
+      const settings = await opened
+      return { app, settings }
+    }
+
+    let { app, settings } = await open()
+    await expect(settings.getByRole('tab', { name: 'General', selected: true })).toBeVisible()
+    await settings.getByLabel('Appearance').selectOption('dark')
+    await settings.getByLabel('Automatic backups to keep').selectOption('10')
+    // (Playwright emulates the page as light, so ask Electron what the app is using)
+    await expect.poll(() => app.evaluate(({ nativeTheme }) => nativeTheme.themeSource)).toBe('dark')
+    expect(await app.evaluate(({ nativeTheme }) => nativeTheme.shouldUseDarkColors)).toBe(true)
+
+    // a bad region is refused and put back
+    const region = settings.getByLabel('App Store region')
+    await region.fill('x1')
+    await region.blur()
+    await expect(region).not.toHaveValue('x1')
+
+    await settings.getByRole('tab', { name: 'Privacy' }).click()
+    // saved by the main process, so the box flips a moment after the click
+    await settings.getByLabel('Look up categories online').click()
+    await expect(settings.getByLabel('Look up categories online')).not.toBeChecked()
+    await app.close()
+    ;({ app, settings } = await open())
+    await expect(settings.getByLabel('Appearance')).toHaveValue('dark')
+    await expect(settings.getByLabel('Automatic backups to keep')).toHaveValue('10')
+    await settings.getByRole('tab', { name: 'Privacy' }).click()
+    await expect(settings.getByLabel('Look up categories online')).not.toBeChecked()
+    await settings.getByRole('button', { name: 'Clear Cache' }).click()
+    await expect(settings.getByText('Cleared.')).toBeVisible()
     await app.close()
   })
 })

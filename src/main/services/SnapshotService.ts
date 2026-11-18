@@ -32,7 +32,7 @@ export class SnapshotService {
   constructor(
     private readonly root: string,
     private readonly log: Logger,
-    private readonly opts: { keepAutoBackups?: number; now?: () => number } = {}
+    private readonly opts: { keepAutoBackups?: () => number; now?: () => number } = {}
   ) {}
 
   async create(input: NewSnapshot): Promise<SnapshotSummary> {
@@ -119,7 +119,7 @@ export class SnapshotService {
 
   // Keep the newest N automatic backups per device. Saved layouts and damaged files are never deleted.
   private async prune(udid: Udid): Promise<void> {
-    const keep = this.opts.keepAutoBackups ?? AUTO_BACKUPS_KEPT
+    const keep = this.opts.keepAutoBackups?.() ?? AUTO_BACKUPS_KEPT
     const backups = (await this.readAll(udid)).filter(
       (e): e is SnapshotSummary => !e.damaged && e.kind === 'auto-backup'
     )

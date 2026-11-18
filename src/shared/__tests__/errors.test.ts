@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { connectMessage } from '../errors'
+import { appError, connectMessage, type ErrorCode } from '../errors'
 import type { Device, DeviceState } from '../types'
 
 const device = (state: DeviceState, osVersion = '26.1'): Device => ({
@@ -37,5 +37,34 @@ describe('connectMessage', () => {
       severity: 'warning',
       action: 'continue-read-only'
     })
+  })
+})
+
+describe('appError', () => {
+  const codes: ErrorCode[] = [
+    'busy',
+    'no-device',
+    'read-only',
+    'layout-changed',
+    'invalid',
+    'not-found',
+    'write-failed',
+    'interrupted',
+    'verify-failed',
+    'engine-restarting',
+    'engine-failed',
+    'lookup-offline'
+  ]
+  it.each(codes)('%s has a title and a message', (code) => {
+    const e = appError(code, { detail: 'The reason it failed.', time: '09:42', version: '16.7' })
+    expect(e.title.length).toBeGreaterThan(3)
+    expect(e.message.length).toBeGreaterThan(10)
+  })
+
+  it('fills in the details', () => {
+    expect(appError('interrupted', { time: '09:42' }).message).toContain(
+      'restore the backup from 09:42'
+    )
+    expect(appError('read-only', { version: '16.7' }).message).toContain('iOS 16.7')
   })
 })

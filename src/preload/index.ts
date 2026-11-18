@@ -42,7 +42,16 @@ const api: JiggleApi = {
     onChanged: (listener) => on('snapshots:changed', () => listener())
   },
   toast: { onShow: (listener) => on('toast', listener) },
-  sidecar: { onStatus: (listener) => on('sidecar:status', listener) }
+  settings: {
+    get: () => invoke('settings:get'),
+    set: (patch) => invoke('settings:set', patch),
+    clearCache: () => invoke('settings:clear-cache'),
+    onChanged: (listener) => on('settings:changed', listener)
+  },
+  sidecar: {
+    status: () => invoke('sidecar:get'),
+    onStatus: (listener) => on('sidecar:status', listener)
+  }
 }
 
 contextBridge.exposeInMainWorld('jiggle', api)

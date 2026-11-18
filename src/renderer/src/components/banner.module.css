@@ -1,0 +1,17 @@
+.banner {
+  flex: none;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+.banner strong {
+  color: var(--text);
+}
+.warning {
+  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+}
+.error {
+  background: color-mix(in srgb, var(--error) 14%, var(--surface));
+}

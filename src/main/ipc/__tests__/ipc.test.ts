@@ -9,6 +9,7 @@ import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
 import { CategoryService } from '../../services/CategoryService'
 import { ApplyService } from '../../services/ApplyService'
 import { IconService } from '../../services/IconService'
+import { SettingsService } from '../../services/SettingsService'
 import { SnapshotService } from '../../services/SnapshotService'
 import { registerIpc } from '..'
 import type { IpcLike } from '../handle'
@@ -30,7 +31,7 @@ function setup() {
   }) as unknown as typeof fetch
   const categories = new CategoryService({
     root,
-    storefront: 'nl',
+    storefront: () => 'nl',
     log: silent,
     onChange() {},
     fetch: failing,
@@ -38,7 +39,17 @@ function setup() {
   })
   const snapshots = new SnapshotService(root, silent)
   const apply = new ApplyService({ bridge, snapshots, broadcast, log: silent })
-  registerIpc(ipc, bridge, broadcast, icons, categories, snapshots, apply)
+  const settings = new SettingsService(root, silent, 'nl')
+  registerIpc(ipc, {
+    bridge,
+    broadcast,
+    icons,
+    categories,
+    snapshots,
+    apply,
+    settings,
+    sidecarStatus: () => 'ready'
+  })
   const call = async (ch: string, ...args: unknown[]) => await handlers.get(ch)!(...args)
   return { call, broadcast }
 }
@@ -76,6 +87,27 @@ describe('IPC validation', () => {
     const { call, broadcast } = setup()
     await expect(call('snapshots:backup', 'UNKNOWN-1')).rejects.toThrow()
     expect(broadcast).toHaveBeenCalledWith('toast', expect.stringContaining('Couldn’t back up'))
+  })
+
+  it('reads and changes settings, and refuses a bad value', async () => {
+    const { call } = setup()
+    expect(await call('settings:get')).toEqual({
+      theme: 'system',
+      storefront: 'nl',
+      backupRetention: 50,
+      categoryLookupEnabled: true
+    })
+    expect(await call('settings:set', { theme: 'dark', backupRetention: 10 })).toMatchObject({
+      theme: 'dark',
+      backupRetention: 10,
+      storefront: 'nl'
+    })
+    await expect(call('settings:set', { storefront: 'Netherlands' })).rejects.toThrow(
+      /Invalid arguments/
+    )
+    await expect(call('settings:set', { backupRetention: 0 })).rejects.toThrow(/Invalid arguments/)
+    expect(((await call('settings:get')) as { theme: string }).theme).toBe('dark')
+    expect(await call('sidecar:get')).toBe('ready')
   })
 
   it('rejects a malformed payload with a readable zod error', async () => {
