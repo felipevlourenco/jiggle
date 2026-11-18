@@ -12,6 +12,10 @@ import { SidecarBridge } from './services/bridge/SidecarBridge'
 import { createMainWindow } from './windows'
 import { buildMenu } from './menu'
 
+// Tests (and a second dev copy) get a folder of their own. Ignored in packaged builds.
+const userDataOverride = app.isPackaged ? undefined : process.env['JIGGLE_USER_DATA']
+if (userDataOverride) app.setPath('userData', userDataOverride)
+
 registerAssetScheme()
 
 // JIGGLE_MOCK_DEVICE=<fixture> serves a recorded device, "none" an empty one. Ignored in packaged builds.

@@ -1,9 +1,18 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
 
 const launch = (env: Record<string, string> = {}) =>
   electron.launch({
     args: ['.'],
-    env: { ...process.env, JIGGLE_MOCK_DEVICE: 'none', JIGGLE_NO_LOOKUP: '1', ...env }
+    env: {
+      ...process.env,
+      JIGGLE_MOCK_DEVICE: 'none',
+      JIGGLE_NO_LOOKUP: '1',
+      JIGGLE_USER_DATA: mkdtempSync(join(tmpdir(), 'jiggle-e2e-')), // never the real caches
+      ...env
+    }
   })
 
 test('app shell loads with sidebar, routes and no Node in the renderer', async () => {
