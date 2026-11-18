@@ -430,14 +430,14 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
 - **Files touched:** `sidecar/jiggle_engine/devices.py`, `src/shared/errors.ts`, `src/main/ipc/device.ts`, `src/renderer/src/screens/Connect.tsx`
 - **Done when:** each of these cases, reproduced by hand on a real phone, shows its matching Connect message:
   - no phone
-  - phone locked
+  - phone locked (only happens for a phone that isn't trusted yet, or was just restarted and not unlocked since; a trusted phone that is locked can still be read, so it shows as ready)
   - trust prompt pending
   - trust declined
   - trusted, which goes to Home Screen with name, model and iOS version shown
 - **Manual check:**
   1. Launch with no phone connected. The Connect screen says "Connect your iPhone" with the three steps.
-  2. Plug in the phone while it's locked. The screen changes to "Unlock Sam's iPhone to continue".
-  3. To test the trust prompt again: on the phone, go to Settings > General > Transfer or Reset iPhone > Reset > Reset Location & Privacy. This clears trusted computers (and location and privacy permissions, so only do it on purpose). Plug in, and the screen says "Tap Trust on your iPhone".
+  2. Plug in a trusted phone while it's locked. Jiggle can still read it, so the app goes straight to Home Screen. This is expected.
+  3. To test the locked and trust screens: on the phone, go to Settings > General > Transfer or Reset iPhone > Reset > Reset Location & Privacy. This clears trusted computers (and location and privacy permissions, so only do it on purpose). Lock the phone and plug it in. The screen says "Unlock Sam's iPhone to continue". Unlock the phone, and the screen changes to "Tap Trust on your iPhone".
   4. Tap Don't Trust on the phone. The declined message appears with Try Again. Unplug, plug in and tap Try Again, and the trust prompt comes back.
   5. Tap Trust and enter the passcode. The app moves to Home Screen, and the name, model and iOS version match the phone's Settings > General > About.
   6. Unplug the phone while on Home Screen. The app goes back to the Connect screen.
@@ -582,6 +582,7 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
   4. Click Restore on that backup and confirm. The phone goes back to the original layout. Compare with your screenshots.
   5. Open the A–Z preview, then move one icon by hand on the phone, then click Apply in the app. It stops with "Your iPhone's layout changed since the preview", and nothing is written.
   6. Double‑click Apply quickly. Only one apply runs, and only one backup is created.
+  7. Lock the phone and apply again. Reading a locked phone works, but writing is untested: either it applies, or it stops with a clear "Unlock your iPhone" message and nothing is half-written. If it needs an unlock, make the Apply sheet say so.
 
 **M12. Color sort**
 
@@ -617,7 +618,7 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
   - an E2E test confirms a renderer request to any host other than `itunes.apple.com` is blocked
   - with "Look up categories online" off, the log shows no outbound requests at all
 - **Manual check:**
-  1. Lock the phone while the app is open and click Device > Refresh. The "Unlock your iPhone" message appears, and goes away once you unlock.
+  1. Run `JIGGLE_MOCK_DEVICE=iphone-locked pnpm dev`. The "Unlock Sam's iPhone to continue" message appears, with the same catalogued wording as the real case in M4. (A trusted phone that is merely locked still reads fine, so this can't be triggered by locking the real phone.)
   2. Repeat the trust‑declined test from M4. The catalogued message appears.
   3. Run `JIGGLE_MOCK_DEVICE=iphone-ios16 pnpm dev`. The read‑only banner shows, and every Apply/Push button is disabled.
   4. Start an A–Z apply and pull the cable during "Writing to iPhone". The "Apply interrupted" message offers Restore. Reconnect, click Restore, and the phone matches your screenshots.

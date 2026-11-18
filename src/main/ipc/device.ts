@@ -4,5 +4,6 @@ import { handle, type IpcLike } from './handle'
 
 export function registerDeviceIpc(ipc: IpcLike, bridge: DeviceBridge, broadcast: Broadcast): void {
   handle(ipc, 'device:list', () => bridge.listDevices())
+  handle(ipc, 'device:refresh', (udid) => bridge.refreshDevice(udid))
   bridge.onDevicesChanged(() => broadcast('device:changed', undefined))
 }

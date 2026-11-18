@@ -90,3 +90,147 @@ nav {
 .placeholder {
   color: var(--text-secondary);
 }
+
+.nav-item.disabled {
+  color: var(--text-tertiary);
+  cursor: default;
+}
+.nav-item.disabled:hover {
+  background: transparent;
+}
+
+.btn {
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.btn:disabled {
+  opacity: 0.5;
+}
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-pressed);
+}
+
+.connect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 440px;
+  margin: 32px auto;
+  gap: 12px;
+}
+.connect h2 {
+  margin: 8px 0 0;
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 700;
+}
+.connect-body {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.steps {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.steps li {
+  counter-increment: step;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.steps li::before {
+  content: counter(step);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+.pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}
+
+.ill-phone {
+  fill: var(--surface);
+  stroke: var(--text-tertiary);
+  stroke-width: 2;
+}
+.ill-notch {
+  fill: var(--surface-2);
+}
+.ill-line {
+  stroke: var(--text-secondary);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.ill-fill {
+  fill: var(--text-secondary);
+  stroke: none;
+}
+.ill-accent {
+  fill: var(--primary);
+  stroke: none;
+}
+.ill-card {
+  fill: var(--surface-2);
+  stroke: var(--border);
+}
+.ill-warn {
+  fill: var(--warning);
+  stroke: var(--warning);
+  stroke-width: 4;
+}
+.ill-bang {
+  fill: #fff;
+}

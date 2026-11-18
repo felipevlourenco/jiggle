@@ -3,7 +3,7 @@ import sys
 import threading
 
 from jiggle_engine import __version__, devices
-from jiggle_engine.rpc import Server
+from jiggle_engine.rpc import RpcError, Server
 
 
 def write_line(line: str) -> None:
@@ -22,6 +22,13 @@ def build_server(write=write_line) -> Server:
     @server.method("list_devices")
     async def list_devices(_params):
         return await devices.list_devices()
+
+    @server.method("device_info")
+    async def device_info(params):
+        udid = params.get("udid")
+        if not isinstance(udid, str) or not udid:
+            raise RpcError("invalid_params", "device_info needs a 'udid' string")
+        return await devices.device_info(udid)
 
     @server.method("watch")
     async def watch(_params):

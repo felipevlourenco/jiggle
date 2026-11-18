@@ -9,14 +9,15 @@ const fake = join(__dirname, 'fake-sidecar.mjs')
 let bridge: SidecarBridge
 afterEach(() => bridge.stop())
 
-function create(command = process.execPath, args = [fake]) {
+function create(command = process.execPath, args = [fake], pollMs = 10) {
   bridge = new SidecarBridge({
     command,
     args,
     log: silent,
     backoffMs: 10,
     maxBackoffMs: 40,
-    requestTimeoutMs: 200
+    requestTimeoutMs: 200,
+    pollMs
   })
   const statuses: SidecarStatus[] = []
   bridge.onStatus((s) => statuses.push(s))
@@ -55,13 +56,30 @@ describe('SidecarBridge', () => {
     expect(await bridge.request('ping')).toEqual({ version: 'fake' })
   })
 
-  it('notifies listeners when devices attach and detach', async () => {
-    const statuses = create()
+  it('tracks a device: waits for trust, becomes ready, vanishes on detach', async () => {
+    const statuses = create(process.execPath, [fake], 150)
     const changed = vi.fn()
     bridge.onDevicesChanged(changed)
     bridge.start()
     await until(statuses, 'ready')
-    await vi.waitFor(() => expect(changed).toHaveBeenCalledTimes(2), { timeout: 3000 })
+    const state = async () => (await bridge.listDevices())[0]?.state
+    await vi.waitFor(async () => expect(await state()).toBe('trust-pending'), { timeout: 3000 })
+    await vi.waitFor(async () => expect(await state()).toBe('ready'), { timeout: 3000 })
+    await bridge.request('detach')
+    await vi.waitFor(async () => expect(await bridge.listDevices()).toEqual([]), { timeout: 3000 })
+    expect(changed).toHaveBeenCalledTimes(3) // pending, ready, gone
+  })
+
+  it('refreshDevice re-checks right away instead of waiting for the poll', async () => {
+    const statuses = create(process.execPath, [fake], 60_000)
+    bridge.start()
+    await until(statuses, 'ready')
+    const state = async () => (await bridge.listDevices())[0]?.state
+    await vi.waitFor(async () => expect(await state()).toBe('trust-pending'), { timeout: 3000 })
+    await bridge.refreshDevice('U1') // 2nd check: still pending
+    expect(await state()).toBe('trust-pending')
+    await bridge.refreshDevice('U1') // 3rd check: ready
+    expect(await state()).toBe('ready')
   })
 
   it('reports failed when the engine never starts', async () => {

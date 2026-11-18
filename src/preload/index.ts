@@ -23,6 +23,7 @@ const on = <E extends EventName>(event: E, listener: (payload: EventPayload<E>) 
 const api: JiggleApi = {
   device: {
     list: () => invoke('device:list'),
+    refresh: (udid) => invoke('device:refresh', udid),
     onChanged: (listener) => on('device:changed', () => listener())
   },
   layout: { get: (udid) => invoke('layout:get', udid) },

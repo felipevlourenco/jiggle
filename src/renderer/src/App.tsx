@@ -1,6 +1,8 @@
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
+import { useEffect, useState } from 'react'
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
-import { useActiveDevice, useDeviceEvents } from './state/queries'
+import { Connect } from './screens/Connect'
+import { useDevices, useDeviceEvents } from './state/queries'
 
 const TITLES: Record<string, string> = {
   '/connect': 'Connect',
@@ -9,24 +11,49 @@ const TITLES: Record<string, string> = {
 
 export function App() {
   const { pathname } = useLocation()
-  const title = TITLES[pathname] ?? 'Jiggle'
-  const device = useActiveDevice()
+  const navigate = useNavigate()
+  const { data: devices, isSuccess } = useDevices()
   useDeviceEvents()
+
+  // Until the device switcher exists (M20), the active device is the first one.
+  const device = devices?.[0]
+  // An unsupported iOS stays on Connect until the user accepts read-only mode.
+  const [readOnlyUdid, setReadOnlyUdid] = useState<string>()
+  const usable =
+    device?.state === 'ready' ||
+    (device?.state === 'unsupported-os' && device.udid === readOnlyUdid)
+  const title = TITLES[pathname] ?? 'Jiggle'
+
+  // Connect is shown whenever there is no usable device, and left as soon as there is one.
+  useEffect(() => {
+    if (!isSuccess) return
+    if (!usable && pathname !== '/connect') navigate('/connect', { replace: true })
+    if (usable && pathname === '/connect') navigate('/home', { replace: true })
+  }, [isSuccess, usable, pathname, navigate])
+
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="drag" />
         <div className="device-header">
           <div className="device-name">
-            {device ? `${device.name} · iOS ${device.osVersion}` : 'No device'}
+            {device
+              ? `${device.name}${device.osVersion ? ` · iOS ${device.osVersion}` : ''}`
+              : 'No device'}
           </div>
         </div>
         <nav>
-          {NAV_ITEMS.map((n) => (
-            <NavLink key={n.path} to={n.path} className="nav-item">
-              {n.label}
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map((n) =>
+            usable ? (
+              <NavLink key={n.path} to={n.path} className="nav-item">
+                {n.label}
+              </NavLink>
+            ) : (
+              <span key={n.path} className="nav-item disabled" aria-disabled="true">
+                {n.label}
+              </span>
+            )
+          )}
         </nav>
       </aside>
       <main className="content">
@@ -34,13 +61,23 @@ export function App() {
           <h1>{title}</h1>
         </header>
         <section className="screen">
-          <Routes>
-            <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="/connect" element={<Placeholder name="Connect" />} />
-            {NAV_ITEMS.map((n) => (
-              <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
-            ))}
-          </Routes>
+          {isSuccess && (
+            <Routes>
+              <Route path="/" element={<Navigate to={usable ? '/home' : '/connect'} replace />} />
+              <Route
+                path="/connect"
+                element={
+                  <Connect
+                    device={device}
+                    onContinueReadOnly={() => setReadOnlyUdid(device?.udid)}
+                  />
+                }
+              />
+              {NAV_ITEMS.map((n) => (
+                <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
+              ))}
+            </Routes>
+          )}
         </section>
       </main>
     </div>

@@ -75,4 +75,7 @@ write(
     device(4, "Sam's iPhone", "iPhone14,2", "iPhone 13 Pro", "16.7", "unsupported-os"),
     basic,
 )
+# blocked-phone states, for the Connect screen
+for n, name, state in ((5, "locked", "locked"), (6, "trust-pending", "trust-pending"), (7, "trust-declined", "trust-declined")):
+    write(f"iphone-{name}", device(n, "Sam's iPhone", "iPhone17,1", "iPhone 16 Pro", "26.1", state), basic)
 print("wrote", sorted(p.name for p in OUT.glob("*.json")))

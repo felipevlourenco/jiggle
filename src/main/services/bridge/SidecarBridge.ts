@@ -1,8 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { z } from 'zod'
-import type { SidecarStatus } from '@shared/ipc-contract'
-import type { Device, RawIconState } from '@shared/types'
+import { schemas, type SidecarStatus } from '@shared/ipc-contract'
+import type { Device, DeviceState, RawIconState, Udid } from '@shared/types'
 import type { DeviceBridge } from './DeviceBridge'
 
 export interface Logger {
@@ -20,6 +20,8 @@ export interface SidecarOptions {
   requestTimeoutMs?: number
   backoffMs?: number
   maxBackoffMs?: number
+  // How often a phone that needs the user (locked, Trust prompt) is re-checked.
+  pollMs?: number
 }
 
 export class EngineError extends Error {
@@ -41,8 +43,25 @@ const Message = z.object({
 })
 const DeviceEvent = z.object({ udid: z.string() })
 
+// States that can fix themselves without a new plug-in, so we keep re-checking them.
+const POLLED_STATES: DeviceState[] = ['locked', 'trust-pending', 'error']
+const MAX_POLLS = 15
+
 // After this many failed starts in a row the status becomes 'failed' (retries continue).
 const FAILED_AFTER = 5
+
+function unknownDevice(udid: Udid): Device {
+  return {
+    udid,
+    name: 'iPhone',
+    productType: '',
+    modelName: 'iPhone',
+    deviceClass: 'iPhone',
+    osVersion: '',
+    connection: 'usb',
+    state: 'error'
+  }
+}
 
 interface Pending {
   resolve(value: unknown): void
@@ -57,6 +76,9 @@ export class SidecarBridge implements DeviceBridge {
   private pending = new Map<number, Pending>()
   private deviceListeners = new Set<() => void>()
   private statusListeners = new Set<(status: SidecarStatus) => void>()
+  private attached = new Set<Udid>()
+  private devices = new Map<Udid, Device>()
+  private polls = new Map<Udid, NodeJS.Timeout>()
   private status: SidecarStatus = 'starting'
   private attempts = 0
   private restartTimer: NodeJS.Timeout | null = null
@@ -77,6 +99,7 @@ export class SidecarBridge implements DeviceBridge {
     const child = this.child
     this.child = null
     this.rejectAll(new Error('Engine stopped'))
+    this.forgetDevices()
     child?.kill()
   }
 
@@ -94,9 +117,12 @@ export class SidecarBridge implements DeviceBridge {
     return () => this.deviceListeners.delete(listener)
   }
 
-  // ponytail: the engine only reports UDIDs until `device_info` lands in M4, so nothing to list yet.
   async listDevices(): Promise<Device[]> {
-    return []
+    return [...this.devices.values()]
+  }
+
+  async refreshDevice(udid: Udid): Promise<void> {
+    await this.probe(udid, 0)
   }
 
   async getIconState(): Promise<RawIconState> {
@@ -162,6 +188,7 @@ export class SidecarBridge implements DeviceBridge {
     if (this.child !== child) return // already handled, or we stopped it on purpose
     this.child = null
     this.rejectAll(new Error('Engine stopped'))
+    this.forgetDevices() // the restarted engine replays what is attached
     if (this.stopped) return
     const { backoffMs = 500, maxBackoffMs = 10_000, log } = this.opts
     this.attempts++
@@ -197,7 +224,63 @@ export class SidecarBridge implements DeviceBridge {
     }
     const parsed = DeviceEvent.safeParse(data)
     if (!parsed.success) return log.warn('bad payload for', event, data)
-    log.info(`device ${event === 'device_attached' ? 'attached' : 'detached'}: ${parsed.data.udid}`)
+    const { udid } = parsed.data
+    if (event === 'device_attached') {
+      log.info(`device attached: ${udid}`)
+      this.attached.add(udid)
+      void this.probe(udid, 0)
+    } else {
+      log.info(`device detached: ${udid}`)
+      this.attached.delete(udid)
+      this.clearPoll(udid)
+      if (this.devices.delete(udid)) this.notifyDevicesChanged()
+    }
+  }
+
+  // Ask the engine about one device, store the answer, and keep re-checking while it needs the user.
+  private async probe(udid: Udid, attempt: number): Promise<void> {
+    const { log, pollMs = 2000 } = this.opts
+    this.clearPoll(udid)
+    const previous = this.devices.get(udid)
+    let device: Device
+    try {
+      device = schemas.Device.parse(await this.request('device_info', { udid }, 15_000))
+    } catch (err) {
+      if (!this.attached.has(udid)) return
+      log.warn(`device_info failed for ${udid}:`, (err as Error).message)
+      device = previous
+        ? { ...previous, state: 'error' }
+        : { ...unknownDevice(udid), state: 'error' }
+    }
+    if (!this.attached.has(udid)) return // unplugged while we were asking
+    if (JSON.stringify(previous) !== JSON.stringify(device)) {
+      log.info(`device ${udid} is ${device.state}`)
+      this.devices.set(udid, device)
+      this.notifyDevicesChanged()
+    }
+    if (POLLED_STATES.includes(device.state) && attempt < MAX_POLLS) {
+      this.polls.set(
+        udid,
+        setTimeout(() => void this.probe(udid, attempt + 1), pollMs)
+      )
+    }
+  }
+
+  private clearPoll(udid: Udid): void {
+    const timer = this.polls.get(udid)
+    if (timer) clearTimeout(timer)
+    this.polls.delete(udid)
+  }
+
+  private forgetDevices(): void {
+    for (const udid of this.polls.keys()) this.clearPoll(udid)
+    const hadDevices = this.devices.size > 0
+    this.attached.clear()
+    this.devices.clear()
+    if (hadDevices) this.notifyDevicesChanged()
+  }
+
+  private notifyDevicesChanged(): void {
     for (const listener of this.deviceListeners) listener()
   }
 

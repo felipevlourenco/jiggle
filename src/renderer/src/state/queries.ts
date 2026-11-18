@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useDevices = () =>
   useQuery({ queryKey: ['devices'], queryFn: () => window.jiggle.device.list() })
@@ -11,10 +11,13 @@ export const useLayout = (udid: string | undefined) =>
     enabled: !!udid
   })
 
-// Until the device switcher exists (M20), the active device is the first one.
-export function useActiveDevice() {
-  const { data } = useDevices()
-  return data?.[0]
+// "Try Again": re-check one device now. A changed state also arrives as `device:changed`.
+export function useRefreshDevice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (udid: string) => window.jiggle.device.refresh(udid),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['devices'] })
+  })
 }
 
 // Main pushes `device:changed`; refetch everything that depends on the device.

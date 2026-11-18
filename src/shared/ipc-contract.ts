@@ -22,6 +22,7 @@ export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_ }
 // Main validates `args` on every call; `result` only types the renderer.
 export const channels = {
   'device:list': { args: z.tuple([]), result: z.array(Device_) },
+  'device:refresh': { args: z.tuple([Udid]), result: z.void() },
   'layout:get': { args: z.tuple([Udid]), result: RawIconState_ }
 } as const
 
@@ -46,6 +47,8 @@ export type Broadcast = <E extends EventName>(event: E, payload: EventPayload<E>
 export interface JiggleApi {
   device: {
     list(): Promise<Device[]>
+    // Re-check one device now (the "Try Again" button).
+    refresh(udid: string): Promise<void>
     onChanged(listener: () => void): () => void
   }
   layout: {

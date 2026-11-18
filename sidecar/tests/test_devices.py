@@ -1,0 +1,96 @@
+import pytest
+from pymobiledevice3.exceptions import (
+    PairingDialogResponsePendingError,
+    PasswordRequiredError,
+    UserDeniedPairingError,
+)
+
+from jiggle_engine.devices import device_info
+
+
+class FakeLockdown:
+    """Just enough of a lockdown client; each flag scripts one phone condition."""
+
+    def __init__(self, *, paired=True, version="26.1", pair_error=None, service_error=None):
+        self.paired = paired
+        self.all_values = {"DeviceName": "Sam's iPhone", "ProductVersion": version, "DeviceClass": "iPhone"}
+        self.product_type = "iPhone17,1"
+        self.display_name = "iPhone 16 Pro"
+        self.pair_error = pair_error
+        self.service_error = service_error
+        self.closed = False
+        self.pair_timeouts = []
+
+    async def pair(self, timeout=None):
+        self.pair_timeouts.append(timeout)
+        if self.pair_error:
+            raise self.pair_error
+        self.paired = True
+
+    async def validate_pairing(self):
+        return True
+
+    async def get_service_connection_attributes(self, name):
+        if self.service_error:
+            raise self.service_error
+        return {"Port": 1}
+
+    async def close(self):
+        self.closed = True
+
+
+async def info(lockdown):
+    async def connect(**_kwargs):
+        return lockdown
+
+    return await device_info("UDID-1", connect=connect)
+
+
+async def test_paired_phone_is_ready_with_its_details():
+    lockdown = FakeLockdown()
+    assert await info(lockdown) == {
+        "udid": "UDID-1",
+        "name": "Sam's iPhone",
+        "productType": "iPhone17,1",
+        "modelName": "iPhone 16 Pro",
+        "deviceClass": "iPhone",
+        "osVersion": "26.1",
+        "connection": "usb",
+        "state": "ready",
+    }
+    assert lockdown.closed
+
+
+@pytest.mark.parametrize(
+    "lockdown_kwargs, state",
+    [
+        (dict(paired=False, pair_error=PairingDialogResponsePendingError()), "trust-pending"),
+        (dict(paired=False, pair_error=UserDeniedPairingError()), "trust-declined"),
+        (dict(paired=False, pair_error=PasswordRequiredError()), "locked"),
+        (dict(service_error=PasswordRequiredError()), "locked"),
+        (dict(service_error=RuntimeError("boom")), "error"),
+        (dict(version="16.7"), "unsupported-os"),
+        (dict(paired=False), "ready"),  # user tapped Trust: pair() succeeds
+    ],
+)
+async def test_maps_phone_conditions_to_device_states(lockdown_kwargs, state):
+    lockdown = FakeLockdown(**lockdown_kwargs)
+    result = await info(lockdown)
+    assert result["state"] == state
+    assert result["name"] == "Sam's iPhone"  # still known when blocked
+    assert lockdown.closed
+
+
+async def test_pairing_never_blocks():
+    lockdown = FakeLockdown(paired=False, pair_error=PairingDialogResponsePendingError())
+    await info(lockdown)
+    assert lockdown.pair_timeouts == [0]
+
+
+async def test_unreachable_device_is_an_error_with_generic_details():
+    async def connect(**_kwargs):
+        raise ConnectionError("lockdownd not up")
+
+    result = await device_info("UDID-2", connect=connect)
+    assert result["state"] == "error"
+    assert result["udid"] == "UDID-2" and result["name"] == "iPhone" and result["osVersion"] == ""

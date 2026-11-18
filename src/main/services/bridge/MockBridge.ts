@@ -21,6 +21,8 @@ export class MockBridge implements DeviceBridge {
     return this.fixture ? [this.fixture.device] : []
   }
 
+  async refreshDevice(): Promise<void> {}
+
   async getIconState(udid: Udid): Promise<RawIconState> {
     if (!this.fixture || this.fixture.device.udid !== udid)
       throw new Error(`Unknown device: ${udid}`)
