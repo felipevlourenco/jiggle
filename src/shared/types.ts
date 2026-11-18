@@ -71,7 +71,15 @@ export interface InstalledApp {
   removable: boolean
 }
 
+// h 0–360, s and l 0–1.
+export interface IconColor {
+  h: number
+  s: number
+  l: number
+}
+
 export interface AppInfo extends InstalledApp {
+  iconColor: IconColor | null // the icon's dominant color; null until the icon is read
   developer: string | null
   category: string // "Social Networking", "Apple", "Unknown"
   categorySource: 'appstore' | 'apple' | 'unknown'

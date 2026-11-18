@@ -1,14 +1,17 @@
-import type { AppItem, FolderItem, Layout, LayoutItem } from '../types'
+import type { AppItem, FolderItem, IconColor, Layout, LayoutItem } from '../types'
+import { compareColors } from './color.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
 
 export interface SortOptions {
-  by: 'name' | 'category'
+  by: 'name' | 'category' | 'color'
   // keep-pages: a page holding a widget (or anything unrecognised) stays exactly as it is.
   // sort-around: apps and folders leave those pages; only the widgets stay on them.
   widgetMode: 'keep-pages' | 'sort-around'
   // Needed for by: 'category'. Apple apps are "Apple", apps the App Store doesn't know "Unknown".
   categoryOf?: (bundleId: string) => string
+  // Needed for by: 'color'. null: the icon hasn't been read; it sorts with the neutrals.
+  colorOf?: (bundleId: string) => IconColor | null
 }
 
 type Movable = AppItem | FolderItem
@@ -20,13 +23,23 @@ const isMovable = (item: LayoutItem): item is Movable =>
 const collator = new Intl.Collator('en', { sensitivity: 'base' })
 const nameOf = (item: Movable): string => item.name.replace(/\p{Cf}/gu, '').trim()
 
-// Folders are sorted as single items by their name. In category mode they come first.
+// Folders are sorted as single items by their name. In category and color mode they come first.
 function compare(a: Movable, b: Movable, opts: SortOptions): number {
   if (opts.by === 'category') {
     const category = (i: Movable): string =>
       i.kind === 'folder' ? '' : (opts.categoryOf?.(i.bundleId) ?? '')
     const byCategory = collator.compare(category(a), category(b))
     if (byCategory) return byCategory
+  }
+  if (opts.by === 'color' && (a.kind === 'app' || b.kind === 'app')) {
+    // Folders have no color: they go first, by name below.
+    if (a.kind !== 'app') return -1
+    if (b.kind !== 'app') return 1
+    const byColor = compareColors(
+      opts.colorOf?.(a.bundleId) ?? null,
+      opts.colorOf?.(b.bundleId) ?? null
+    )
+    if (byColor) return byColor
   }
   return collator.compare(nameOf(a), nameOf(b))
 }

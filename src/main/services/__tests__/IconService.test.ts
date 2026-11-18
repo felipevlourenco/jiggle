@@ -8,14 +8,14 @@ import { iconsDir, resolveAssetUrl } from '../storage/paths'
 
 const silent = { debug() {}, info() {}, warn() {}, error() {} }
 
-function setup() {
+function setup(colorOf?: (png: Buffer) => { h: number; s: number; l: number } | null) {
   const root = mkdtempSync(join(tmpdir(), 'jiggle-icons-'))
   const getIcons = vi.fn(async (_udid: string, ids: string[]) => {
     // the phone can't read this one
     return new Map(ids.filter((i) => i !== 'broken.app').map((i) => [i, Buffer.from('png-' + i)]))
   })
   const bridge = { getIcons } as unknown as DeviceBridge
-  return { root, getIcons, service: new IconService(bridge, root, silent) }
+  return { root, getIcons, service: new IconService(bridge, root, silent, colorOf) }
 }
 
 describe('IconService', () => {
@@ -52,6 +52,38 @@ describe('IconService', () => {
     ])
     expect(getIcons).toHaveBeenCalledTimes(2) // a.b once, then c.d
     expect(readdirSync(iconsDir(root, 'U1')).sort()).toEqual(['a.b.png', 'c.d.png'])
+  })
+})
+
+describe('IconService colors', () => {
+  const red = { h: 0, s: 0.9, l: 0.5 }
+
+  it("reads each icon's color once and remembers it, including icons that fail", async () => {
+    const colorOf = vi.fn((png: Buffer) => {
+      if (png.toString() === 'png-bad.app') throw new Error('not an image')
+      return red
+    })
+    const { service, root } = setup(colorOf)
+    await service.sync('U1', ['a.b', 'bad.app'])
+    expect(await service.colors('U1')).toEqual({ 'a.b': red, 'bad.app': null })
+    colorOf.mockClear()
+    // a new service (a relaunch) answers from the file
+    const again = new IconService(
+      { getIcons: async () => new Map() } as unknown as DeviceBridge,
+      root,
+      silent,
+      colorOf
+    )
+    await again.sync('U1', ['a.b', 'bad.app'])
+    expect(colorOf).not.toHaveBeenCalled()
+    expect(await again.colors('U1')).toEqual({ 'a.b': red, 'bad.app': null })
+  })
+
+  it('does nothing without a decoder and has no colors before a sync', async () => {
+    const { service } = setup()
+    expect(await service.colors('U1')).toEqual({})
+    await service.sync('U1', ['a.b'])
+    expect(await service.colors('U1')).toEqual({})
   })
 })
 

@@ -106,6 +106,36 @@ describe('sortLayout by category', () => {
   })
 })
 
+describe('sortLayout by color', () => {
+  const colors: Record<string, { h: number; s: number; l: number }> = {
+    'app.sky': { h: 210, s: 0.8, l: 0.5 },
+    'app.rose': { h: 0, s: 0.8, l: 0.5 },
+    'app.snow': { h: 0, s: 0, l: 0.97 },
+    'app.lime': { h: 100, s: 0.8, l: 0.5 }
+  }
+  const opts = {
+    by: 'color',
+    widgetMode: 'keep-pages',
+    colorOf: (id: string) => colors[id] ?? null
+  } as const
+
+  it('flows through the rainbow, neutrals and unread icons last, folders first', () => {
+    const out = sortLayout(
+      layout([[app('Snow'), app('Sky'), app('Unread'), folder('Stuff'), app('Rose'), app('Lime')]]),
+      opts
+    )
+    expect(names(out.pages[0])).toEqual(['Stuff', 'Rose', 'Lime', 'Sky', 'Snow', 'Unread'])
+  })
+
+  it('breaks ties by name', () => {
+    const same = { ...opts, colorOf: () => ({ h: 120, s: 0.8, l: 0.5 }) }
+    expect(names(sortLayout(layout([[app('Zed'), app('Abe')]]), same).pages[0])).toEqual([
+      'Abe',
+      'Zed'
+    ])
+  })
+})
+
 describe('widget modes', () => {
   const widgetPage = [widget(), app('Zulu'), app('Yankee')]
   const input = (): Layout =>

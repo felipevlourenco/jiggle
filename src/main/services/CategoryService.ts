@@ -43,11 +43,18 @@ export class CategoryService {
     this.sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
   }
 
+  // `iconColor` is left null here; the caller adds it.
   // Answers from what is known right now and fetches the rest in the background.
   resolve(apps: InstalledApp[]): AppsResult {
     const infos = apps.map((app): AppInfo => {
       if (app.bundleId.startsWith('com.apple.')) {
-        return { ...app, developer: 'Apple', category: 'Apple', categorySource: 'apple' }
+        return {
+          ...app,
+          developer: 'Apple',
+          category: 'Apple',
+          categorySource: 'apple',
+          iconColor: null
+        }
       }
       const hit = this.cached(app.bundleId)
       if (!hit) {
@@ -58,13 +65,20 @@ export class CategoryService {
         ) {
           this.queue.push(app.bundleId)
         }
-        return { ...app, developer: null, category: 'Unknown', categorySource: 'unknown' }
+        return {
+          ...app,
+          developer: null,
+          category: 'Unknown',
+          categorySource: 'unknown',
+          iconColor: null
+        }
       }
       return {
         ...app,
         developer: hit.developer,
         category: hit.category ?? 'Unknown',
-        categorySource: hit.category ? 'appstore' : 'unknown'
+        categorySource: hit.category ? 'appstore' : 'unknown',
+        iconColor: null
       }
     })
     if (this.queue.length && !this.running) void this.drain()

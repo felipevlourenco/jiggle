@@ -3,6 +3,8 @@ import { join } from 'node:path'
 // Everything Jiggle stores lives under Electron's userData folder (`root`).
 export const deviceDir = (root: string, udid: string): string => join(root, 'devices', udid)
 export const iconsDir = (root: string, udid: string): string => join(deviceDir(root, udid), 'icons')
+export const iconColorsPath = (root: string, udid: string): string =>
+  join(deviceDir(root, udid), 'icon-colors.json')
 export const snapshotsDir = (root: string, udid: string): string =>
   join(deviceDir(root, udid), 'snapshots')
 

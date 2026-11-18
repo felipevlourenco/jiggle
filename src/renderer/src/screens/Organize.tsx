@@ -13,9 +13,15 @@ import { useApps, useLayout } from '../state/queries'
 import { useOrganizeChoice } from '../state/store'
 import s from './organize.module.css'
 
-const PRESETS: { by: SortOptions['by']; title: string; blurb: string }[] = [
-  { by: 'name', title: 'A–Z', blurb: 'Alphabetical by name' },
-  { by: 'category', title: 'Category', blurb: 'Grouped by App Store category' }
+const PRESETS: { by: SortOptions['by']; title: string; blurb: string; sorted: string }[] = [
+  { by: 'name', title: 'A–Z', blurb: 'Alphabetical by name', sorted: 'A–Z' },
+  {
+    by: 'category',
+    title: 'Category',
+    blurb: 'Grouped by App Store category',
+    sorted: 'by category'
+  },
+  { by: 'color', title: 'Color', blurb: 'A rainbow of icons', sorted: 'by color' }
 ]
 const WIDGET_MODES: { mode: SortOptions['widgetMode']; label: string }[] = [
   { mode: 'keep-pages', label: 'Keep widget pages' },
@@ -36,12 +42,21 @@ export function Organize({ device }: { device: Device }) {
     () => new Map(apps.data?.apps.map((a) => [a.bundleId, a.category])),
     [apps.data]
   )
+  const colors = useMemo(
+    () => new Map(apps.data?.apps.map((a) => [a.bundleId, a.iconColor])),
+    [apps.data]
+  )
   const before = layout.data?.layout
   const preview = useMemo(() => {
     if (!before) return null
     const categoryOf = (id: string): string => categories.get(id) ?? 'Unknown'
     const sorted = (by: SortOptions['by']): Layout =>
-      sortLayout(before, { by, widgetMode: choice.widgetMode, categoryOf })
+      sortLayout(before, {
+        by,
+        widgetMode: choice.widgetMode,
+        categoryOf,
+        colorOf: (id) => colors.get(id) ?? null
+      })
     const after = sorted(choice.by)
     const moved = movedIds(before, after)
     // Apps inside a moved folder move with it.
@@ -61,7 +76,7 @@ export function Organize({ device }: { device: Device }) {
         PRESETS.map((p) => [p.by, appsOf(sorted(p.by).pages.flat()).slice(0, 5)])
       ) as Record<SortOptions['by'], AppItem[]>
     }
-  }, [before, categories, choice])
+  }, [before, categories, colors, choice])
 
   if (layout.isError) {
     return (
@@ -74,7 +89,7 @@ export function Organize({ device }: { device: Device }) {
       </div>
     )
   }
-  const waitingForCategories = choice.by === 'category' && apps.isPending
+  const waitingForCategories = choice.by !== 'name' && apps.isPending
   if (!before || !preview || waitingForCategories) {
     return (
       <p className={s.status} role="status">
@@ -83,7 +98,8 @@ export function Organize({ device }: { device: Device }) {
     )
   }
 
-  const presetTitle = PRESETS.find((p) => p.by === choice.by)!.title
+  const preset = PRESETS.find((p) => p.by === choice.by)!
+  const presetTitle = preset.title
   const readOnly = device.state === 'unsupported-os'
   const blocked = preview.issues.length > 0
   const lookup = apps.data?.lookup
@@ -169,7 +185,7 @@ export function Organize({ device }: { device: Device }) {
               ? [`${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`]
               : [])
           ]}
-          doneMessage={`Done! ${device.name} is sorted ${presetTitle}.`}
+          doneMessage={`Done! ${device.name} is sorted ${preset.sorted}.`}
           udid={device.udid}
           run={() =>
             window.jiggle.apply.run({

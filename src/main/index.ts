@@ -1,7 +1,8 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage } from 'electron'
 import log from 'electron-log/main'
 import type { Broadcast } from '@shared/ipc-contract'
+import { dominantColor } from '@shared/layout/color'
 import { registerIpc } from './ipc'
 import { restoreLastBackup } from './ipc/apply'
 import { backUpActiveDevice } from './ipc/snapshots'
@@ -62,7 +63,11 @@ if (!app.requestSingleInstanceLock()) {
     const bridge = (mock ?? sidecar) as DeviceBridge
     const userData = app.getPath('userData')
     handleAssetProtocol(userData)
-    const icons = new IconService(bridge, userData, log.scope('icons'))
+    const icons = new IconService(bridge, userData, log.scope('icons'), (png) => {
+      const image = nativeImage.createFromBuffer(png)
+      const { width, height } = image.getSize()
+      return width ? dominantColor({ data: image.toBitmap(), width, height }) : null
+    })
     // ponytail: the storefront follows the Mac's region until Settings exists (M16-ish); no lookup on/off switch yet.
     const categories = new CategoryService({
       root: userData,

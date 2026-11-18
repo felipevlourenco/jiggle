@@ -1,15 +1,18 @@
 import { existsSync } from 'node:fs'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import writeFileAtomic from 'write-file-atomic'
-import type { Udid } from '@shared/types'
+import type { IconColor, Udid } from '@shared/types'
 import type { DeviceBridge } from './bridge/DeviceBridge'
 import type { Logger } from './bridge/SidecarBridge'
-import { iconsDir, isSafeBundleId } from './storage/paths'
+import { iconColorsPath, iconsDir, isSafeBundleId } from './storage/paths'
 
 const BATCH = 20
 
-// Keeps a disk cache of each device's app icons, so the UI never waits on the phone twice.
+// Turns a PNG into its dominant color. Electron's nativeImage in the app, a stub in tests.
+export type ColorOf = (png: Buffer) => IconColor | null
+
+// Keeps a disk cache of each device's app icons and their colors, so the UI never waits on the phone twice.
 // ponytail: an icon is cached forever; an updated app icon needs the cache cleared (key by iconModDate if it matters).
 export class IconService {
   // The latest run per device: a new call waits for it, then fetches only what is still missing.
@@ -18,7 +21,8 @@ export class IconService {
   constructor(
     private readonly bridge: DeviceBridge,
     private readonly root: string,
-    private readonly log: Logger
+    private readonly log: Logger,
+    private readonly colorOf?: ColorOf
   ) {}
 
   // Make sure every icon is on disk. Calls for one device run one after another.
@@ -50,5 +54,35 @@ export class IconService {
       }
     }
     if (missing.length) this.log.info(`icons: fetched ${fetched} of ${missing.length}`)
+    await this.syncColors(udid, ids)
+  }
+
+  // bundle id -> dominant color (null: the icon couldn't be read). Empty until the icons are synced.
+  async colors(udid: Udid): Promise<Record<string, IconColor | null>> {
+    try {
+      return JSON.parse(await readFile(iconColorsPath(this.root, udid), 'utf8'))
+    } catch {
+      return {}
+    }
+  }
+
+  // Read each icon's color once; after that it is a lookup.
+  private async syncColors(udid: Udid, ids: string[]): Promise<void> {
+    if (!this.colorOf) return
+    const known = await this.colors(udid)
+    const todo = ids.filter(
+      (id) => !(id in known) && existsSync(join(iconsDir(this.root, udid), `${id}.png`))
+    )
+    if (todo.length === 0) return
+    for (const id of todo) {
+      try {
+        known[id] = this.colorOf(await readFile(join(iconsDir(this.root, udid), `${id}.png`)))
+      } catch (err) {
+        this.log.warn(`icon color ${id} failed:`, (err as Error).message)
+        known[id] = null
+      }
+    }
+    await writeFileAtomic(iconColorsPath(this.root, udid), JSON.stringify(known))
+    this.log.info(`icons: read ${todo.length} colors`)
   }
 }

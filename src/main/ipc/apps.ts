@@ -21,6 +21,11 @@ export function registerAppsIpc(
       if (!known.has(bundleId)) installed.push({ bundleId, name, removable: false })
     }
     await icons.sync(udid, [...placed.keys(), ...known])
-    return categories.resolve(installed)
+    const colors = await icons.colors(udid)
+    const result = categories.resolve(installed)
+    return {
+      ...result,
+      apps: result.apps.map((a) => ({ ...a, iconColor: colors[a.bundleId] ?? null }))
+    }
   })
 }

@@ -220,6 +220,10 @@ test.describe('Organize', () => {
       'aria-checked',
       'true'
     )
+    await win.getByRole('radio', { name: /Color/ }).click()
+    await expect(win.getByRole('radio', { name: /Color/ })).toHaveAttribute('aria-checked', 'true')
+    await expect(win.getByTestId('summary')).toHaveText(/^\d+ of \d+ apps will move/)
+    await win.getByRole('radio', { name: /Category/ }).click()
     await win.getByRole('radio', { name: 'Sort around widgets' }).click()
     await expect(win.getByRole('radio', { name: 'Sort around widgets' })).toHaveAttribute(
       'aria-checked',
