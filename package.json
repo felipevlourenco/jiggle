@@ -1,7 +1,7 @@
 {
   "name": "jiggle",
   "productName": "Jiggle",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Rearrange your iPhone home screen from your Mac",
   "author": "Felipe Lourenco",
   "packageManager": "pnpm@12.18.0",
