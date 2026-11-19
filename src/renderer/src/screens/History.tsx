@@ -198,7 +198,9 @@ export function History({
         {saveButton}
       </ToolbarActions>
       {!canBackUp && (
-        <Banner>No iPhone connected. You can look at your backups, not change anything.</Banner>
+        <Banner>
+          No iPhone or iPad connected. You can look at your backups, not change anything.
+        </Banner>
       )}
       {saved.length > 0 && (
         <>
@@ -229,7 +231,7 @@ export function History({
             'Apps installed since are added at the end.'
           ]}
           confirmLabel="Switch"
-          doneMessage={`Done! ${deviceName ?? 'Your iPhone'} now shows “${switching.name}”.`}
+          doneMessage={`Done! ${deviceName ?? 'Your device'} now shows “${switching.name}”.`}
           udid={switching.udid}
           run={() => window.jiggle.apply.switchTo(switching.udid, switching.id)}
           onClose={() => setSwitching(undefined)}
@@ -250,7 +252,7 @@ export function History({
             `Back to ${when(restoring.createdAt, isToday(restoring.createdAt))}: ${plural(restoring.appCount, 'app')} on ${plural(restoring.pageCount, 'page')}`
           ]}
           confirmLabel="Restore"
-          doneMessage="Restored. Your iPhone is back as it was."
+          doneMessage={`Restored. ${deviceName ?? 'Your device'} is back as it was.`}
           udid={restoring.udid}
           run={() => window.jiggle.apply.restore(restoring.udid, restoring.id)}
           onClose={() => setRestoring(undefined)}

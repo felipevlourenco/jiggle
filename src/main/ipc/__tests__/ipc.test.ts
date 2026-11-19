@@ -170,7 +170,7 @@ describe('File > Save Layout…', () => {
     await requestSaveLayout(d)
     expect(d.broadcast).toHaveBeenCalledWith(
       'toast',
-      'Connect an unlocked iPhone to save its layout.'
+      'Connect an unlocked iPhone or iPad to save its layout.'
     )
     expect(d.broadcast).not.toHaveBeenCalledWith('menu:save-layout', undefined)
   })

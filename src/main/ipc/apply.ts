@@ -28,7 +28,8 @@ export async function restoreLastBackup({
   confirm
 }: MenuDeps): Promise<void> {
   const device = (await bridge.listDevices()).find((d) => d.state === 'ready')
-  if (!device) return void broadcast('toast', 'Connect an unlocked iPhone to restore a backup.')
+  if (!device)
+    return void broadcast('toast', 'Connect an unlocked iPhone or iPad to restore a backup.')
   const last = await snapshots.latest(device.udid)
   if (!last) return void broadcast('toast', 'There are no backups to restore yet.')
   const when = new Date(last.createdAt).toLocaleString([], {

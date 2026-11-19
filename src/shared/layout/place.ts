@@ -9,16 +9,18 @@ export interface Placement {
 }
 
 // How many grid cells an item covers. Apps, folders and web clips take one.
+// ponytail: widget sizes on an iPad (6 columns: medium 4 × 2, large 4 × 4, extra large 6 × 4) are from memory.
 export function itemSpan(item: LayoutItem, grid: Grid): { w: number; h: number } {
   if (item.kind !== 'widget') return { w: 1, h: 1 }
   switch (item.raw['gridSize']) {
     case 'small':
       return { w: Math.min(2, grid.columns), h: 2 }
     case 'large':
+      return { w: Math.min(4, grid.columns), h: 4 }
     case 'extraLarge':
       return { w: grid.columns, h: 4 }
-    default: // 'medium', and anything we don't know: full width, two rows
-      return { w: grid.columns, h: 2 }
+    default: // 'medium', and anything we don't know: two rows, across the iPhone's whole width
+      return { w: Math.min(4, grid.columns), h: 2 }
   }
 }
 

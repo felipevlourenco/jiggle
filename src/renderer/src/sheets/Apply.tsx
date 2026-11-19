@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useDevices } from '../state/queries'
 import { appError } from '@shared/errors'
 import type { ApplyResult, ApplyStep, SnapshotSummary } from '@shared/types'
 import {
@@ -12,10 +13,10 @@ import {
 } from '../components/icons'
 import s from './apply.module.css'
 
-const STEPS: { step: ApplyStep; label: string }[] = [
+const steps = (kind: string): { step: ApplyStep; label: string }[] => [
   { step: 'checking', label: 'Checking layout' },
   { step: 'backing-up', label: 'Backing up' },
-  { step: 'writing', label: 'Writing to iPhone' },
+  { step: 'writing', label: `Writing to ${kind}` },
   { step: 'verifying', label: 'Verifying' }
 ]
 
@@ -51,6 +52,8 @@ export function ApplySheet({
   const dialog = useRef<HTMLDialogElement>(null)
   const started = useRef(false)
   const qc = useQueryClient()
+  const kind = useDevices().data?.find((d) => d.udid === udid)?.deviceClass ?? 'iPhone'
+  const stepList = steps(kind)
   const [phase, setPhase] = useState<Phase>({ name: 'confirm' })
   const running = phase.name === 'running'
 
@@ -86,7 +89,7 @@ export function ApplySheet({
   const undoWith = (backup: SnapshotSummary): Promise<void> =>
     go(() => window.jiggle.apply.restore(udid, backup.id), true)
 
-  const current = phase.name === 'running' ? STEPS.findIndex((x) => x.step === phase.step) : -1
+  const current = phase.name === 'running' ? stepList.findIndex((x) => x.step === phase.step) : -1
   const writing = phase.name === 'running' && phase.step === 'writing'
 
   return (
@@ -135,17 +138,17 @@ export function ApplySheet({
         <>
           <div className={s.head}>
             <h2>{phase.undo ? 'Restoring your backup…' : 'Applying…'}</h2>
-            <span className="meta">Keep your iPhone connected and unlocked.</span>
+            <span className="meta">Keep your {kind} connected and unlocked.</span>
           </div>
           <div className={s.body}>
             <progress
               className={s.bar}
-              max={STEPS.length}
+              max={stepList.length}
               value={current + 1}
               aria-label="Progress"
             />
             <ol className={s.steps}>
-              {STEPS.map(({ step, label }, i) => (
+              {stepList.map(({ step, label }, i) => (
                 <li
                   key={step}
                   className={i === current ? s.now : i < current ? s.past : undefined}
@@ -185,7 +188,7 @@ export function ApplySheet({
             <span className={s.check} aria-hidden="true">
               <CheckIcon size={28} />
             </span>
-            <h2>{phase.undone ? 'Restored. Your iPhone is back as it was.' : doneMessage}</h2>
+            <h2>{phase.undone ? `Restored. Your ${kind} is back as it was.` : doneMessage}</h2>
           </div>
           <div className={`${s.footer} ${s.center}`}>
             {!phase.undone && (

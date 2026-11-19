@@ -84,3 +84,30 @@ describe('real widget pages', () => {
     expect(summary.apps).toBeGreaterThan(100) // dock, pages and folders all count
   })
 })
+
+describe('placeItems on an iPad (6 columns)', () => {
+  const ipad = gridFor('iPad')
+  const spots = (items: LayoutItem[]) =>
+    placeItems(items, ipad).map((p) => [p.col, p.row, p.w, p.h])
+
+  it('a medium widget is 4 × 2, with icons beside it and under it', () => {
+    expect(spots([widget('medium'), app(1), app(2), app(3), app(4), app(5)])).toEqual([
+      [0, 0, 4, 2],
+      [4, 0, 1, 1],
+      [5, 0, 1, 1],
+      [4, 1, 1, 1],
+      [5, 1, 1, 1],
+      [0, 2, 1, 1]
+    ])
+  })
+
+  it('a large widget is 4 × 4, an extra large one 6 × 4', () => {
+    expect(spots([widget('large')])).toEqual([[0, 0, 4, 4]])
+    expect(spots([widget('extraLarge')])).toEqual([[0, 0, 6, 4]])
+  })
+
+  it('still spans the iPhone’s whole width there', () => {
+    expect(at([widget('medium')])).toEqual([[0, 0, 4, 2]])
+    expect(at([widget('large')])).toEqual([[0, 0, 4, 4]])
+  })
+})

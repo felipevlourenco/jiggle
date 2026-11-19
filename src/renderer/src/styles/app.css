@@ -50,6 +50,70 @@ body {
     var(--sh-sm),
     0 0 0 1px var(--border);
 }
+/* With two or more devices the card is a button that opens a menu of them. */
+.device-switch {
+  position: relative;
+}
+.device-card.switchable {
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+.device-card.switchable > svg {
+  flex: none;
+  color: var(--text-tertiary);
+}
+.device-card.switchable:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--sh-sm),
+    0 0 0 3px var(--ring);
+}
+.device-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--sh-md);
+}
+.device-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.device-menu button:hover,
+.device-menu button:focus-visible {
+  outline: none;
+  background: var(--surface-2);
+}
+.device-menu button[aria-checked='true'] {
+  background: var(--sel);
+}
+.device-menu .dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+.device-menu .dot.warn {
+  background: var(--warning);
+}
 .device-icon {
   display: grid;
   place-items: center;

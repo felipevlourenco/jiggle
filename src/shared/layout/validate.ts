@@ -46,15 +46,17 @@ export function validateLayout(before: Layout, after: Layout, removed: string[] 
   }
 
   // Cells, not items: a medium widget takes 8. Counting cells needs no guess about where things sit.
+  // The phone's own grid (`before`) rules, not whatever grid the caller put on `after`.
+  const { grid } = before
   after.pages.forEach((page, i) => {
     const cells = page.reduce((n, item) => {
-      const { w, h } = itemSpan(item, after.grid)
+      const { w, h } = itemSpan(item, grid)
       return n + w * h
     }, 0)
-    if (cells > pageCapacity(after.grid)) issues.push({ code: 'page-over-capacity', page: i + 1 })
+    if (cells > pageCapacity(grid)) issues.push({ code: 'page-over-capacity', page: i + 1 })
   })
 
-  if (after.dock.length > after.grid.dockMax) {
+  if (after.dock.length > grid.dockMax) {
     issues.push({ code: 'dock-over-max', count: after.dock.length })
   }
 

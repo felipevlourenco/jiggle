@@ -100,6 +100,7 @@ export interface Snapshot {
   reason: string | null // "Before A–Z sort" for auto-backups
   createdAt: string // ISO
   osVersion: string
+  deviceClass?: Device['deviceClass'] // missing in files saved before iPad support: an iPhone
   appCount: number
   pageCount: number
   rawState: RawIconState

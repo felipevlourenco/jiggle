@@ -120,7 +120,7 @@ export function Organize({ device }: { device: Device }) {
           disabled={readOnly || blocked}
           onClick={() => setApplying(true)}
         >
-          Apply to iPhone
+          Apply to {device.deviceClass}
         </button>
       </ToolbarActions>
       <div className={s.presets} role="radiogroup" aria-label="Sort by">
@@ -202,6 +202,7 @@ export function Organize({ device }: { device: Device }) {
           after={preview.after}
           moved={preview.moved}
           udid={device.udid}
+          kind={device.deviceClass}
         />
       </div>
 

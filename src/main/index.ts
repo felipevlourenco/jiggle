@@ -32,7 +32,9 @@ function createMock(): MockBridge | null {
   const name = app.isPackaged ? undefined : process.env['JIGGLE_MOCK_DEVICE']
   if (!name) return null
   if (name === 'none') return new MockBridge()
-  return new MockBridge(loadFixture(join(app.getAppPath(), 'tests/fixtures'), name))
+  // Several at once: JIGGLE_MOCK_DEVICE=iphone-basic,ipad-basic
+  const dir = join(app.getAppPath(), 'tests/fixtures')
+  return new MockBridge(name.split(',').map((one) => loadFixture(dir, one.trim())))
 }
 
 // Packaged: the frozen engine in Resources. Dev: the sidecar's own venv.

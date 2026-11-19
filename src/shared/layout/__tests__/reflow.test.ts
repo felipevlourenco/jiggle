@@ -1,7 +1,15 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { AppItem, FolderItem, Layout, LayoutItem, RawIconState, WidgetItem } from '../../types'
+import type {
+  AppItem,
+  Device,
+  FolderItem,
+  Layout,
+  LayoutItem,
+  RawIconState,
+  WidgetItem
+} from '../../types'
 import { gridFor } from '../grid'
 import { normalize } from '../normalize'
 import { reflow } from '../reflow'
@@ -111,10 +119,12 @@ describe('reflow', () => {
 describe('reflow on every fixture', () => {
   const dir = join(__dirname, '../../../../tests/fixtures')
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
-    const raw: RawIconState | undefined = JSON.parse(readFileSync(join(dir, file), 'utf8')).rawState
+    const { rawState: raw, device }: { rawState?: RawIconState; device?: Device } = JSON.parse(
+      readFileSync(join(dir, file), 'utf8')
+    )
     if (!raw) continue
     it(`${file}: switching to what the phone already has changes nothing`, () => {
-      const here = normalize(raw, gridFor('iPhone'))
+      const here = normalize(raw, gridFor(device?.deviceClass ?? 'iPhone'))
       const out = reflow(here, here)
       expect(layoutSignature(serialize(out))).toBe(layoutSignature(raw))
       expect(validateLayout(here, out)).toEqual([])

@@ -17,12 +17,14 @@ export async function backUpNow(
 ): Promise<SnapshotSummary> {
   try {
     const [rawState, devices] = await Promise.all([bridge.getIconState(udid), bridge.listDevices()])
+    const device = devices.find((d) => d.udid === udid)
     const made = await snapshots.create({
       udid,
       kind: 'auto-backup',
       name: null,
       reason: 'Manual backup',
-      osVersion: devices.find((d) => d.udid === udid)?.osVersion ?? '',
+      osVersion: device?.osVersion ?? '',
+      deviceClass: device?.deviceClass,
       rawState
     })
     broadcast('snapshots:changed', undefined)
@@ -38,7 +40,7 @@ export async function backUpNow(
 export async function backUpActiveDevice(deps: Deps): Promise<void> {
   const device = (await deps.bridge.listDevices()).find((d) => d.state === 'ready')
   if (!device) {
-    deps.broadcast('toast', 'Connect an unlocked iPhone to back it up.')
+    deps.broadcast('toast', 'Connect an unlocked iPhone or iPad to back it up.')
     return
   }
   await backUpNow(deps, device.udid).catch(() => {}) // already toasted
@@ -58,10 +60,12 @@ export async function saveLayout(
     ]).catch((err: Error) => {
       throw new Error(`Couldn’t read the iPhone: ${err.message}`, { cause: err })
     })
+    const device = devices.find((d) => d.udid === udid)
     const layout = await snapshots.saveLayout({
       udid,
       name,
-      osVersion: devices.find((d) => d.udid === udid)?.osVersion ?? '',
+      osVersion: device?.osVersion ?? '',
+      deviceClass: device?.deviceClass,
       rawState
     })
     broadcast('snapshots:changed', undefined)
@@ -92,7 +96,7 @@ export async function requestSaveLayout({ bridge, broadcast }: Deps): Promise<vo
     (d) => d.state === 'ready' || d.state === 'unsupported-os'
   )
   if (ready) broadcast('menu:save-layout', undefined)
-  else broadcast('toast', 'Connect an unlocked iPhone to save its layout.')
+  else broadcast('toast', 'Connect an unlocked iPhone or iPad to save its layout.')
 }
 
 export function registerSnapshotsIpc(ipc: IpcLike, deps: Deps): void {

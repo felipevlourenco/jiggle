@@ -15,31 +15,29 @@ export function loadFixture(dir: string, name: string): Fixture {
   return Fixture.parse(JSON.parse(readFileSync(join(dir, `${name}.json`), 'utf8')))
 }
 
-// Serves one recorded device (or none) from memory. Used for dev, tests and E2E.
+// Serves recorded devices (none, one or several) from memory. Used for dev, tests and E2E.
 export class MockBridge implements DeviceBridge {
-  // The mock phone remembers what is written to it, so apply and restore can be tried without a phone.
-  private rawState: RawIconState | null
+  // Each mock phone remembers what is written to it, so apply and restore can be tried without a phone.
+  private readonly phones = new Map<Udid, { fixture: Fixture; rawState: RawIconState }>()
 
-  constructor(private readonly fixture: Fixture | null = null) {
-    this.rawState = fixture ? structuredClone(fixture.rawState) : null
+  constructor(fixtures: Fixture | Fixture[] | null = null) {
+    for (const fixture of [fixtures ?? []].flat()) {
+      this.phones.set(fixture.device.udid, { fixture, rawState: structuredClone(fixture.rawState) })
+    }
   }
 
   async listDevices(): Promise<Device[]> {
-    return this.fixture ? [this.fixture.device] : []
+    return [...this.phones.values()].map((p) => p.fixture.device)
   }
 
   async refreshDevice(): Promise<void> {}
 
   async getIconState(udid: Udid): Promise<RawIconState> {
-    if (!this.fixture || this.fixture.device.udid !== udid)
-      throw new Error(`Unknown device: ${udid}`)
-    return structuredClone(this.rawState!)
+    return structuredClone(this.phone(udid).rawState)
   }
 
   async setIconState(udid: Udid, state: RawIconState): Promise<void> {
-    if (!this.fixture || this.fixture.device.udid !== udid)
-      throw new Error(`Unknown device: ${udid}`)
-    this.rawState = structuredClone(state)
+    this.phone(udid).rawState = structuredClone(state)
   }
 
   // The mock has no phone to ask: the UI falls back to the default grid, letter tiles and a gradient.
@@ -54,8 +52,8 @@ export class MockBridge implements DeviceBridge {
   // The mock has no installation proxy: every app on the recorded home screen counts as installed,
   // so an app sent to the App Library stays in the list.
   async listApps(udid: Udid): Promise<InstalledApp[]> {
-    await this.getIconState(udid) // checks the udid
-    const { dock, pages } = normalize(this.fixture!.rawState, gridFor('iPhone'))
+    const { fixture } = this.phone(udid)
+    const { dock, pages } = normalize(fixture.rawState, gridFor(fixture.device.deviceClass))
     const apps = new Map<string, InstalledApp>()
     const visit = (item: LayoutItem): void => {
       if (item.kind === 'folder') item.pages.flat().forEach(visit)
@@ -73,5 +71,11 @@ export class MockBridge implements DeviceBridge {
 
   onDevicesChanged(): () => void {
     return () => {}
+  }
+
+  private phone(udid: Udid): { fixture: Fixture; rawState: RawIconState } {
+    const phone = this.phones.get(udid)
+    if (!phone) throw new Error(`Unknown device: ${udid}`)
+    return phone
   }
 }

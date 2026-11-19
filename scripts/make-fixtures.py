@@ -27,13 +27,13 @@ def is_folder(i):
     return i.get("listType") == "folder"
 
 
-def device(n, name, product, model, os, state="ready"):
+def device(n, name, product, model, os, state="ready", kind="iPhone"):
     return {
         "udid": f"00008130-000A1B2C3D4E{n:04d}",
         "name": name,
         "productType": product,
         "modelName": model,
-        "deviceClass": "iPhone",
+        "deviceClass": kind,
         "osVersion": os,
         "connection": "usb",
         "state": state,
@@ -74,4 +74,28 @@ write(
 # blocked-phone states, for the Connect screen
 for n, name, state in ((5, "locked", "locked"), (6, "trust-pending", "trust-pending"), (7, "trust-declined", "trust-declined")):
     write(f"iphone-{name}", device(n, "Sam's iPhone", "iPhone17,1", "iPhone 16 Pro", "26.1", state), basic)
+
+# iPad (landscape, 6 x 5 = 30 per page): made-up from the iPhone's apps, not recorded from a real iPad.
+# ponytail: replace with a recording of a real iPad's icon state when there is one.
+def repack(items, first=()):
+    """Pages of 30 cells. `first` is a list of (widget, cells) that take the start of consecutive pages."""
+    pages, rest = [], list(items)
+    for widget, cells in first:
+        pages.append([copy.deepcopy(widget), *[rest.pop(0) for _ in range(30 - cells)]])
+    while rest:
+        pages.append([rest.pop(0) for _ in range(min(30, len(rest)))])
+    return pages
+
+
+apps_and_folders = [i for p in basic[1:] for i in p]
+ipad = lambda n, name: device(n, name, "iPad14,8", "iPad Air 11-inch (M2)", "26.1", kind="iPad")
+write("ipad-basic", ipad(11, "Sam's iPad"), [dock, *repack(apps_and_folders)])
+widgets = [i for p in pages for i in p if is_widget(i)]
+medium = {**widgets[0], "gridSize": "medium"}
+large = {**widgets[0], "gridSize": "large", "widgetIdentifier": "LargeWidget"}
+write(
+    "ipad-widgets",
+    ipad(12, "Sam's iPad"),
+    [dock, *repack(apps_and_folders, first=[(medium, 8), (large, 16)])],
+)
 print("wrote", sorted(p.name for p in OUT.glob("*.json")))

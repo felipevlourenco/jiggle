@@ -38,3 +38,26 @@ describe('MockBridge.listApps', () => {
     for (const a of apps) expect(a.removable).toBe(!a.bundleId.startsWith('com.apple.'))
   })
 })
+
+describe('MockBridge with several devices', () => {
+  const phone = loadFixture(dir, 'iphone-basic')
+  const ipad = loadFixture(dir, 'ipad-basic')
+
+  it('lists them all, and keeps what is written to one away from the other', async () => {
+    const bridge = new MockBridge([phone, ipad])
+    expect((await bridge.listDevices()).map((d) => d.deviceClass)).toEqual(['iPhone', 'iPad'])
+    await bridge.setIconState(ipad.device.udid, [[], []])
+    expect(await bridge.getIconState(ipad.device.udid)).toEqual([[], []])
+    expect(await bridge.getIconState(phone.device.udid)).toEqual(phone.rawState)
+    await expect(bridge.getIconState('NOPE-1')).rejects.toThrow('Unknown device')
+  })
+
+  it('has iPad fixtures with 30 items on a full page, and widgets sized for 6 columns', () => {
+    const wide = loadFixture(dir, 'ipad-widgets')
+    expect(wide.device).toMatchObject({ deviceClass: 'iPad', state: 'ready' })
+    const [, page1, page2, page3] = wide.rawState
+    expect([page1!.length, page2!.length, page3!.length]).toEqual([23, 15, 30]) // + widget cells = 30
+    expect(page1!.find((i) => 'gridSize' in i)).toMatchObject({ gridSize: 'medium' })
+    expect(page2!.find((i) => 'gridSize' in i)).toMatchObject({ gridSize: 'large' })
+  })
+})

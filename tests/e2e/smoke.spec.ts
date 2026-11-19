@@ -307,7 +307,7 @@ test.describe('History', () => {
     await win.getByRole('link', { name: 'History' }).click()
     await expect(win.getByRole('listitem')).toHaveCount(2)
     await expect(win.getByRole('button', { name: 'Back Up Now' })).toBeDisabled()
-    await expect(win.getByText(/No iPhone connected/)).toBeVisible()
+    await expect(win.getByText(/No iPhone or iPad connected/)).toBeVisible()
     await app.close()
   })
 })
@@ -836,8 +836,74 @@ test.describe('Saved layouts', () => {
     const win = await app.firstWindow()
     await expect(win.getByRole('heading', { name: 'Connect your iPhone' })).toBeVisible() // the page is listening
     await clickMenu(app, 'save-layout')
-    await expect(win.getByText('Connect an unlocked iPhone to save its layout.')).toBeVisible()
+    await expect(
+      win.getByText('Connect an unlocked iPhone or iPad to save its layout.')
+    ).toBeVisible()
     await expect(win.getByRole('dialog')).toHaveCount(0)
+    await app.close()
+  })
+})
+
+test.describe('iPad', () => {
+  test('shows a landscape frame with the 6-column grid, says iPad, and sorts into pages of up to 30', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'ipad-widgets' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('device-card')).toContainText("Sam's iPad")
+    await expect(win.getByTestId('device-card')).toContainText(
+      'iPad Air 11-inch (M2) · iPadOS 26.1'
+    )
+    await expect(win.locator('[data-frame="iPad"]')).toBeVisible()
+    await expect(win.locator('[data-frame="iPhone"]')).toHaveCount(0)
+    await expect(win.getByTestId('page')).toHaveAttribute('style', /repeat\(6, 1fr\)/)
+    await expect(win.getByTestId('dock').locator('[data-kind]')).toHaveCount(4)
+
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await expect(win.locator('[data-frame="iPad"]')).toHaveCount(2) // Before and After
+    await win.getByRole('button', { name: 'Apply to iPad' }).click()
+    const sheet = win.getByRole('dialog', { name: /Apply A–Z to Sam's iPad/ })
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done! Sam's iPad is sorted A–Z/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect(win.getByTestId('page')).toHaveCount(1) // Organize showed two
+    const sizes: number[] = []
+    for (let i = 0; i < 4; i++) {
+      await expect(
+        win.getByRole('group', { name: 'Pages' }).locator('[aria-current="page"]')
+      ).toHaveAttribute('aria-label', `Page ${i + 1}`)
+      sizes.push(await win.getByTestId('page').locator('> *').count())
+      if (i < 3) await win.getByRole('button', { name: 'Next page' }).click()
+    }
+    expect(sizes.every((n) => n <= 30)).toBe(true)
+    await app.close()
+  })
+
+  test('with an iPhone and an iPad connected, the sidebar switches between them', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic,ipad-basic' })
+    const win = await app.firstWindow()
+    const card = win.getByTestId('device-card')
+    await expect(card).toContainText('iPhone 16 Pro')
+    await expect(win.locator('[data-frame="iPhone"]')).toBeVisible()
+
+    await card.click()
+    const items = win.getByRole('menuitemradio')
+    await expect(items).toHaveCount(2)
+    await expect(items.first()).toHaveAttribute('aria-checked', 'true')
+    await items.filter({ hasText: 'iPad' }).click()
+    await expect(win.getByRole('menu')).toHaveCount(0)
+    await expect(card).toContainText('iPad Air 11-inch (M2)')
+    await expect(win.locator('[data-frame="iPad"]')).toBeVisible()
+    await expect(win.getByTestId('page')).toHaveAttribute('style', /repeat\(6, 1fr\)/)
+
+    // each device has its own apps: the iPad has the same apps as the iPhone here, its own pages
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByRole('heading', { name: 'No backups yet' })).toBeVisible()
+    await card.click()
+    await win.getByRole('menuitemradio').filter({ hasText: 'iPhone' }).click()
+    await expect(card).toContainText('iPhone 16 Pro')
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect(win.locator('[data-frame="iPhone"]')).toBeVisible()
     await app.close()
   })
 })

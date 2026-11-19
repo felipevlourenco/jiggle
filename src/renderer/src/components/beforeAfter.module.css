@@ -1,6 +1,7 @@
 .root {
   flex: 1;
   min-height: 0;
+  min-width: 0; /* the frames fit the space; they must not widen it */
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -8,6 +9,7 @@
 .stage {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   display: flex;
   justify-content: center;
   gap: 32px;

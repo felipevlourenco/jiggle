@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type WheelEvent } from 'react
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { compact } from '@shared/layout/edit'
-import { gridFor } from '@shared/layout/grid'
+import { gridFor, pageCapacity } from '@shared/layout/grid'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import { summarize } from '@shared/layout/summarize'
@@ -14,7 +14,7 @@ import { PageDots } from '../components/PageDots'
 import { PageGrid } from '../components/PageGrid'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { RedoIcon, UndoIcon, PencilIcon } from '../components/icons'
-import { FRAME_HEIGHT, PhoneFrame } from '../components/PhoneFrame'
+import { frameSize, PhoneFrame } from '../components/PhoneFrame'
 import t from '../components/tiles.module.css'
 import p from '../components/phone.module.css'
 import { draftActions, useDraft } from '../state/draft'
@@ -35,7 +35,7 @@ export function HomeScreen({ device }: { device: Device }) {
   const { data, isPending, isError, refetch, isRefetching } = useLayout(device.udid)
   const [page, setPage] = useState(0)
   const [chosenZoom, setChosenZoom] = useState<number>()
-  const [stageHeight, setStageHeight] = useState(0)
+  const [stage, setStage] = useState({ width: 0, height: 0 })
 
   const qc = useQueryClient()
   const editor = useDraft()
@@ -62,11 +62,20 @@ export function HomeScreen({ device }: { device: Device }) {
   // Fit the phone into the window until the user picks a zoom of their own.
   const stageRef = useCallback((el: HTMLDivElement | null) => {
     if (!el) return
-    const observer = new ResizeObserver(() => setStageHeight(el.clientHeight))
+    const observer = new ResizeObserver(() =>
+      setStage({ width: el.clientWidth, height: el.clientHeight })
+    )
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
-  const fit = stageHeight ? clamp((stageHeight - 8) / FRAME_HEIGHT, MIN_ZOOM, 1) : 0.7
+  const frame = frameSize(device.deviceClass)
+  const fit = stage.height
+    ? clamp(
+        Math.min((stage.height - 8) / frame.height, (stage.width - 8) / frame.width),
+        MIN_ZOOM,
+        1
+      )
+    : 0.7
   const zoom = chosenZoom ?? fit
 
   // A draft for another phone, or for a layout the phone no longer has (it changed, or a push went through).
@@ -145,12 +154,12 @@ export function HomeScreen({ device }: { device: Device }) {
           Reading your home screen…
         </p>
         <div className={s.stage} ref={stageRef}>
-          <PhoneFrame zoom={zoom}>
+          <PhoneFrame zoom={zoom} kind={device.deviceClass}>
             <div
               className={p.grid}
               style={{ gridTemplateColumns: `repeat(${gridFor(device.deviceClass).columns}, 1fr)` }}
             >
-              {Array.from({ length: 24 }, (_, i) => (
+              {Array.from({ length: pageCapacity(gridFor(device.deviceClass)) }, (_, i) => (
                 <div key={i} className={t.cell}>
                   <div className={t.skeleton} />
                 </div>
@@ -248,7 +257,7 @@ export function HomeScreen({ device }: { device: Device }) {
                 })
               }
             >
-              Push to iPhone
+              Push to {device.deviceClass}
             </button>
           </>
         )}
@@ -289,7 +298,7 @@ export function HomeScreen({ device }: { device: Device }) {
         onDone={() => setOpenFolder(null)}
       >
         <div className={s.stage} ref={stageRef} onWheel={onWheel}>
-          <PhoneFrame zoom={zoom}>
+          <PhoneFrame zoom={zoom} kind={device.deviceClass}>
             <PageGrid
               key={current}
               items={layout.pages[current] ?? []}

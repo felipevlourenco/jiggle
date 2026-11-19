@@ -24,7 +24,7 @@ function ulid(time: number): string {
 
 export type NewSnapshot = Pick<
   Snapshot,
-  'udid' | 'kind' | 'name' | 'reason' | 'osVersion' | 'rawState'
+  'udid' | 'kind' | 'name' | 'reason' | 'osVersion' | 'deviceClass' | 'rawState'
 >
 
 // Layouts saved to disk as one JSON file each: devices/<udid>/snapshots/<id>.json.
@@ -41,7 +41,7 @@ export class SnapshotService {
     await mkdir(dir, { recursive: true })
     const now = (this.opts.now ?? Date.now)()
     // The same counts the Home Screen info strip shows.
-    const layout = normalize(input.rawState, gridFor('iPhone'))
+    const layout = normalize(input.rawState, gridFor(input.deviceClass ?? 'iPhone'))
     const snapshot: Snapshot = {
       ...input,
       id: ulid(now),
@@ -57,7 +57,9 @@ export class SnapshotService {
 
   // A saved layout: the phone's state under a name the person chose. Names are unique per device.
   // Throws a message fit for the name field when the name won't do.
-  async saveLayout(input: Pick<NewSnapshot, 'udid' | 'osVersion' | 'rawState'> & { name: string }) {
+  async saveLayout(
+    input: Pick<NewSnapshot, 'udid' | 'osVersion' | 'deviceClass' | 'rawState'> & { name: string }
+  ) {
     const name = input.name.trim()
     await this.checkName(input.udid, name)
     return this.create({ ...input, name, kind: 'saved-layout', reason: null })

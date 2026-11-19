@@ -31,6 +31,13 @@ describe('connectMessage', () => {
     expect(m.action).toBe(action)
   })
 
+  it('says iPad for an iPad: the title and the steps', () => {
+    const ipad = { ...device('locked'), name: "Sam's iPad", deviceClass: 'iPad' } as const
+    expect(connectMessage({ ...ipad, state: 'trust-pending' }).title).toBe('Tap Trust on your iPad')
+    expect(connectMessage(ipad).steps).toContain('Unlock your iPad')
+    expect(connectMessage(undefined).steps).toContain('Unlock your iPhone')
+  })
+
   it('explains read-only mode for an unsupported iOS', () => {
     expect(connectMessage(device('unsupported-os', '16.7'))).toMatchObject({
       title: "iOS 16.7 isn't supported for changes",
@@ -59,6 +66,14 @@ describe('appError', () => {
     const e = appError(code, { detail: 'The reason it failed.', time: '09:42', version: '16.7' })
     expect(e.title.length).toBeGreaterThan(3)
     expect(e.message.length).toBeGreaterThan(10)
+  })
+
+  it('names the device class in the apply errors', () => {
+    expect(appError('busy', { kind: 'iPad' }).message).toBe(
+      'Another change to this iPad is already running.'
+    )
+    expect(appError('write-failed', { kind: 'iPad' }).title).toBe('Couldn’t write to the iPad')
+    expect(appError('verify-failed').message).toContain('The iPhone')
   })
 
   it('fills in the details', () => {

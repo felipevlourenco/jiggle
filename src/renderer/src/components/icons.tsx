@@ -33,6 +33,17 @@ export const PhoneIcon = icon(
     <path d="M7 12.5h2" />
   </>
 )
+export const TabletIcon = icon(
+  <>
+    <rect x="1.5" y="3.5" width="13" height="9" rx="2" />
+    <path d="M13 8h.01" />
+  </>
+)
+export const SwitchIcon = icon(<path d="M5 6.5L8 3.5l3 3M5 9.5l3 3 3-3" />, {
+  stroke: 1.5,
+  cap: true,
+  join: true
+})
 export const HomeIcon = icon(
   <>
     <rect x="2" y="2" width="5" height="5" rx="1.5" />

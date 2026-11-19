@@ -150,7 +150,8 @@ export function SaveLayoutSheet({ device, onClose }: { device: Device; onClose: 
             udid={device.udid}
             items={layout.pages[0] ?? []}
             grid={layout.grid}
-            zoom={0.2}
+            kind={device.deviceClass}
+            scale={1.35}
           />
         )
       }
@@ -180,7 +181,7 @@ export function RenameLayoutSheet({
       confirmLabel="Rename"
       initial={layout.name ?? ''}
       taken={taken}
-      thumb={<SnapshotThumb snapshot={layout} zoom={0.2} />}
+      thumb={<SnapshotThumb snapshot={layout} scale={1.35} />}
       caption={`${plural(layout.appCount, 'app')} · ${plural(layout.pageCount, 'page')}`}
       submit={(name) => window.jiggle.snapshots.renameLayout(layout.udid, layout.id, name)}
       onClose={onClose}
@@ -217,7 +218,8 @@ export function DeleteLayoutSheet({
       </div>
       <div className={s.body}>
         <p className={n.note}>
-          This saved layout will be deleted for good. Your iPhone isn’t changed.
+          This saved layout will be deleted for good. Your {layout.deviceClass ?? 'iPhone'} isn’t
+          changed.
         </p>
         {failure && (
           <p className={n.error} role="alert">

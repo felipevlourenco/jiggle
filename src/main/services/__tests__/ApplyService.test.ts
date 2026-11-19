@@ -172,6 +172,55 @@ describe('ApplyService.apply', () => {
   })
 })
 
+describe('ApplyService on an iPad', () => {
+  const ipad = () => setup('ipad-widgets')
+
+  it('sorts A–Z into pages of up to 30, keeps the widget pages, and verifies', async () => {
+    const t = ipad()
+    const before = normalize(t.original, gridFor('iPad'))
+    const after = sortLayout(before, { by: 'name', widgetMode: 'keep-pages' })
+    expect(after.pages.every((p) => p.length <= 30)).toBe(true)
+    const { backup } = t.ok(
+      await t.service.apply({
+        udid: t.udid,
+        reason: 'A–Z sort',
+        beforeSignature: layoutSignature(t.original),
+        after,
+        removedFromHomeScreen: []
+      })
+    )
+    expect(await t.phone()).toBe(layoutSignature(serialize(after)))
+    expect(backup).toMatchObject({ reason: 'Before A–Z sort', deviceClass: 'iPad' })
+  })
+
+  it('judges the layout by the grid the iPad reports, not by the default', async () => {
+    const t = ipad()
+    vi.spyOn(t.bridge, 'getIconMetrics').mockResolvedValue({ columns: 6, rows: 4, dockMax: 13 })
+    const before = normalize(t.original, gridFor('iPad'))
+    const after = sortLayout(before, { by: 'name', widgetMode: 'sort-around' }) // 30 apps on a page
+    const result = await t.service.apply({
+      udid: t.udid,
+      reason: 'A–Z sort',
+      beforeSignature: layoutSignature(t.original),
+      after,
+      removedFromHomeScreen: []
+    })
+    expect(result).toMatchObject({ ok: false, code: 'invalid' })
+    expect(result.ok ? '' : result.message).toContain('too many items')
+    expect(await t.phone()).toBe(layoutSignature(t.original))
+  })
+
+  it('words its errors for an iPad', async () => {
+    const t = ipad()
+    const [a, b] = await Promise.all([
+      t.service.switchTo(t.udid, 'x'),
+      t.service.switchTo(t.udid, 'x')
+    ])
+    const busy = [a, b].find((r) => !r.ok && r.code === 'busy')
+    expect(busy && !busy.ok && busy.message).toContain('this iPad')
+  })
+})
+
 describe('ApplyService.restore', () => {
   it('puts the original layout back, after backing up the current one', async () => {
     const t = setup()

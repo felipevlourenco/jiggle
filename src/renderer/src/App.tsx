@@ -2,14 +2,8 @@ import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
 import { Connect } from './screens/Connect'
-import {
-  AppsIcon,
-  CleanupIcon,
-  HistoryIcon,
-  HomeIcon,
-  OrganizeIcon,
-  PhoneIcon
-} from './components/icons'
+import { DeviceCard } from './components/DeviceCard'
+import { AppsIcon, CleanupIcon, HistoryIcon, HomeIcon, OrganizeIcon } from './components/icons'
 import { ToolbarSlotContext } from './components/ToolbarSlot'
 import { Apps } from './screens/Apps'
 import { Banner } from './components/Banner'
@@ -48,8 +42,12 @@ function Shell() {
   useDeviceEvents()
   const engine = useSidecarStatus()
 
-  // Until the device switcher exists (M20), the active device is the first one.
-  const device = devices?.[0]
+  // The active device: the one picked in the switcher, else the first that is ready, else the first.
+  const [chosen, setChosen] = useState<string>()
+  const device =
+    devices?.find((d) => d.udid === chosen) ??
+    devices?.find((d) => d.state === 'ready') ??
+    devices?.[0]
   // An unsupported iOS stays on Connect until the user accepts read-only mode.
   const [readOnlyUdid, setReadOnlyUdid] = useState<string>()
   const usable =
@@ -76,41 +74,7 @@ function Shell() {
     <div className="shell">
       <aside className="sidebar">
         <div className="drag" />
-        <div
-          className={`device-card${device ? '' : ' off'}`}
-          data-testid="device-card"
-          aria-label="Device"
-        >
-          <span className="device-icon">
-            <PhoneIcon />
-          </span>
-          <span className="device-text">
-            <span className="device-name">{device ? device.name : 'No device'}</span>
-            <span className="device-sub">
-              {device
-                ? [device.modelName, device.osVersion && `iOS ${device.osVersion}`]
-                    .filter(Boolean)
-                    .join(' · ')
-                : 'Connect an iPhone or iPad'}
-            </span>
-            <span
-              className={`conn ${!device ? 'none' : usable && device.state === 'ready' ? '' : 'warn'}`}
-            >
-              <i />
-              {!device
-                ? 'Not connected'
-                : `${device.connection === 'wifi' ? 'Wi‑Fi' : 'USB'}${
-                    device.state === 'unsupported-os' && usable
-                      ? ' · Read‑only'
-                      : device.state === 'ready'
-                        ? ''
-                        : device.state === 'locked' || device.state === 'trust-pending'
-                          ? ' · Waiting'
-                          : ''
-                  }`}
-            </span>
-          </span>
-        </div>
+        <DeviceCard devices={devices ?? []} device={device} usable={usable} onSelect={setChosen} />
         <nav>
           {NAV_ITEMS.map((n) => {
             const Icon = NAV_ICONS[n.path]!
@@ -152,7 +116,8 @@ function Shell() {
           {isSuccess && (
             <PinsProvider udid={usable ? device?.udid : undefined}>
               <ToolbarSlotContext.Provider value={toolbarSlot}>
-                <Routes>
+                {/* Each device starts its screens afresh: no search, selection or page carried over. */}
+                <Routes key={device?.udid}>
                   <Route
                     path="/"
                     element={<Navigate to={usable ? '/home' : '/connect'} replace />}

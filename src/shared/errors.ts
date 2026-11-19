@@ -10,9 +10,9 @@ export interface ConnectMessage {
   action?: 'retry' | 'continue-read-only'
 }
 
-export const CONNECT_STEPS = [
+export const connectSteps = (kind: Device['deviceClass'] = 'iPhone'): string[] => [
   'Connect the cable',
-  'Unlock your iPhone',
+  `Unlock your ${kind}`,
   'Tap Trust and enter your passcode'
 ]
 
@@ -23,7 +23,7 @@ export function connectMessage(device: Device | undefined): ConnectMessage {
       body: 'Plug your iPhone or iPad into this Mac with a cable.',
       severity: 'info',
       illustration: 'cable',
-      steps: CONNECT_STEPS
+      steps: connectSteps()
     }
   }
   const kind = device.deviceClass
@@ -34,7 +34,7 @@ export function connectMessage(device: Device | undefined): ConnectMessage {
         body: 'Jiggle continues by itself as soon as the screen is unlocked.',
         severity: 'info',
         illustration: 'lock',
-        steps: CONNECT_STEPS
+        steps: connectSteps(kind)
       }
     case 'trust-pending':
       return {
@@ -42,7 +42,7 @@ export function connectMessage(device: Device | undefined): ConnectMessage {
         body: 'If it asks, enter your passcode. Jiggle continues by itself.',
         severity: 'info',
         illustration: 'trust',
-        steps: CONNECT_STEPS
+        steps: connectSteps(kind)
       }
     case 'trust-declined':
       return {
@@ -87,20 +87,22 @@ export interface AppError {
 export type ErrorCode =
   ApplyErrorCode | 'engine-restarting' | 'engine-failed' | 'lookup-offline' | 'read-only'
 export interface ErrorVars {
+  kind?: Device['deviceClass'] // "iPhone" unless it is an iPad
   detail?: string
   time?: string
   version?: string
 }
 
 export function appError(code: ErrorCode, v: ErrorVars = {}): AppError {
+  const kind = v.kind ?? 'iPhone'
   switch (code) {
     case 'busy':
       return {
         title: 'Still working',
-        message: 'Another change to this iPhone is already running.'
+        message: `Another change to this ${kind} is already running.`
       }
     case 'no-device':
-      return { title: 'No iPhone', message: v.detail ?? 'Unlock your iPhone and try again.' }
+      return { title: `No ${kind}`, message: v.detail ?? `Unlock your ${kind} and try again.` }
     case 'read-only':
       return {
         title: 'Read-only mode',
@@ -108,8 +110,8 @@ export function appError(code: ErrorCode, v: ErrorVars = {}): AppError {
       }
     case 'layout-changed':
       return {
-        title: 'Your iPhone changed',
-        message: 'Your iPhone’s layout changed since the preview. Refresh and try again.'
+        title: `Your ${kind} changed`,
+        message: `Your ${kind}’s layout changed since the preview. Refresh and try again.`
       }
     case 'invalid':
       return {
@@ -120,19 +122,18 @@ export function appError(code: ErrorCode, v: ErrorVars = {}): AppError {
       return { title: 'Backup unavailable', message: v.detail ?? 'No such backup.' }
     case 'write-failed':
       return {
-        title: 'Couldn’t write to the iPhone',
+        title: `Couldn’t write to the ${kind}`,
         message: `${v.detail ?? 'The write failed'}. If it is locked, unlock it and try again.`
       }
     case 'interrupted':
       return {
         title: 'Apply interrupted',
-        message: `The iPhone was disconnected while writing. Reconnect it, then restore the backup from ${v.time ?? 'a moment ago'}.`
+        message: `The ${kind} was disconnected while writing. Reconnect it, then restore the backup from ${v.time ?? 'a moment ago'}.`
       }
     case 'verify-failed':
       return {
         title: 'The layout didn’t stick',
-        message:
-          'The iPhone doesn’t show the new layout exactly. Your old layout is backed up in History.'
+        message: `The ${kind} doesn’t show the new layout exactly. Your old layout is backed up in History.`
       }
     case 'engine-restarting':
       return {

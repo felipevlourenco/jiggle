@@ -4,7 +4,7 @@ import { Dock } from './Dock'
 import { FolderPopover } from './FolderPopover'
 import { PageDots } from './PageDots'
 import { PageGrid } from './PageGrid'
-import { FRAME_HEIGHT, FRAME_WIDTH, PhoneFrame } from './PhoneFrame'
+import { frameSize, PhoneFrame, type FrameKind } from './PhoneFrame'
 import s from './beforeAfter.module.css'
 
 const GAP = 32
@@ -17,12 +17,14 @@ export function BeforeAfter({
   before,
   after,
   moved,
-  udid
+  udid,
+  kind = 'iPhone'
 }: {
   before: Layout
   after: Layout
   moved: ReadonlySet<string>
   udid: string
+  kind?: FrameKind
 }) {
   const [page, setPage] = useState(0)
   const [open, setOpen] = useState<{ label: string; folder: FolderItem } | null>(null)
@@ -39,10 +41,11 @@ export function BeforeAfter({
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+  const frame = frameSize(kind)
   const zoom = size.height
     ? clamp(
-        Math.min((size.height - CAPTION) / FRAME_HEIGHT, (size.width - GAP) / 2 / FRAME_WIDTH),
-        0.3,
+        Math.min((size.height - CAPTION) / frame.height, (size.width - GAP) / 2 / frame.width),
+        0.15,
         1
       )
     : 0.5
@@ -50,7 +53,7 @@ export function BeforeAfter({
   const side = (label: string, layout: Layout, marked?: ReadonlySet<string>) => (
     <figure className={s.side} aria-label={label}>
       <figcaption>{label}</figcaption>
-      <PhoneFrame zoom={zoom}>
+      <PhoneFrame zoom={zoom} kind={kind}>
         <PageGrid
           key={current}
           items={layout.pages[current] ?? []}

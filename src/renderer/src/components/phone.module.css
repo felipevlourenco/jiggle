@@ -4,7 +4,6 @@
 }
 .device {
   transform-origin: top left;
-  padding: 12px;
   border-radius: 48px;
   background: var(--frame);
   box-shadow:
@@ -13,8 +12,6 @@
 }
 .screen {
   position: relative;
-  width: 402px;
-  height: 874px;
   border-radius: 38px;
   overflow: hidden;
   background: var(--wall);
@@ -39,4 +36,28 @@
   border-radius: 34px;
   background: rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(20px);
+}
+
+/* The iPad: landscape, a 6 × 5 grid of larger icons, and a dock in the middle. */
+.ipad {
+  border-radius: 28px;
+}
+.ipad .screen {
+  border-radius: 10px;
+  --tile: 76px;
+}
+.ipad .grid {
+  grid-auto-rows: 120px;
+  padding: 48px 64px 0;
+}
+.ipad .dock {
+  left: 50%;
+  right: auto;
+  bottom: 14px;
+  transform: translateX(-50%);
+  justify-content: center;
+  gap: 20px;
+  height: 100px;
+  padding: 0 24px;
+  border-radius: 30px;
 }

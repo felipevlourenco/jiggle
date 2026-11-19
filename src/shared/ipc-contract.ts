@@ -37,6 +37,7 @@ const Snapshot_ = z.object({
   reason: z.string().nullable(),
   createdAt: z.string(),
   osVersion: z.string(),
+  deviceClass: z.enum(['iPhone', 'iPad']).optional(),
   appCount: z.number(),
   pageCount: z.number(),
   rawState: RawIconState_
