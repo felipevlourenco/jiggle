@@ -89,6 +89,8 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.whenReady().then(() => {
+    // A packaged app gets build/icon.icns from its bundle; in dev the Dock would show Electron's.
+    if (!app.isPackaged) app.dock?.setIcon(join(app.getAppPath(), 'build/icon.png'))
     const broadcast: Broadcast = (event, payload) => {
       for (const win of BrowserWindow.getAllWindows()) win.webContents.send(event, payload)
     }
