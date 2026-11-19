@@ -9,7 +9,7 @@ from jiggle_engine.rpc import RpcError
 
 @asynccontextmanager
 async def open_installation_proxy(udid: str, connect=create_using_usbmux):
-    lockdown = await connect(serial=udid, autopair=False, connection_type="USB")
+    lockdown = await connect(serial=udid, autopair=False)  # USB if it is there, else Wi-Fi
     try:
         async with InstallationProxyService(lockdown) as ip:
             yield ip

@@ -105,10 +105,12 @@ if (!app.requestSingleInstanceLock()) {
       (app.getLocaleCountryCode() || 'us').toLowerCase(),
       (s) => {
         nativeTheme.themeSource = s.theme
+        sidecar?.setWifi(s.wifiEnabled)
         broadcast('settings:changed', s)
       }
     )
     nativeTheme.themeSource = settings.get().theme
+    sidecar?.setWifi(settings.get().wifiEnabled) // before the engine starts: it is told with its first `watch`
     const icons = new IconService(bridge, userData, log.scope('icons'), (png) => {
       const image = nativeImage.createFromBuffer(png)
       const { width, height } = image.getSize()

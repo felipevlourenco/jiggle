@@ -138,7 +138,8 @@ describe('IPC validation', () => {
       storefront: 'nl',
       backupRetention: 50,
       categoryLookupEnabled: true,
-      updateCheckEnabled: true
+      updateCheckEnabled: true,
+      wifiEnabled: false
     })
     expect(await call('settings:set', { theme: 'dark', backupRetention: 10 })).toMatchObject({
       theme: 'dark',

@@ -14,7 +14,8 @@ describe('SettingsService', () => {
       storefront: 'br',
       backupRetention: 50,
       categoryLookupEnabled: true,
-      updateCheckEnabled: true
+      updateCheckEnabled: true,
+      wifiEnabled: false
     })
   })
 

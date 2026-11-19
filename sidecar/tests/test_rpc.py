@@ -70,10 +70,12 @@ async def test_response_error_and_event_framing():
 
 
 def test_changes_diff():
-    assert changes({}, {1: "A"}) == [("device_attached", "A")]
-    assert changes({1: "A"}, {1: "A"}) == []
-    assert changes({1: "A"}, {}) == [("device_detached", "A")]
-    assert sorted(changes({1: "A"}, {2: "B"})) == [("device_attached", "B"), ("device_detached", "A")]
+    assert changes({}, {"A": "usb"}) == [("device_attached", "A")]
+    assert changes({"A": "usb"}, {"A": "usb"}) == []
+    assert changes({"A": "usb"}, {}) == [("device_detached", "A")]
+    assert sorted(changes({"A": "usb"}, {"B": "usb"})) == [("device_attached", "B"), ("device_detached", "A")]
+    # the cable comes out but Wi-Fi keeps it: still there, read again over the new connection
+    assert changes({"A": "usb"}, {"A": "wifi"}) == [("device_attached", "A")]
 
 
 def test_engine_answers_ping_over_stdio():

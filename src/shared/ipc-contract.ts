@@ -81,7 +81,8 @@ const Settings_ = z.object({
   storefront: z.string().regex(/^[a-z]{2}$/),
   backupRetention: z.number().int().min(5).max(200),
   categoryLookupEnabled: z.boolean(),
-  updateCheckEnabled: z.boolean()
+  updateCheckEnabled: z.boolean(),
+  wifiEnabled: z.boolean()
 }) satisfies z.ZodType<Settings>
 
 export const schemas = { Udid, Device: Device_, RawIconState: RawIconState_, Snapshot: Snapshot_ }

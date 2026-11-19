@@ -25,7 +25,8 @@ export class SettingsService {
       storefront: defaultStorefront,
       backupRetention: 50,
       categoryLookupEnabled: true,
-      updateCheckEnabled: true
+      updateCheckEnabled: true,
+      wifiEnabled: false
     }
     this.current = { ...defaults, ...this.readValid(defaults) }
   }

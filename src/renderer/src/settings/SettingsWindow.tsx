@@ -2,16 +2,17 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Settings } from '@shared/types'
 import { useEffect } from 'react'
-import { AppsIcon, GearIcon, ShieldIcon, ShieldOutline } from '../components/icons'
+import { AppsIcon, GearIcon, ShieldIcon, ShieldOutline, WifiIcon } from '../components/icons'
 import s from './settings.module.css'
 
 const BACKUP_CHOICES = [10, 25, 50, 100]
 const REGION = /^[a-z]{2}$/
 
-type Tab = 'general' | 'categories' | 'privacy'
+type Tab = 'general' | 'categories' | 'connection' | 'privacy'
 const TABS: { tab: Tab; label: string; icon: typeof GearIcon }[] = [
   { tab: 'general', label: 'General', icon: GearIcon },
   { tab: 'categories', label: 'Categories', icon: AppsIcon },
+  { tab: 'connection', label: 'Connection', icon: WifiIcon },
   { tab: 'privacy', label: 'Privacy', icon: ShieldOutline }
 ]
 
@@ -48,6 +49,7 @@ export function SettingsWindow() {
       </div>
       {tab === 'general' && <General settings={data} save={(p) => save.mutate(p)} />}
       {tab === 'categories' && <Categories />}
+      {tab === 'connection' && <Connection settings={data} save={(p) => save.mutate(p)} />}
       {tab === 'privacy' && <Privacy settings={data} save={(p) => save.mutate(p)} />}
     </div>
   )
@@ -114,6 +116,74 @@ function General({ settings, save }: { settings: Settings; save: (p: Partial<Set
         </select>
         <span className="meta">per device</span>
       </div>
+    </div>
+  )
+}
+
+// Wi‑Fi: Jiggle can find a phone through the Mac's own Wi‑Fi sync once Finder has been told to show it.
+function Connection({
+  settings,
+  save
+}: {
+  settings: Settings
+  save: (p: Partial<Settings>) => void
+}) {
+  const qc = useQueryClient()
+  const { data: devices } = useQuery({
+    queryKey: ['wifi-devices'],
+    queryFn: () => window.jiggle.device.list()
+  })
+  useEffect(
+    () =>
+      window.jiggle.device.onChanged(
+        () => void qc.invalidateQueries({ queryKey: ['wifi-devices'] })
+      ),
+    [qc]
+  )
+  // The engine takes a moment to look after the switch is turned on.
+  const [looking, setLooking] = useState(false)
+  useEffect(() => {
+    if (!looking) return
+    const timer = window.setTimeout(() => setLooking(false), 2500)
+    return () => window.clearTimeout(timer)
+  }, [looking])
+  const found = (devices ?? []).filter((d) => d.connection === 'wifi')
+  return (
+    <div className={s.privacy}>
+      <div className={s.option}>
+        <label className="sw">
+          <input
+            type="checkbox"
+            checked={settings.wifiEnabled}
+            onChange={(e) => {
+              setLooking(e.target.checked)
+              save({ wifiEnabled: e.target.checked })
+            }}
+          />
+          <strong>Connect over Wi‑Fi</strong>
+        </label>
+        <p className={s.help}>
+          Jiggle uses your Mac’s own Wi‑Fi sync, so the phone must be set up once with a cable.
+        </p>
+        <ol className={s.steps}>
+          <li>Connect with a cable.</li>
+          <li>In Finder, select your iPhone or iPad.</li>
+          <li>Turn on “Show this iPhone when on Wi‑Fi”, then click Apply.</li>
+        </ol>
+      </div>
+      {settings.wifiEnabled && (
+        <p className={found.length > 0 ? s.found : s.none} role="status">
+          {looking && found.length === 0 ? (
+            <>
+              <span className="spin" aria-hidden="true" /> Looking for devices…
+            </>
+          ) : found.length > 0 ? (
+            `${found.map((d) => d.name).join(' and ')} ${found.length === 1 ? 'is' : 'are'} available over Wi‑Fi`
+          ) : (
+            'No Wi‑Fi devices found'
+          )}
+        </p>
+      )}
     </div>
   )
 }

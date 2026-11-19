@@ -130,7 +130,7 @@ describe('CategoryService', () => {
       throw new TypeError('fetch failed')
     })
     service.resolve([app('a.a'), app('b.b')])
-    await settle()
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled()) // the lookups, then the save, are done
     expect(calls).toBe(3) // 3 attempts for a.a, then b.b is skipped: no network
     expect(service.resolve([app('a.a')]).lookup).toBe('offline')
     expect(calls).toBe(3) // not retried this session

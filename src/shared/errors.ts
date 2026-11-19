@@ -16,11 +16,16 @@ export const connectSteps = (kind: Device['deviceClass'] = 'iPhone'): string[] =
   'Tap Trust and enter your passcode'
 ]
 
-export function connectMessage(device: Device | undefined): ConnectMessage {
+export function connectMessage(
+  device: Device | undefined,
+  wifi = false // Wi‑Fi devices are being looked for too
+): ConnectMessage {
   if (!device) {
     return {
       title: 'Connect your iPhone',
-      body: 'Plug your iPhone or iPad into this Mac with a cable.',
+      body: wifi
+        ? 'Plug your iPhone or iPad into this Mac, or wake it up on the same Wi‑Fi network.'
+        : 'Plug your iPhone or iPad into this Mac with a cable.',
       severity: 'info',
       illustration: 'cable',
       steps: connectSteps()

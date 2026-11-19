@@ -2,6 +2,7 @@ import { connectMessage } from '@shared/errors'
 import type { Device } from '@shared/types'
 import { Illustration } from '../components/Illustration'
 import { CheckIcon } from '../components/icons'
+import { useQuery } from '@tanstack/react-query'
 import { useRefreshDevice } from '../state/queries'
 
 interface Props {
@@ -10,7 +11,11 @@ interface Props {
 }
 
 export function Connect({ device, onContinueReadOnly }: Props) {
-  const message = connectMessage(device)
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => window.jiggle.settings.get()
+  })
+  const message = connectMessage(device, settings?.wifiEnabled)
   const refresh = useRefreshDevice()
   const waiting = device?.state === 'locked' || device?.state === 'trust-pending'
   // Which of the three steps the person is on: the cable is in once a device shows up.

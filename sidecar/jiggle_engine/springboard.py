@@ -12,7 +12,7 @@ from jiggle_engine.plistjson import from_json, to_json
 
 @asynccontextmanager
 async def open_springboard(udid: str, connect=create_using_usbmux):
-    lockdown = await connect(serial=udid, autopair=False, connection_type="USB")
+    lockdown = await connect(serial=udid, autopair=False)  # USB if it is there, else Wi-Fi
     try:
         async with SpringBoardServicesService(lockdown) as sb:
             yield sb

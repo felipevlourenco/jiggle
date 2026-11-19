@@ -31,6 +31,11 @@ describe('connectMessage', () => {
     expect(m.action).toBe(action)
   })
 
+  it('mentions the Wi‑Fi network once Wi‑Fi devices are looked for', () => {
+    expect(connectMessage(undefined).body).toContain('with a cable')
+    expect(connectMessage(undefined, true).body).toContain('same Wi‑Fi network')
+  })
+
   it('says iPad for an iPad: the title and the steps', () => {
     const ipad = { ...device('locked'), name: "Sam's iPad", deviceClass: 'iPad' } as const
     expect(connectMessage({ ...ipad, state: 'trust-pending' }).title).toBe('Tap Trust on your iPad')

@@ -17,6 +17,8 @@ export interface DeviceBridge {
   listApps(udid: Udid): Promise<InstalledApp[]>
   // Deletes one app and its data. The engine refuses an app the phone doesn't list as removable.
   uninstall(udid: Udid, bundleId: string): Promise<void>
+  // Also list devices reachable over Wi‑Fi (or stop). Only the real engine has a network to look at.
+  setWifi?(enabled: boolean): void
   // Returns an unsubscribe function.
   onDevicesChanged(listener: () => void): () => void
 }

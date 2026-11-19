@@ -97,4 +97,35 @@ describe('SidecarBridge', () => {
     bridge.start()
     await until(statuses, 'failed')
   })
+
+  it('tells the engine whether to look for Wi‑Fi devices: when it starts, and when the setting changes', async () => {
+    const statuses = create()
+    bridge.setWifi(true) // before the engine is up
+    bridge.start()
+    await until(statuses, 'ready')
+    await vi.waitFor(async () => expect(await bridge.request('last_watch')).toEqual({ wifi: true }))
+    bridge.setWifi(false)
+    await vi.waitFor(async () =>
+      expect(await bridge.request('last_watch')).toEqual({ wifi: false })
+    )
+  })
+
+  it('gives a Wi‑Fi device three times as long to answer', async () => {
+    const statuses = create()
+    bridge.start()
+    await until(statuses, 'ready')
+    await bridge.request('attach', { udid: 'W1' })
+    await vi.waitFor(async () =>
+      expect((await bridge.listDevices()).find((d) => d.udid === 'W1')).toMatchObject({
+        udid: 'W1',
+        connection: 'wifi'
+      })
+    )
+    const started = Date.now()
+    await expect(bridge.request('hang', { udid: 'W1' })).rejects.toThrow('timed out')
+    expect(Date.now() - started).toBeGreaterThanOrEqual(550) // 3 × the 200 ms of a cable
+    const usb = Date.now()
+    await expect(bridge.request('hang', { udid: 'nobody' })).rejects.toThrow('timed out')
+    expect(Date.now() - usb).toBeLessThan(500)
+  })
 })

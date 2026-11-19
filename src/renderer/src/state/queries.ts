@@ -60,7 +60,11 @@ export function useDeviceEvents(): void {
   )
   // A changed region or lookup switch means the categories need another look.
   useEffect(
-    () => window.jiggle.settings.onChanged(() => void qc.invalidateQueries({ queryKey: ['apps'] })),
+    () =>
+      window.jiggle.settings.onChanged((next) => {
+        void qc.invalidateQueries({ queryKey: ['apps'] })
+        qc.setQueryData(['settings'], next)
+      }),
     [qc]
   )
   // Categories arrive from the App Store in the background.

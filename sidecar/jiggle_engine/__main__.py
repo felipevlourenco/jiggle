@@ -44,24 +44,30 @@ def icon_state_param(params: dict) -> list:
 
 def build_server(write=write_line) -> Server:
     server = Server(write)
-    watcher: list[asyncio.Task] = []
+    watcher: list[tuple[bool, asyncio.Task]] = []  # (Wi-Fi on, the task)
 
     @server.method("ping")
     async def ping(_params):
         return {"version": __version__}
 
     @server.method("list_devices")
-    async def list_devices(_params):
-        return await devices.list_devices()
+    async def list_devices(params):
+        return await devices.list_devices(wifi=params.get("wifi") is True)
 
     @server.method("device_info")
     async def device_info(params):
         return await devices.device_info(udid_param(params))
 
     @server.method("watch")
-    async def watch(_params):
-        if not watcher:  # idempotent: one watcher per process
-            watcher.append(asyncio.create_task(devices.watch(server.emit)))
+    async def watch(params):
+        wifi = params.get("wifi") is True
+        # One watcher per process; asking again with another Wi-Fi setting swaps it.
+        if watcher and watcher[0][0] != wifi:
+            _, old = watcher.pop()
+            old.cancel()
+            await asyncio.gather(old, return_exceptions=True)  # it detaches what it knew
+        if not watcher:
+            watcher.append((wifi, asyncio.create_task(devices.watch(server.emit, wifi))))
         return {"watching": True}
 
     # The SpringBoard commands: validate the params first, then open the service and read.

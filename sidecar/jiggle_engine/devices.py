@@ -16,9 +16,21 @@ SPRINGBOARD = "com.apple.springboardservices"
 MIN_SUPPORTED_MAJOR = 17
 
 
-async def list_devices() -> list[dict]:
-    """USB devices only. Wi-Fi devices are opt-in later (M25)."""
-    return [{"udid": d.serial} for d in await usbmux.list_devices() if d.is_usb]
+def reachable(mux_devices, wifi: bool) -> dict[str, str]:
+    """{udid: 'usb' | 'wifi'}. A phone on both counts as USB. Wi-Fi ones only show when `wifi` is on."""
+    found: dict[str, str] = {}
+    for d in mux_devices:
+        if d.is_usb:
+            found[d.serial] = "usb"
+        elif wifi and d.is_network:
+            found.setdefault(d.serial, "wifi")
+    return found
+
+
+async def list_devices(wifi: bool = False) -> list[dict]:
+    """USB devices, plus the ones reachable over Wi-Fi when that is switched on."""
+    found = reachable(await usbmux.list_devices(), wifi)
+    return [{"udid": udid, "connection": connection} for udid, connection in found.items()]
 
 
 def describe(udid: str, lockdown=None) -> dict:
@@ -32,7 +44,9 @@ def describe(udid: str, lockdown=None) -> dict:
         "modelName": (lockdown.display_name if lockdown else None) or product or "iPhone",
         "deviceClass": "iPad" if values.get("DeviceClass") == "iPad" else "iPhone",
         "osVersion": values.get("ProductVersion") or "",
-        "connection": "usb",
+        # Over the cable unless usbmux reached it through the network (the engine asks for either).
+        "connection": "wifi" if getattr(getattr(lockdown, "service", None), "mux_device", None) is not None
+        and lockdown.service.mux_device.is_network else "usb",
     }
 
 
@@ -69,7 +83,7 @@ async def device_info(udid: str, connect=create_using_usbmux) -> dict:
     """Describe one USB device and say whether it is usable. Stateless: call it again to re-check."""
     lockdown = None
     try:
-        lockdown = await connect(serial=udid, autopair=False, connection_type="USB")
+        lockdown = await connect(serial=udid, autopair=False)  # USB if it is there, else Wi-Fi
         state = await probe(lockdown)
         if state == "ready" and os_major(describe(udid, lockdown)["osVersion"]) < MIN_SUPPORTED_MAJOR:
             state = "unsupported-os"
@@ -84,20 +98,22 @@ async def device_info(udid: str, connect=create_using_usbmux) -> dict:
             await lockdown.close()
 
 
-def changes(known: dict[int, str], now: dict[int, str]) -> list[tuple[str, str]]:
-    """Diff two {device id: udid} maps into ('device_attached' | 'device_detached', udid)."""
-    out = [("device_attached", udid) for devid, udid in now.items() if devid not in known]
-    out += [("device_detached", udid) for devid, udid in known.items() if devid not in now]
+def changes(known: dict[str, str], now: dict[str, str]) -> list[tuple[str, str]]:
+    """Diff two {udid: 'usb' | 'wifi'} maps into ('device_attached' | 'device_detached', udid).
+    A phone whose connection changed (cable pulled, Wi-Fi left) is attached again, so it is read afresh."""
+    out = [("device_attached", udid) for udid, connection in now.items() if known.get(udid) != connection]
+    out += [("device_detached", udid) for udid in known if udid not in now]
     return out
 
 
-async def watch(emit: Emit) -> None:
-    """Emit device_attached / device_detached for USB devices, forever.
+async def watch(emit: Emit, wifi: bool = False) -> None:
+    """Emit device_attached / device_detached for USB devices (and Wi-Fi ones when `wifi`), forever.
 
     usbmuxd replays already-connected devices as attached when we start listening.
-    If usbmuxd goes away we reconnect, and diff against what we knew.
+    If usbmuxd goes away we reconnect, and diff against what we knew. When cancelled (the Wi-Fi switch
+    changed) everything known is detached first, so the next watcher starts from nothing.
     """
-    known: dict[int, str] = {}
+    known: dict[str, str] = {}
     while True:
         try:
             mux = await usbmux.create_mux()
@@ -105,13 +121,15 @@ async def watch(emit: Emit) -> None:
                 await mux.listen()
                 while True:
                     await mux.receive_device_state_update()
-                    now = {d.devid: d.serial for d in mux.devices if d.is_usb}
+                    now = reachable(mux.devices, wifi)
                     for event, udid in changes(known, now):
                         emit(event, {"udid": udid})
                     known = now
             finally:
                 await mux.close()
         except asyncio.CancelledError:
+            for event, udid in changes(known, {}):
+                emit(event, {"udid": udid})
             raise
         except Exception as e:
             print(f"watch: {type(e).__name__}: {e}; retrying", file=sys.stderr, flush=True)

@@ -1196,3 +1196,56 @@ test.describe('Uninstall apps', () => {
     await app.close()
   })
 })
+
+test.describe('Wi‑Fi', () => {
+  const openSettings = async (app: Awaited<ReturnType<typeof launch>>) => {
+    const opened = app.waitForEvent('window')
+    await app.evaluate(({ Menu }) =>
+      Menu.getApplicationMenu()!.getMenuItemById('settings')!.click()
+    )
+    return opened
+  }
+
+  test('a phone over Wi‑Fi shows the Wi‑Fi badge; Settings > Connection turns Wi‑Fi on, says what it found, and keeps the choice', async () => {
+    const env = {
+      JIGGLE_MOCK_DEVICE: 'iphone-wifi',
+      JIGGLE_USER_DATA: mkdtempSync(join(tmpdir(), 'jiggle-e2e-wifi-'))
+    }
+    let app = await launch(env)
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('device-card')).toContainText('Wi‑Fi')
+    await expect(win.getByTestId('device-card')).not.toContainText('USB')
+
+    let settings = await openSettings(app)
+    await settings.getByRole('tab', { name: 'Connection' }).click()
+    const toggle = settings.getByLabel('Connect over Wi‑Fi')
+    await expect(toggle).not.toBeChecked()
+    await expect(settings.getByRole('status')).toHaveCount(0)
+    await expect(
+      settings.getByText('Show this iPhone when on Wi‑Fi', { exact: false })
+    ).toBeVisible()
+    await toggle.click()
+    await expect(toggle).toBeChecked()
+    await expect(settings.getByText("Sam's iPhone is available over Wi‑Fi")).toBeVisible()
+    await app.close()
+
+    app = await launch(env)
+    await app.firstWindow()
+    settings = await openSettings(app)
+    await settings.getByRole('tab', { name: 'Connection' }).click()
+    await expect(settings.getByLabel('Connect over Wi‑Fi')).toBeChecked()
+    await app.close()
+  })
+
+  test('with Wi‑Fi on and nothing found, Settings says so and Connect mentions the network', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'none' })
+    const win = await app.firstWindow()
+    await expect(win.getByText(/with a cable\./)).toBeVisible()
+    const settings = await openSettings(app)
+    await settings.getByRole('tab', { name: 'Connection' }).click()
+    await settings.getByLabel('Connect over Wi‑Fi').click()
+    await expect(settings.getByText('No Wi‑Fi devices found')).toBeVisible()
+    await expect(win.getByText(/same Wi‑Fi network/)).toBeVisible()
+    await app.close()
+  })
+})

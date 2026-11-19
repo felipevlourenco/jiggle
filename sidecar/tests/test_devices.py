@@ -94,3 +94,27 @@ async def test_unreachable_device_is_an_error_with_generic_details():
     result = await device_info("UDID-2", connect=connect)
     assert result["state"] == "error"
     assert result["udid"] == "UDID-2" and result["name"] == "iPhone" and result["osVersion"] == ""
+
+
+class FakeMux:
+    def __init__(self, serial, kind):
+        self.serial, self.connection_type = serial, kind
+        self.is_usb, self.is_network = kind == "USB", kind == "Network"
+
+
+def test_reachable_lists_wifi_phones_only_when_asked_and_prefers_the_cable():
+    from jiggle_engine.devices import reachable
+
+    mux = [FakeMux("A", "USB"), FakeMux("A", "Network"), FakeMux("B", "Network")]
+    assert reachable(mux, wifi=False) == {"A": "usb"}
+    assert reachable(mux, wifi=True) == {"A": "usb", "B": "wifi"}
+    assert reachable(list(reversed(mux)), wifi=True) == {"A": "usb", "B": "wifi"}
+
+
+async def test_describe_says_wifi_when_usbmux_reached_the_phone_through_the_network():
+    from types import SimpleNamespace
+
+    lockdown = FakeLockdown()
+    assert (await info(lockdown))["connection"] == "usb"
+    lockdown.service = SimpleNamespace(mux_device=FakeMux("U", "Network"))
+    assert (await info(lockdown))["connection"] == "wifi"

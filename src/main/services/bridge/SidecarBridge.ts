@@ -55,6 +55,7 @@ const InstalledApps = z.array(
 // States that can fix themselves without a new plug-in, so we keep re-checking them.
 const POLLED_STATES: DeviceState[] = ['locked', 'trust-pending', 'error']
 const MAX_POLLS = 15
+const WIFI_TIMEOUT_FACTOR = 3
 
 // After this many failed starts in a row the status becomes 'failed' (retries continue).
 const FAILED_AFTER = 5
@@ -92,6 +93,7 @@ export class SidecarBridge implements DeviceBridge {
   private attempts = 0
   private restartTimer: NodeJS.Timeout | null = null
   private stopped = true
+  private wifi = false
 
   constructor(private readonly opts: SidecarOptions) {}
 
@@ -110,6 +112,13 @@ export class SidecarBridge implements DeviceBridge {
     this.rejectAll(new Error('Engine stopped'))
     this.forgetDevices()
     child?.kill()
+  }
+
+  // Wi‑Fi devices on or off. The engine swaps its watcher, detaches what it knew and replays what is reachable.
+  setWifi(enabled: boolean): void {
+    if (enabled === this.wifi) return
+    this.wifi = enabled
+    if (this.status === 'ready') void this.request('watch', { wifi: enabled }).catch(() => {})
   }
 
   getStatus(): SidecarStatus {
@@ -175,14 +184,15 @@ export class SidecarBridge implements DeviceBridge {
     const stdin = this.child?.stdin
     if (!stdin?.writable) return Promise.reject(new Error('Engine is not running'))
     const id = this.nextId++
+    // Everything over Wi‑Fi is slower, and the first request after a pause slowest.
+    const onWifi = this.devices.get((params as { udid?: string }).udid ?? '')?.connection === 'wifi'
+    const timeout =
+      (timeoutMs ?? this.opts.requestTimeoutMs ?? 10_000) * (onWifi ? WIFI_TIMEOUT_FACTOR : 1)
     return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(
-        () => {
-          this.pending.delete(id)
-          reject(new Error(`Engine request timed out: ${method}`))
-        },
-        timeoutMs ?? this.opts.requestTimeoutMs ?? 10_000
-      )
+      const timer = setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error(`Engine request timed out: ${method}`))
+      }, timeout)
       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer })
       stdin.write(JSON.stringify({ id, method, params }) + '\n')
     })
@@ -217,7 +227,7 @@ export class SidecarBridge implements DeviceBridge {
         this.attempts = 0
         log.info(`engine ready (version ${version})`)
         this.setStatus('ready')
-        await this.request('watch')
+        await this.request('watch', { wifi: this.wifi })
       })
       .catch((err: Error) => {
         if (this.child !== child) return

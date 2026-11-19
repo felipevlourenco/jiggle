@@ -44,6 +44,13 @@ export const SwitchIcon = icon(<path d="M5 6.5L8 3.5l3 3M5 9.5l3 3 3-3" />, {
   cap: true,
   join: true
 })
+export const WifiIcon = icon(
+  <>
+    <path d="M1.5 6a9.5 9.5 0 0113 0M3.8 8.6a6.2 6.2 0 018.4 0M6.2 11.2a2.8 2.8 0 013.6 0" />
+    <path d="M8 13.5h.01" />
+  </>,
+  { cap: true }
+)
 export const HomeIcon = icon(
   <>
     <rect x="2" y="2" width="5" height="5" rx="1.5" />
