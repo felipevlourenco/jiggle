@@ -28,4 +28,14 @@ export function registerAppsIpc(
       apps: result.apps.map((a) => ({ ...a, iconColor: colors[a.bundleId] ?? null }))
     }
   })
+  handle(ipc, 'apps:overrides', () => categories.getOverrides())
+  handle(ipc, 'apps:set-category', async (bundleId, name, category) => {
+    try {
+      await categories.setOverride(bundleId, name, category)
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, message: (err as Error).message }
+    }
+  })
+  handle(ipc, 'apps:reset-category', (bundleId) => categories.resetOverride(bundleId))
 }

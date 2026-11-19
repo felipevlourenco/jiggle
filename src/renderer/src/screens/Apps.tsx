@@ -11,6 +11,7 @@ import { PinIcon, SearchIcon } from '../components/icons'
 import { Thumb } from '../components/Thumb'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { ApplySheet } from '../sheets/Apply'
+import { ChangeCategorySheet } from '../sheets/ChangeCategory'
 import { usePins } from '../state/pins'
 import { useApps, useLayout } from '../state/queries'
 import s from './apps.module.css'
@@ -37,6 +38,7 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
   const layout = useLayout(device.udid)
   const { pins, openMenu } = usePins()
   const qc = useQueryClient()
+  const [changing, setChanging] = useState<AppInfo>()
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
   // What the sheet was opened for, kept apart from the live selection: the phone changes under it.
@@ -165,7 +167,9 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
                 key={r.bundleId}
                 title={r.bundleId}
                 aria-selected={picked.has(r.bundleId)}
-                onContextMenu={(e) => openMenu(e, r)}
+                onContextMenu={(e) =>
+                  openMenu(e, r, [{ label: 'Change Category…', onSelect: () => setChanging(r) }])
+                }
                 // ⌘-click picks a row, like in Finder.
                 onClick={(e) => (e.metaKey || e.ctrlKey) && canLeave(r) && toggle(r.bundleId)}
               >
@@ -189,7 +193,12 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
                     )}
                   </span>
                 </td>
-                <td>{r.category}</td>
+                <td>
+                  {r.category}
+                  {r.categorySource === 'override' && (
+                    <span className={s.edited} data-testid="override-dot" title="Changed by you" />
+                  )}
+                </td>
                 <td className={r.developer ? undefined : s.unknown}>{text(r, 'developer')}</td>
                 <td>{r.location}</td>
               </tr>
@@ -206,6 +215,13 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
           </div>
         )}
       </div>
+      {changing && (
+        <ChangeCategorySheet
+          app={changing}
+          known={rows.map((r) => r.category)}
+          onClose={() => setChanging(undefined)}
+        />
+      )}
       {sending && (
         <ApplySheet
           title={`Send ${sending.apps.length} app${sending.apps.length === 1 ? '' : 's'} to the App Library?`}

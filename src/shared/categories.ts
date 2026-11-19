@@ -1,0 +1,28 @@
+// The App Store's genres, offered when changing an app's category. Any text is allowed too.
+export const APP_STORE_CATEGORIES = [
+  'Books',
+  'Business',
+  'Developer Tools',
+  'Education',
+  'Entertainment',
+  'Finance',
+  'Food & Drink',
+  'Games',
+  'Graphics & Design',
+  'Health & Fitness',
+  'Lifestyle',
+  'Magazines & Newspapers',
+  'Medical',
+  'Music',
+  'Navigation',
+  'News',
+  'Photo & Video',
+  'Productivity',
+  'Reference',
+  'Shopping',
+  'Social Networking',
+  'Sports',
+  'Travel',
+  'Utilities',
+  'Weather'
+] as const

@@ -2,15 +2,20 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Settings } from '@shared/types'
 import { useEffect } from 'react'
-import { GearIcon, ShieldIcon, ShieldOutline } from '../components/icons'
+import { AppsIcon, GearIcon, ShieldIcon, ShieldOutline } from '../components/icons'
 import s from './settings.module.css'
 
 const BACKUP_CHOICES = [10, 25, 50, 100]
 const REGION = /^[a-z]{2}$/
 
-type Tab = 'general' | 'privacy'
+type Tab = 'general' | 'categories' | 'privacy'
+const TABS: { tab: Tab; label: string; icon: typeof GearIcon }[] = [
+  { tab: 'general', label: 'General', icon: GearIcon },
+  { tab: 'categories', label: 'Categories', icon: AppsIcon },
+  { tab: 'privacy', label: 'Privacy', icon: ShieldOutline }
+]
 
-// ⌘, : a separate window with General and Privacy.
+// ⌘, : a separate window with General, Categories and Privacy.
 export function SettingsWindow() {
   const qc = useQueryClient()
   const { data } = useQuery({ queryKey: ['settings'], queryFn: () => window.jiggle.settings.get() })
@@ -28,7 +33,7 @@ export function SettingsWindow() {
   return (
     <div className={s.root}>
       <div className={s.tabs} role="tablist" aria-label="Settings">
-        {(['general', 'privacy'] as const).map((t) => (
+        {TABS.map(({ tab: t, label, icon: Icon }) => (
           <button
             key={t}
             role="tab"
@@ -36,16 +41,14 @@ export function SettingsWindow() {
             className={s.tab}
             onClick={() => setTab(t)}
           >
-            {t === 'general' ? <GearIcon size={20} /> : <ShieldOutline size={20} />}
-            {t === 'general' ? 'General' : 'Privacy'}
+            <Icon size={20} />
+            {label}
           </button>
         ))}
       </div>
-      {tab === 'general' ? (
-        <General settings={data} save={(p) => save.mutate(p)} />
-      ) : (
-        <Privacy settings={data} save={(p) => save.mutate(p)} />
-      )}
+      {tab === 'general' && <General settings={data} save={(p) => save.mutate(p)} />}
+      {tab === 'categories' && <Categories />}
+      {tab === 'privacy' && <Privacy settings={data} save={(p) => save.mutate(p)} />}
     </div>
   )
 }
@@ -112,6 +115,46 @@ function General({ settings, save }: { settings: Settings; save: (p: Partial<Set
         <span className="meta">per device</span>
       </div>
     </div>
+  )
+}
+
+// The categories the person changed in Apps, each with a way back to the App Store's.
+function Categories() {
+  const qc = useQueryClient()
+  const { data } = useQuery({
+    queryKey: ['overrides'],
+    queryFn: () => window.jiggle.apps.overrides()
+  })
+  useEffect(
+    () =>
+      window.jiggle.apps.onChanged(() => void qc.invalidateQueries({ queryKey: ['overrides'] })),
+    [qc]
+  )
+  if (!data) return null
+  if (data.length === 0) {
+    return (
+      <p className={s.empty}>
+        No category overrides. Right‑click an app in Apps to change its category.
+      </p>
+    )
+  }
+  return (
+    <ul className={s.overrides}>
+      {data.map((o) => (
+        <li key={o.bundleId}>
+          <span>
+            <strong>{o.name}</strong> → {o.category}
+          </span>
+          <button
+            className="btn btn-sm"
+            aria-label={`Reset ${o.name}`}
+            onClick={() => void window.jiggle.apps.resetCategory(o.bundleId)}
+          >
+            Reset
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 

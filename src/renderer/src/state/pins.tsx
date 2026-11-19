@@ -16,7 +16,12 @@ interface PinsApi {
   pins: Pins
   setPage1(on: boolean): void
   // Right-click handler: opens the Pin / Unpin menu for this app.
-  openMenu(e: MouseEvent, app: { bundleId: string; name: string }): void
+  // `extra`: more menu items for this screen (Apps adds "Change Category…").
+  openMenu(
+    e: MouseEvent,
+    app: { bundleId: string; name: string },
+    extra?: { label: string; onSelect: () => void }[]
+  ): void
 }
 const PinsContext = createContext<PinsApi>({ pins: NO_PINS, setPage1() {}, openMenu() {} })
 export const usePins = (): PinsApi => useContext(PinsContext)
@@ -41,7 +46,13 @@ export function PinsProvider({
     mutationFn: (next: Pins) => window.jiggle.pins.set(udid!, next),
     onMutate: (next) => qc.setQueryData(key, next)
   })
-  const [menu, setMenu] = useState<{ x: number; y: number; bundleId: string; name: string }>()
+  const [menu, setMenu] = useState<{
+    x: number
+    y: number
+    bundleId: string
+    name: string
+    extra: { label: string; onSelect: () => void }[]
+  }>()
   useEffect(() => {
     if (!menu) return
     const close = (): void => setMenu(undefined)
@@ -61,10 +72,10 @@ export function PinsProvider({
   const api: PinsApi = {
     pins,
     setPage1: (on) => udid && save.mutate({ ...pins, page1: on }),
-    openMenu: (e, app) => {
+    openMenu: (e, app, extra = []) => {
       if (!udid) return
       e.preventDefault()
-      setMenu({ x: e.clientX, y: e.clientY, ...app })
+      setMenu({ x: e.clientX, y: e.clientY, ...app, extra })
     }
   }
   return (
@@ -80,6 +91,11 @@ export function PinsProvider({
             <PinIcon size={14} />
             {pins.apps.includes(menu.bundleId) ? 'Unpin' : 'Pin'} {menu.name}
           </button>
+          {menu.extra.map((item) => (
+            <button key={item.label} role="menuitem" onClick={item.onSelect}>
+              {item.label}
+            </button>
+          ))}
         </div>
       )}
     </PinsContext.Provider>

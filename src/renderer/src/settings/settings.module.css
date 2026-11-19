@@ -101,3 +101,26 @@
   line-height: 16px;
   color: var(--text-secondary);
 }
+
+.empty {
+  margin: 0;
+  padding: 40px 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.overrides {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 0;
+  padding: 12px 24px;
+  list-style: none;
+}
+.overrides li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 40px;
+  border-bottom: 1px solid var(--border);
+}

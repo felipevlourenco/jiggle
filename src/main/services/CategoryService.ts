@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import writeFileAtomic from 'write-file-atomic'
-import type { AppInfo, AppsResult, InstalledApp } from '@shared/types'
+import type { AppInfo, AppsResult, CategoryOverride, InstalledApp } from '@shared/types'
 import type { Logger } from './bridge/SidecarBridge'
 
 interface CacheEntry {
@@ -28,6 +28,8 @@ const SAVE_EVERY = 10
 // Cached on disk (including "not on the App Store"). A failed lookup is not cached: it is retried next launch.
 export class CategoryService {
   private readonly file: string
+  private readonly overridesFile: string
+  private overrides: Record<string, { name: string; category: string }>
   private readonly cache: Record<string, CacheEntry>
   private readonly queue: string[] = []
   private readonly failed = new Set<string>() // gave up this session
@@ -38,6 +40,8 @@ export class CategoryService {
 
   constructor(private readonly opts: Options) {
     this.file = join(opts.root, 'category-cache.json')
+    this.overridesFile = join(opts.root, 'overrides.json')
+    this.overrides = this.loadOverrides()
     this.cache = this.load()
     this.doFetch = opts.fetch ?? fetch
     this.sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
@@ -47,6 +51,18 @@ export class CategoryService {
   // Answers from what is known right now and fetches the rest in the background.
   resolve(apps: InstalledApp[]): AppsResult {
     const infos = apps.map((app): AppInfo => {
+      const mine = this.overrides[app.bundleId]
+      if (mine) {
+        // The person's choice wins. The developer still comes from the App Store when it is known.
+        const hit = this.cached(app.bundleId)
+        return {
+          ...app,
+          developer: app.bundleId.startsWith('com.apple.') ? 'Apple' : (hit?.developer ?? null),
+          category: mine.category,
+          categorySource: 'override',
+          iconColor: null
+        }
+      }
       if (app.bundleId.startsWith('com.apple.')) {
         return {
           ...app,
@@ -84,6 +100,39 @@ export class CategoryService {
     if (this.queue.length && !this.running) void this.drain()
     const lookup = this.running ? 'running' : this.offline ? 'offline' : 'idle'
     return { apps: infos, lookup }
+  }
+
+  getOverrides(): CategoryOverride[] {
+    return Object.entries(this.overrides)
+      .map(([bundleId, o]) => ({ bundleId, ...o }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  // Throws a message for the dialog when the category is empty.
+  async setOverride(bundleId: string, name: string, category: string): Promise<void> {
+    const clean = category.trim()
+    if (!clean) throw new Error('Type a category.')
+    if (clean.length > 60) throw new Error('Use 60 characters or fewer.')
+    this.overrides = { ...this.overrides, [bundleId]: { name, category: clean } }
+    await writeFileAtomic(this.overridesFile, JSON.stringify(this.overrides, null, 2))
+    this.opts.onChange()
+  }
+
+  async resetOverride(bundleId: string): Promise<void> {
+    this.overrides = { ...this.overrides }
+    delete this.overrides[bundleId]
+    await writeFileAtomic(this.overridesFile, JSON.stringify(this.overrides, null, 2))
+    this.opts.onChange()
+  }
+
+  private loadOverrides(): Record<string, { name: string; category: string }> {
+    try {
+      if (existsSync(this.overridesFile))
+        return JSON.parse(readFileSync(this.overridesFile, 'utf8'))
+    } catch (err) {
+      this.opts.log.warn('category overrides unreadable, starting empty:', (err as Error).message)
+    }
+    return {}
   }
 
   private enabled(): boolean {

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -151,5 +151,58 @@ describe('CategoryService', () => {
       sleep: async () => {}
     })
     expect(b.resolve([app('com.spotify.client')]).apps[0]!.category).toBe('Unknown')
+  })
+})
+
+describe('category overrides', () => {
+  it('win over the App Store and over Apple, keep the developer, and are marked as overrides', async () => {
+    const { service } = setup()
+    service.resolve([app('com.spotify.client')])
+    await settle()
+    await service.setOverride('com.spotify.client', 'Spotify', ' Finance ')
+    await service.setOverride('com.apple.mobilemail', 'Mail', 'Work')
+    const { apps } = service.resolve([app('com.spotify.client'), app('com.apple.mobilemail')])
+    expect(apps[0]).toMatchObject({
+      category: 'Finance',
+      categorySource: 'override',
+      developer: 'Spotify'
+    })
+    expect(apps[1]).toMatchObject({
+      category: 'Work',
+      categorySource: 'override',
+      developer: 'Apple'
+    })
+  })
+
+  it('are still there after a relaunch, listed by name, and reset brings the App Store category back', async () => {
+    const first = setup()
+    first.service.resolve([app('com.spotify.client')])
+    await settle()
+    await first.service.setOverride('com.spotify.client', 'Spotify', 'Finance')
+    expect(first.onChange).toHaveBeenCalled()
+
+    const again = setup(undefined, first.dir).service
+    expect(again.getOverrides()).toEqual([
+      { bundleId: 'com.spotify.client', name: 'Spotify', category: 'Finance' }
+    ])
+    await again.resetOverride('com.spotify.client')
+    expect(again.resolve([app('com.spotify.client')]).apps[0]).toMatchObject({
+      category: 'Music',
+      categorySource: 'appstore'
+    })
+    expect(setup(undefined, first.dir).service.getOverrides()).toEqual([])
+  })
+
+  it('refuses an empty or very long category and keeps what was there', async () => {
+    const { service } = setup()
+    await expect(service.setOverride('a.b', 'AB', '   ')).rejects.toThrow('Type a category.')
+    await expect(service.setOverride('a.b', 'AB', 'x'.repeat(61))).rejects.toThrow('60 characters')
+    expect(service.getOverrides()).toEqual([])
+  })
+
+  it('an unreadable overrides file means none, not a crash', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'jiggle-cat-'))
+    writeFileSync(join(dir, 'overrides.json'), '{ nope')
+    expect(setup(undefined, dir).service.getOverrides()).toEqual([])
   })
 })

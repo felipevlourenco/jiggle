@@ -4,6 +4,7 @@ import type {
   ApplyResult,
   ApplyStep,
   AppsResult,
+  CategoryOverride,
   Device,
   ExportRequest,
   ExportResult,
@@ -91,6 +92,13 @@ export const channels = {
   'device:refresh': { args: z.tuple([Udid]), result: z.void() },
   'layout:get': { args: z.tuple([Udid]), result: z.custom<LayoutResult>() },
   'apps:list': { args: z.tuple([Udid]), result: z.custom<AppsResult>() },
+  // Categories the person set by hand. Setting or resetting one makes the window refetch the apps.
+  'apps:overrides': { args: z.tuple([]), result: z.custom<CategoryOverride[]>() },
+  'apps:set-category': {
+    args: z.tuple([z.string().min(1), z.string().min(1).max(100), z.string()]),
+    result: z.custom<{ ok: true } | { ok: false; message: string }>()
+  },
+  'apps:reset-category': { args: z.tuple([z.string().min(1)]), result: z.void() },
   // No udid: every device's snapshots, so History still works with nothing plugged in.
   'snapshots:list': { args: z.tuple([Udid.optional()]), result: z.custom<SnapshotEntry[]>() },
   'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() },
@@ -171,6 +179,13 @@ export interface JiggleApi {
   }
   apps: {
     list(udid: string): Promise<AppsResult>
+    overrides(): Promise<CategoryOverride[]>
+    setCategory(
+      bundleId: string,
+      name: string,
+      category: string
+    ): Promise<{ ok: true } | { ok: false; message: string }>
+    resetCategory(bundleId: string): Promise<void>
     // Categories arrived from the App Store: refetch.
     onChanged(listener: () => void): () => void
   }

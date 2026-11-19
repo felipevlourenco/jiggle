@@ -82,7 +82,14 @@ export interface AppInfo extends InstalledApp {
   iconColor: IconColor | null // the icon's dominant color; null until the icon is read
   developer: string | null
   category: string // "Social Networking", "Apple", "Unknown"
-  categorySource: 'appstore' | 'apple' | 'unknown'
+  categorySource: 'appstore' | 'apple' | 'override' | 'unknown' // 'override': the person changed it
+}
+
+// A category the person chose for an app, instead of the App Store's. Global to this Mac, not per device.
+export interface CategoryOverride {
+  bundleId: string
+  name: string // kept so Settings can list it when the app is gone
+  category: string
 }
 
 // `lookup`: are categories still being fetched, or is the App Store unreachable?

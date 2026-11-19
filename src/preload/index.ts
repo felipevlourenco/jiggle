@@ -29,6 +29,10 @@ const api: JiggleApi = {
   layout: { get: (udid) => invoke('layout:get', udid) },
   apps: {
     list: (udid) => invoke('apps:list', udid),
+    overrides: () => invoke('apps:overrides'),
+    setCategory: (bundleId, name, category) =>
+      invoke('apps:set-category', bundleId, name, category),
+    resetCategory: (bundleId) => invoke('apps:reset-category', bundleId),
     onChanged: (listener) => on('apps:changed', () => listener())
   },
   apply: {

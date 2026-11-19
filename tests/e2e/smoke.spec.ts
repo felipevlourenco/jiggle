@@ -1025,3 +1025,65 @@ test.describe('Export', () => {
     await app.close()
   })
 })
+
+test.describe('Category overrides', () => {
+  test('Change Category… shows with a dot, is listed and reset in Settings, and survives a relaunch', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-overrides-'))
+    const open = async () => {
+      const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_USER_DATA: userData })
+      const win = await app.firstWindow()
+      await win.getByRole('link', { name: 'Apps' }).click()
+      return { app, win }
+    }
+    let { app, win } = await open()
+    const row = win.getByRole('row').filter({ hasText: 'Unknown' }).first()
+    const name = ((await row.getByRole('checkbox').getAttribute('aria-label')) ?? '').slice(7)
+    const mine = win.getByRole('row').filter({ has: win.getByLabel(`Select ${name}`) })
+
+    await mine.click({ button: 'right' })
+    await win.getByRole('menuitem', { name: 'Change Category…' }).click()
+    const sheet = win.getByRole('dialog', { name: /Change category of/ })
+    await expect(sheet.getByRole('button', { name: 'Save' })).toBeDisabled()
+    await sheet.getByLabel('Category').fill('Finance')
+    await sheet.getByRole('button', { name: 'Save' }).click()
+    await expect(sheet).toHaveCount(0)
+    await expect(mine).toContainText('Finance')
+    await expect(mine.getByTestId('override-dot')).toBeVisible()
+
+    // Settings > Categories lists it, and Reset brings the App Store's answer back
+    const opened = app.waitForEvent('window')
+    await app.evaluate(({ Menu }) =>
+      Menu.getApplicationMenu()!.getMenuItemById('settings')!.click()
+    )
+    const settings = await opened
+    await settings.getByRole('tab', { name: 'Categories' }).click()
+    await expect(settings.getByText(`${name} → Finance`)).toBeVisible()
+    await settings.getByRole('button', { name: `Reset ${name}` }).click()
+    await expect(settings.getByText(/No category overrides/)).toBeVisible()
+    await expect(mine).toContainText('Unknown')
+    await expect(mine.getByTestId('override-dot')).toHaveCount(0)
+
+    // set it again from the row's sheet (with Reset there), then relaunch
+    await mine.click({ button: 'right' })
+    await win.getByRole('menuitem', { name: 'Change Category…' }).click()
+    await win.getByRole('combobox', { name: 'Category' }).fill('Finance')
+    await win.getByRole('button', { name: 'Save' }).click()
+    await expect(mine).toContainText('Finance')
+    await app.close()
+    ;({ app, win } = await open())
+    await expect(
+      win.getByRole('row').filter({ has: win.getByLabel(`Select ${name}`) })
+    ).toContainText('Finance')
+    await expect(win.getByTestId('override-dot')).toHaveCount(1)
+
+    // the sheet's own Reset
+    await win
+      .getByRole('row')
+      .filter({ has: win.getByLabel(`Select ${name}`) })
+      .click({ button: 'right' })
+    await win.getByRole('menuitem', { name: 'Change Category…' }).click()
+    await win.getByRole('button', { name: 'Reset to App Store' }).click()
+    await expect(win.getByTestId('override-dot')).toHaveCount(0)
+    await app.close()
+  })
+})

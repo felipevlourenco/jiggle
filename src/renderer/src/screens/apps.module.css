@@ -136,3 +136,14 @@
 .table tbody tr[aria-selected='true'] {
   background: var(--surface-2);
 }
+
+/* A category the person changed: a small coral dot after it. */
+.edited {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--secondary);
+  vertical-align: middle;
+}
