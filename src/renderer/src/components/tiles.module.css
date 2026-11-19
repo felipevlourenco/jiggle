@@ -95,6 +95,24 @@
   }
 }
 
+/* Coral badge on a pinned app, at the icon's top right. */
+.tile {
+  position: relative;
+}
+.pin {
+  position: absolute;
+  top: -4px;
+  left: calc(50% + 20px);
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
 /* Marks an icon that a sort moved (Organize, After frame). */
 .cell[data-moved]::after {
   content: '';

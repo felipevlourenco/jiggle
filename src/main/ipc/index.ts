@@ -3,6 +3,7 @@ import type { ApplyService } from '../services/ApplyService'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
 import type { CategoryService } from '../services/CategoryService'
 import type { IconService } from '../services/IconService'
+import type { PinsService } from '../services/PinsService'
 import type { SettingsService } from '../services/SettingsService'
 import type { SnapshotService } from '../services/SnapshotService'
 import { registerApplyIpc } from './apply'
@@ -21,6 +22,7 @@ export interface IpcDeps {
   snapshots: SnapshotService
   apply: ApplyService
   settings: SettingsService
+  pins: PinsService
   sidecarStatus: () => SidecarStatus
 }
 

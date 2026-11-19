@@ -7,6 +7,7 @@ import type {
   Device,
   Layout,
   LayoutResult,
+  Pins,
   Settings,
   SnapshotEntry,
   SnapshotSummary
@@ -54,6 +55,11 @@ const ApplyPlan_ = z.object({
   removedFromHomeScreen: z.array(z.string())
 }) satisfies z.ZodType<ApplyPlan>
 
+const Pins_ = z.object({
+  apps: z.array(z.string().min(1)),
+  page1: z.boolean()
+}) satisfies z.ZodType<Pins>
+
 const Settings_ = z.object({
   theme: z.enum(['system', 'light', 'dark']),
   storefront: z.string().regex(/^[a-z]{2}$/),
@@ -83,6 +89,8 @@ export const channels = {
     args: z.tuple([]),
     result: z.enum(['starting', 'ready', 'restarting', 'failed'])
   },
+  'pins:get': { args: z.tuple([Udid]), result: z.custom<Pins>() },
+  'pins:set': { args: z.tuple([Udid, Pins_]), result: z.custom<Pins>() },
   'apply:run': { args: z.tuple([ApplyPlan_]), result: z.custom<ApplyResult>() },
   'apply:restore': { args: z.tuple([Udid, z.string().min(1)]), result: z.custom<ApplyResult>() }
 } as const
@@ -138,6 +146,10 @@ export interface JiggleApi {
   }
   toast: {
     onShow(listener: (message: string) => void): () => void
+  }
+  pins: {
+    get(udid: string): Promise<Pins>
+    set(udid: string, pins: Pins): Promise<Pins>
   }
   settings: {
     get(): Promise<Settings>

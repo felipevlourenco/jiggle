@@ -9,6 +9,7 @@ import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
 import { CategoryService } from '../../services/CategoryService'
 import { ApplyService } from '../../services/ApplyService'
 import { IconService } from '../../services/IconService'
+import { PinsService } from '../../services/PinsService'
 import { SettingsService } from '../../services/SettingsService'
 import { SnapshotService } from '../../services/SnapshotService'
 import { registerIpc } from '..'
@@ -48,6 +49,7 @@ function setup() {
     snapshots,
     apply,
     settings,
+    pins: new PinsService(root, silent),
     sidecarStatus: () => 'ready'
   })
   const call = async (ch: string, ...args: unknown[]) => await handlers.get(ch)!(...args)

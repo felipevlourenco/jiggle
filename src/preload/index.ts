@@ -42,6 +42,10 @@ const api: JiggleApi = {
     onChanged: (listener) => on('snapshots:changed', () => listener())
   },
   toast: { onShow: (listener) => on('toast', listener) },
+  pins: {
+    get: (udid) => invoke('pins:get', udid),
+    set: (udid, pins) => invoke('pins:set', udid, pins)
+  },
   settings: {
     get: () => invoke('settings:get'),
     set: (patch) => invoke('settings:set', patch),

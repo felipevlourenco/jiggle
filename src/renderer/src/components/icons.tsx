@@ -21,6 +21,12 @@ function icon(paths: ReactNode, opts: { stroke?: number; join?: boolean; cap?: b
   }
 }
 
+export const PinIcon = icon(
+  <>
+    <path d="M9.5 1.5l5 5-2 .5-2.5 2.5.5 3-1 1-3-3-4.5 4.5M6 5.5l-1.5-.5-1 1 6.5 6.5" />
+  </>,
+  { join: true, cap: true }
+)
 export const PhoneIcon = icon(
   <>
     <rect x="4.5" y="1.5" width="7" height="13" rx="2" />

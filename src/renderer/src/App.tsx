@@ -19,6 +19,7 @@ import { HomeScreen } from './screens/HomeScreen'
 import { Organize } from './screens/Organize'
 import { SettingsWindow } from './settings/SettingsWindow'
 import { appError } from '@shared/errors'
+import { PinsProvider } from './state/pins'
 import { useDevices, useDeviceEvents, useLayout, useSidecarStatus } from './state/queries'
 
 const NAV_ICONS: Record<string, typeof HomeIcon> = {
@@ -144,38 +145,43 @@ function Shell() {
         )}
         <section className="screen">
           {isSuccess && (
-            <ToolbarSlotContext.Provider value={toolbarSlot}>
-              <Routes>
-                <Route path="/" element={<Navigate to={usable ? '/home' : '/connect'} replace />} />
-                <Route
-                  path="/connect"
-                  element={
-                    <Connect
-                      device={device}
-                      onContinueReadOnly={() => setReadOnlyUdid(device?.udid)}
-                    />
-                  }
-                />
-                {device && <Route path="/home" element={<HomeScreen device={device} />} />}
-                {device && <Route path="/apps" element={<Apps device={device} />} />}
-                {device && <Route path="/organize" element={<Organize device={device} />} />}
-                <Route
-                  path="/history"
-                  element={
-                    <History
-                      udid={device?.udid}
-                      canBackUp={usable}
-                      canRestore={device?.state === 'ready'}
-                    />
-                  }
-                />
-                {NAV_ITEMS.filter(
-                  (n) => !['/home', '/apps', '/organize', '/history'].includes(n.path)
-                ).map((n) => (
-                  <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
-                ))}
-              </Routes>
-            </ToolbarSlotContext.Provider>
+            <PinsProvider udid={usable ? device?.udid : undefined}>
+              <ToolbarSlotContext.Provider value={toolbarSlot}>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={<Navigate to={usable ? '/home' : '/connect'} replace />}
+                  />
+                  <Route
+                    path="/connect"
+                    element={
+                      <Connect
+                        device={device}
+                        onContinueReadOnly={() => setReadOnlyUdid(device?.udid)}
+                      />
+                    }
+                  />
+                  {device && <Route path="/home" element={<HomeScreen device={device} />} />}
+                  {device && <Route path="/apps" element={<Apps device={device} />} />}
+                  {device && <Route path="/organize" element={<Organize device={device} />} />}
+                  <Route
+                    path="/history"
+                    element={
+                      <History
+                        udid={device?.udid}
+                        canBackUp={usable}
+                        canRestore={device?.state === 'ready'}
+                      />
+                    }
+                  />
+                  {NAV_ITEMS.filter(
+                    (n) => !['/home', '/apps', '/organize', '/history'].includes(n.path)
+                  ).map((n) => (
+                    <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
+                  ))}
+                </Routes>
+              </ToolbarSlotContext.Provider>
+            </PinsProvider>
           )}
         </section>
       </main>

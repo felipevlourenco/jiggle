@@ -11,6 +11,7 @@ import { handleAssetProtocol, registerAssetScheme } from './protocol'
 import { ApplyService } from './services/ApplyService'
 import { CategoryService } from './services/CategoryService'
 import { IconService } from './services/IconService'
+import { PinsService } from './services/PinsService'
 import { SettingsService } from './services/SettingsService'
 import { SnapshotService } from './services/SnapshotService'
 import type { DeviceBridge } from './services/bridge/DeviceBridge'
@@ -96,6 +97,7 @@ if (!app.requestSingleInstanceLock()) {
     const snapshots = new SnapshotService(userData, log.scope('snapshots'), {
       keepAutoBackups: () => settings.get().backupRetention
     })
+    const pins = new PinsService(userData, log.scope('pins'))
     const apply = new ApplyService({ bridge, snapshots, broadcast, log: log.scope('apply') })
     registerIpc(ipcMain, {
       bridge,
@@ -105,6 +107,7 @@ if (!app.requestSingleInstanceLock()) {
       snapshots,
       apply,
       settings,
+      pins,
       sidecarStatus: () => sidecar?.getStatus() ?? 'ready'
     })
     if (sidecar) {

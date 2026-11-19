@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { iconUrl } from '@shared/assets'
 import type { AppItem } from '@shared/types'
+import { usePins } from '../state/pins'
+import { PinIcon } from './icons'
 import s from './tiles.module.css'
 
 const hueOf = (id: string): number => {
@@ -43,9 +45,20 @@ export function IconTile({
   app: AppItem
   label?: boolean
 }) {
+  const { pins, openMenu } = usePins()
   return (
-    <div className={s.tile} data-kind="app" title={app.name}>
+    <div
+      className={s.tile}
+      data-kind="app"
+      title={app.name}
+      onContextMenu={(e) => openMenu(e, app)}
+    >
       <AppIcon udid={udid} app={app} />
+      {pins.apps.includes(app.bundleId) && (
+        <span className={s.pin} data-testid="pin-badge">
+          <PinIcon size={9} />
+        </span>
+      )}
       {label && <span className={s.label}>{app.name}</span>}
     </div>
   )

@@ -147,6 +147,13 @@ export type ApplyResult =
   | { ok: true; backup: SnapshotSummary }
   | { ok: false; code: ApplyErrorCode; message: string; backup?: SnapshotSummary }
 
+// What a sort must leave where it is, per device. Pinned apps keep their page and slot; page1 keeps all
+// of page 1. The dock is never moved by a sort, so it needs no pin.
+export interface Pins {
+  apps: string[] // bundle ids
+  page1: boolean
+}
+
 export interface Settings {
   theme: 'system' | 'light' | 'dark'
   storefront: string // two letters: "nl"

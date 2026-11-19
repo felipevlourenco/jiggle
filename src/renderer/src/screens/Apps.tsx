@@ -3,9 +3,10 @@ import { APP_LIBRARY, appLocations } from '@shared/layout/locations'
 import type { AppInfo, Device } from '@shared/types'
 import { appError } from '@shared/errors'
 import { Banner } from '../components/Banner'
-import { SearchIcon } from '../components/icons'
+import { PinIcon, SearchIcon } from '../components/icons'
 import { Thumb } from '../components/Thumb'
 import { ToolbarActions } from '../components/ToolbarSlot'
+import { usePins } from '../state/pins'
 import { useApps, useLayout } from '../state/queries'
 import s from './apps.module.css'
 
@@ -26,6 +27,7 @@ const text = (row: Row, key: Key): string =>
 export function Apps({ device }: { device: Device }) {
   const apps = useApps(device.udid)
   const layout = useLayout(device.udid)
+  const { pins, openMenu } = usePins()
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<{ key: Key; desc: boolean }>({ key: 'name', desc: false })
 
@@ -126,11 +128,16 @@ export function Apps({ device }: { device: Device }) {
           </thead>
           <tbody>
             {shown.map((r) => (
-              <tr key={r.bundleId} title={r.bundleId}>
+              <tr key={r.bundleId} title={r.bundleId} onContextMenu={(e) => openMenu(e, r)}>
                 <td>
                   <span className={s.name}>
                     <Thumb udid={device.udid} app={r} />
                     {r.name}
+                    {pins.apps.includes(r.bundleId) && (
+                      <span className={s.pinned} data-testid="pin-badge" title="Pinned">
+                        <PinIcon size={12} />
+                      </span>
+                    )}
                   </span>
                 </td>
                 <td>{r.category}</td>

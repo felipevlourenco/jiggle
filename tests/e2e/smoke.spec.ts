@@ -99,6 +99,7 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
     'apps',
     'device',
     'layout',
+    'pins',
     'settings',
     'sidecar',
     'snapshots',
@@ -595,6 +596,49 @@ test.describe('Hardening', () => {
     await expect(settings.getByLabel('Look up categories online')).not.toBeChecked()
     await settings.getByRole('button', { name: 'Clear Cache' }).click()
     await expect(settings.getByText('Cleared.')).toBeVisible()
+    await app.close()
+  })
+})
+
+test.describe('Pinning', () => {
+  test('pin from the right-click menu, badges on Home and Apps, kept after a relaunch', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'jiggle-e2e-'))
+    const env = { JIGGLE_MOCK_DEVICE: 'iphone-messy', JIGGLE_USER_DATA: dir }
+    let app = await launch(env)
+    let win = await app.firstWindow()
+    const page = win.getByTestId('page').first()
+    await expect(page.locator('[data-kind="app"]').first()).toBeVisible()
+    await expect(win.getByTestId('pin-badge')).toHaveCount(0)
+    await page.locator('[data-kind="app"]').first().click({ button: 'right' })
+    await win.getByRole('menuitem', { name: /^Pin / }).click()
+    await expect(win.getByTestId('pin-badge')).toHaveCount(1)
+    await win.getByRole('link', { name: 'Apps' }).click()
+    await expect(win.getByTestId('pin-badge')).toHaveCount(1)
+
+    // Pin page 1: fewer apps move than without it.
+    await win.getByRole('link', { name: 'Organize' }).click()
+    const summary = win.getByTestId('summary')
+    await expect(summary).toHaveText(/^\d+ of \d+ apps will move/)
+    const moves = async () => Number((await summary.innerText()).match(/^(\d+) of/)![1])
+    const free = await moves()
+    await win.getByRole('checkbox', { name: 'Pin page 1' }).click()
+    await expect.poll(moves).toBeLessThan(free)
+    await app.close()
+
+    app = await launch(env)
+    win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await expect(win.getByRole('checkbox', { name: 'Pin page 1' })).toBeChecked()
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect(win.getByTestId('pin-badge')).toHaveCount(1)
+    await win
+      .getByTestId('page')
+      .first()
+      .locator('[data-kind="app"]')
+      .first()
+      .click({ button: 'right' })
+    await win.getByRole('menuitem', { name: /^Unpin / }).click()
+    await expect(win.getByTestId('pin-badge')).toHaveCount(0)
     await app.close()
   })
 })

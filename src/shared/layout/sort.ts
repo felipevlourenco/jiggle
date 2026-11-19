@@ -1,4 +1,4 @@
-import type { AppItem, FolderItem, IconColor, Layout, LayoutItem } from '../types'
+import type { AppItem, FolderItem, IconColor, Layout, LayoutItem, Pins } from '../types'
 import { compareColors } from './color.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
@@ -12,6 +12,8 @@ export interface SortOptions {
   categoryOf?: (bundleId: string) => string
   // Needed for by: 'color'. null: the icon hasn't been read; it sorts with the neutrals.
   colorOf?: (bundleId: string) => IconColor | null
+  // Pinned apps and page 1 stay exactly where they are (see sortInPlace).
+  pins?: Pins
 }
 
 type Movable = AppItem | FolderItem
@@ -48,6 +50,7 @@ function compare(a: Movable, b: Movable, opts: SortOptions): number {
 // pages that must stay as they are come first, then the sorted pages, full ones first.
 // ponytail: untouched pages move to the front, like the POC; keep their page numbers if that surprises people.
 export function sortLayout(layout: Layout, opts: SortOptions): Layout {
+  if (opts.pins && (opts.pins.page1 || opts.pins.apps.length)) return sortInPlace(layout, opts)
   const frozen: LayoutItem[][] = []
   const movable: Movable[] = []
   for (const page of layout.pages) {
@@ -63,4 +66,24 @@ export function sortLayout(layout: Layout, opts: SortOptions): Layout {
   const sorted: LayoutItem[][] = []
   for (let i = 0; i < movable.length; i += size) sorted.push(movable.slice(i, i + size))
   return { ...layout, pages: [...frozen, ...sorted] }
+}
+
+// With pins every page keeps its number and its size: locked pages stay as they are, and the
+// movable items are dealt back, sorted, into the free slots of the others. A pinned app simply
+// isn't a free slot. Pins on apps inside folders, or on a widget page when widgets are kept, do nothing.
+// ponytail: unlike the no-pin sort, partly filled pages stay partly filled; repack if that surprises people.
+function sortInPlace(layout: Layout, opts: SortOptions): Layout {
+  const pins = opts.pins!
+  const pinned = new Set(pins.apps)
+  const free = (item: LayoutItem): item is Movable =>
+    isMovable(item) && !(item.kind === 'app' && pinned.has(item.bundleId))
+  const locked = (page: LayoutItem[], i: number): boolean =>
+    (i === 0 && pins.page1) || (opts.widgetMode === 'keep-pages' && !page.every(isMovable))
+  const movable = layout.pages.flatMap((page, i) => (locked(page, i) ? [] : page.filter(free)))
+  movable.sort((a, b) => compare(a, b, opts))
+  const queue = [...movable]
+  const pages = layout.pages.map((page, i) =>
+    locked(page, i) ? page : page.map((item) => (free(item) ? queue.shift()! : item))
+  )
+  return { ...layout, pages }
 }

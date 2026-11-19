@@ -122,3 +122,8 @@
   margin: 0 0 8px;
   color: var(--text-secondary);
 }
+
+.pinned {
+  display: inline-flex;
+  color: var(--secondary);
+}

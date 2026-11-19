@@ -12,6 +12,7 @@ import { ToolbarActions } from '../components/ToolbarSlot'
 import { Banner } from '../components/Banner'
 import { Thumb } from '../components/Thumb'
 import { ApplySheet } from '../sheets/Apply'
+import { usePins } from '../state/pins'
 import { useApps, useLayout } from '../state/queries'
 import { useOrganizeChoice } from '../state/store'
 import s from './organize.module.css'
@@ -38,6 +39,7 @@ export function Organize({ device }: { device: Device }) {
   const layout = useLayout(device.udid)
   const apps = useApps(device.udid)
   const [choice, setChoice] = useOrganizeChoice()
+  const { pins, setPage1 } = usePins()
   const qc = useQueryClient()
   const [applying, setApplying] = useState(false)
 
@@ -57,6 +59,7 @@ export function Organize({ device }: { device: Device }) {
       sortLayout(before, {
         by,
         widgetMode: choice.widgetMode,
+        pins,
         categoryOf,
         colorOf: (id) => colors.get(id) ?? null
       })
@@ -79,7 +82,7 @@ export function Organize({ device }: { device: Device }) {
         PRESETS.map((p) => [p.by, appsOf(sorted(p.by).pages.flat()).slice(0, 5)])
       ) as Record<SortOptions['by'], AppItem[]>
     }
-  }, [before, categories, colors, choice])
+  }, [before, categories, colors, choice, pins])
 
   if (layout.isError) {
     return (
@@ -158,6 +161,14 @@ export function Organize({ device }: { device: Device }) {
             </button>
           ))}
         </div>
+        <label className="sw">
+          <input
+            type="checkbox"
+            checked={pins.page1}
+            onChange={(e) => setPage1(e.target.checked)}
+          />
+          Pin page 1
+        </label>
       </div>
 
       {blocked && (
