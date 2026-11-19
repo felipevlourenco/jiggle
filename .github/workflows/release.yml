@@ -1,5 +1,5 @@
-# Push a tag like v0.1.1 (it must match package.json's version) to build, sign and notarize both
-# architectures and create a DRAFT GitHub release. Publishing the draft is what makes the update go live.
+# Push a tag like v0.1.1 (it must match package.json's version) to build, sign and notarize an
+# Apple silicon build and create a DRAFT GitHub release. Publishing the draft is what makes the update go live.
 #
 # Secrets: CSC_LINK (base64 of the signing certificate .p12), CSC_KEY_PASSWORD.
 #   Until you have a Developer ID Application certificate, export your "Apple Development" one. The app is then
@@ -19,7 +19,8 @@ jobs:
       matrix:
         include:
           - { arch: arm64, runner: macos-latest }
-          - { arch: x64, runner: macos-15-intel }
+          # Intel is off for now. To bring it back, add { arch: x64, runner: macos-15-intel } here and use
+          # scripts/merge-latest-mac.mjs in the release job (see below).
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -84,11 +85,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with: { path: artifacts }
-      # Each runner wrote a latest-mac.yml for its own arch; the updater needs one listing both.
+      # With more than one arch, each runner writes its own latest-mac.yml and the updater needs one listing all:
+      #   node scripts/merge-latest-mac.mjs artifacts/jiggle-arm64/latest-mac.yml artifacts/jiggle-x64/latest-mac.yml > release/latest-mac.yml
       - run: |
           mkdir release
-          cp artifacts/*/*.dmg artifacts/*/*.zip artifacts/*/*.blockmap release/
-          node scripts/merge-latest-mac.mjs artifacts/jiggle-arm64/latest-mac.yml artifacts/jiggle-x64/latest-mac.yml > release/latest-mac.yml
+          cp artifacts/*/*.dmg artifacts/*/*.zip artifacts/*/*.blockmap artifacts/*/latest-mac.yml release/
       - run: gh release create "$GITHUB_REF_NAME" release/* --draft --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
