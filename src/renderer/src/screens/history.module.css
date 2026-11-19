@@ -6,7 +6,7 @@
   gap: 12px;
 }
 .group {
-  overflow: hidden;
+  overflow-y: scroll;
 }
 .heading {
   margin: 0;
