@@ -1,5 +1,5 @@
 import { placeItems } from '@shared/layout/place'
-import type { Grid, LayoutItem } from '@shared/types'
+import type { FolderItem, Grid, LayoutItem } from '@shared/types'
 import { DragCell, DropZone } from './DragCell'
 import { ItemTile } from './ItemTile'
 import s from './phone.module.css'
@@ -12,13 +12,15 @@ export function PageGrid({
   grid,
   udid,
   marked,
-  edit
+  edit,
+  onFolder
 }: {
   items: LayoutItem[]
   grid: Grid
   udid: string
   marked?: ReadonlySet<string> // item ids that get a coral dot (moved by a sort)
   edit?: { page: number; onOpenFolder: (id: string) => void }
+  onFolder?: (folder: FolderItem) => void // a click on a folder outside Edit mode (Organize preview)
 }) {
   const props = {
     className: edit ? `${s.grid} ${t.jiggle}` : s.grid,
@@ -32,6 +34,22 @@ export function PageGrid({
       'data-moved': marked?.has(item.id) || undefined
     }
     if (!edit) {
+      if (item.kind === 'folder' && onFolder) {
+        return (
+          <div
+            key={item.id}
+            {...common}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open folder ${item.name}`}
+            style={{ ...common.style, cursor: 'pointer' }}
+            onClick={() => onFolder(item)}
+            onKeyDown={(ev) => (ev.key === 'Enter' || ev.key === ' ') && onFolder(item)}
+          >
+            <ItemTile item={item} udid={udid} />
+          </div>
+        )
+      }
       return (
         <div key={item.id} {...common}>
           <ItemTile item={item} udid={udid} />

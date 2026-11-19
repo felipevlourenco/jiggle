@@ -642,3 +642,33 @@ test.describe('Pinning', () => {
     await app.close()
   })
 })
+
+test.describe('Auto-folders', () => {
+  test('the toggle waits for Category, then the After frame shows folders you can open', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    const toggle = win.getByRole('checkbox', { name: 'Create folders by category' })
+    await expect(toggle).toBeDisabled()
+    await win.getByRole('radio', { name: /Category/ }).click()
+    await expect(toggle).toBeEnabled()
+    await toggle.click()
+    await expect(win.getByTestId('summary')).toContainText(/\d+ folders? created/)
+
+    const after = win.getByRole('figure', { name: 'After' })
+    await after
+      .getByRole('button', { name: /^Open folder / })
+      .first()
+      .click()
+    const dialog = after.getByRole('dialog', { name: /^Folder / })
+    await expect(dialog.locator('[data-kind="app"]').first()).toBeVisible()
+    await dialog.getByRole('button', { name: 'Close folder' }).click()
+    await expect(dialog).toHaveCount(0)
+
+    // back to A–Z: the option is off again
+    await win.getByRole('radio', { name: /A–Z/ }).click()
+    await expect(toggle).toBeDisabled()
+    await expect(win.getByTestId('summary')).not.toContainText('created')
+    await app.close()
+  })
+})

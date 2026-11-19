@@ -66,11 +66,15 @@
 .options {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px 16px;
+  flex-wrap: wrap;
   flex: none;
 }
 .options .sw {
   margin-left: auto;
+}
+.options .sw + .sw {
+  margin-left: 0;
 }
 .stage {
   flex: 1;

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
-import type { Layout } from '@shared/types'
+import type { FolderItem, Layout } from '@shared/types'
 import { Dock } from './Dock'
+import { FolderPopover } from './FolderPopover'
 import { PageDots } from './PageDots'
 import { PageGrid } from './PageGrid'
 import { FRAME_HEIGHT, FRAME_WIDTH, PhoneFrame } from './PhoneFrame'
@@ -24,6 +25,7 @@ export function BeforeAfter({
   udid: string
 }) {
   const [page, setPage] = useState(0)
+  const [open, setOpen] = useState<{ label: string; folder: FolderItem } | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const count = Math.max(before.pages.length, after.pages.length)
   const current = clamp(page, 0, Math.max(0, count - 1))
@@ -55,8 +57,12 @@ export function BeforeAfter({
           grid={layout.grid}
           udid={udid}
           marked={marked}
+          onFolder={(folder) => setOpen({ label, folder })}
         />
         <Dock items={layout.dock} udid={udid} />
+        {open?.label === label && (
+          <FolderPopover folder={open.folder} udid={udid} onClose={() => setOpen(null)} />
+        )}
       </PhoneFrame>
     </figure>
   )
@@ -72,16 +78,16 @@ export function BeforeAfter({
           className={s.arrow}
           aria-label="Previous page"
           disabled={current === 0}
-          onClick={() => setPage(current - 1)}
+          onClick={() => (setOpen(null), setPage(current - 1))}
         >
           ‹
         </button>
-        <PageDots count={count} current={current} onSelect={setPage} />
+        <PageDots count={count} current={current} onSelect={(n) => (setOpen(null), setPage(n))} />
         <button
           className={s.arrow}
           aria-label="Next page"
           disabled={current >= count - 1}
-          onClick={() => setPage(current + 1)}
+          onClick={() => (setOpen(null), setPage(current + 1))}
         >
           ›
         </button>

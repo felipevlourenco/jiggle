@@ -1,5 +1,6 @@
 import type { AppItem, FolderItem, IconColor, Layout, LayoutItem, Pins } from '../types'
 import { compareColors } from './color.ts'
+import { foldByCategory } from './folders.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
 
@@ -14,6 +15,8 @@ export interface SortOptions {
   colorOf?: (bundleId: string) => IconColor | null
   // Pinned apps and page 1 stay exactly where they are (see sortInPlace).
   pins?: Pins
+  // With by: 'category': loose apps gather into one folder per category (2 or more apps).
+  folders?: boolean
 }
 
 type Movable = AppItem | FolderItem
@@ -46,6 +49,11 @@ function compare(a: Movable, b: Movable, opts: SortOptions): number {
   return collator.compare(nameOf(a), nameOf(b))
 }
 
+const withFolders = (movable: Movable[], opts: SortOptions): Movable[] =>
+  opts.folders && opts.by === 'category' && opts.categoryOf
+    ? foldByCategory(movable, opts.categoryOf)
+    : movable
+
 // The dock is never touched. Home screen pages are re-sorted and packed from the top left:
 // pages that must stay as they are come first, then the sorted pages, full ones first.
 // ponytail: untouched pages move to the front, like the POC; keep their page numbers if that surprises people.
@@ -60,11 +68,11 @@ export function sortLayout(layout: Layout, opts: SortOptions): Layout {
       frozen.push(page.filter((item) => !isMovable(item)))
     } else frozen.push(page)
   }
-  movable.sort((a, b) => compare(a, b, opts)) // stable: equal names keep their order
+  const ordered = withFolders(movable, opts).sort((a, b) => compare(a, b, opts)) // stable: equal names keep their order
 
   const size = pageCapacity(layout.grid)
   const sorted: LayoutItem[][] = []
-  for (let i = 0; i < movable.length; i += size) sorted.push(movable.slice(i, i + size))
+  for (let i = 0; i < ordered.length; i += size) sorted.push(ordered.slice(i, i + size))
   return { ...layout, pages: [...frozen, ...sorted] }
 }
 
@@ -80,10 +88,15 @@ function sortInPlace(layout: Layout, opts: SortOptions): Layout {
   const locked = (page: LayoutItem[], i: number): boolean =>
     (i === 0 && pins.page1) || (opts.widgetMode === 'keep-pages' && !page.every(isMovable))
   const movable = layout.pages.flatMap((page, i) => (locked(page, i) ? [] : page.filter(free)))
-  movable.sort((a, b) => compare(a, b, opts))
-  const queue = [...movable]
-  const pages = layout.pages.map((page, i) =>
-    locked(page, i) ? page : page.map((item) => (free(item) ? queue.shift()! : item))
-  )
+  const queue = withFolders(movable, opts).sort((a, b) => compare(a, b, opts))
+  // Folding leaves fewer items than slots: the slots at the end go, and a page left empty goes with them.
+  // ponytail: a pinned app after such gaps moves up with them; the pin only keeps its page then.
+  const pages = layout.pages
+    .map((page, i) =>
+      locked(page, i)
+        ? page
+        : page.flatMap<LayoutItem>((item) => (free(item) ? queue.splice(0, 1) : [item]))
+    )
+    .filter((page, i) => page.length > 0 || layout.pages[i]!.length === 0)
   return { ...layout, pages }
 }

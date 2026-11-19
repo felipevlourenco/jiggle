@@ -60,6 +60,7 @@ export function Organize({ device }: { device: Device }) {
         by,
         widgetMode: choice.widgetMode,
         pins,
+        folders: choice.folders,
         categoryOf,
         colorOf: (id) => colors.get(id) ?? null
       })
@@ -70,8 +71,10 @@ export function Organize({ device }: { device: Device }) {
       .flat()
       .filter((i) => moved.has(i.id))
       .reduce((n, i) => n + appsOf([i]).length, 0)
+    const made = after.pages.flat().filter((i) => i.kind === 'folder' && i.id.startsWith('folder:'))
     return {
       after,
+      newFolders: made.length,
       moved,
       movedApps,
       totalApps: appsOf([...before.dock, ...before.pages.flat()]).length,
@@ -169,6 +172,15 @@ export function Organize({ device }: { device: Device }) {
           />
           Pin page 1
         </label>
+        <label className="sw">
+          <input
+            type="checkbox"
+            checked={choice.folders && choice.by === 'category'}
+            disabled={choice.by !== 'category'}
+            onChange={(e) => setChoice({ folders: e.target.checked })}
+          />
+          Create folders by category
+        </label>
       </div>
 
       {blocked && (
@@ -201,6 +213,8 @@ export function Organize({ device }: { device: Device }) {
           </b>
           {preview.widgetPages > 0 &&
             ` · ${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`}
+          {preview.newFolders > 0 &&
+            ` · ${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`}
         </span>
       </p>
 
@@ -209,6 +223,9 @@ export function Organize({ device }: { device: Device }) {
           title={`Apply ${presetTitle} to ${device.name}?`}
           lines={[
             `${preview.movedApps} apps will move`,
+            ...(preview.newFolders > 0
+              ? [`${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`]
+              : []),
             ...(preview.widgetPages > 0
               ? [`${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`]
               : [])

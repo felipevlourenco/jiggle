@@ -6,9 +6,10 @@ import type { SortOptions } from '@shared/layout/sort'
 export interface OrganizeChoice {
   by: SortOptions['by']
   widgetMode: SortOptions['widgetMode']
+  folders: boolean // with by: 'category': one folder per category
 }
 
-let choice: OrganizeChoice = { by: 'name', widgetMode: 'keep-pages' }
+let choice: OrganizeChoice = { by: 'name', widgetMode: 'keep-pages', folders: false }
 const listeners = new Set<() => void>()
 
 export function useOrganizeChoice(): [OrganizeChoice, (patch: Partial<OrganizeChoice>) => void] {
