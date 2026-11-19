@@ -34,10 +34,29 @@ export function createMainWindow(): BrowserWindow {
 }
 
 // The same page for every window; `route` picks the screen ("/settings").
-function loadRenderer(win: BrowserWindow, route?: string): void {
+export function loadRenderer(win: BrowserWindow, route?: string): Promise<void> {
   const devUrl = process.env['ELECTRON_RENDERER_URL']
-  if (devUrl) win.loadURL(route ? `${devUrl}#${route}` : devUrl)
-  else win.loadFile(join(__dirname, '../renderer/index.html'), route ? { hash: route } : undefined)
+  if (devUrl) return win.loadURL(route ? `${devUrl}#${route}` : devUrl)
+  return win.loadFile(
+    join(__dirname, '../renderer/index.html'),
+    route ? { hash: route } : undefined
+  )
+}
+
+// An invisible window that draws the export pages (see ExportService). Same preload as every window.
+export function createExportWindow(): BrowserWindow {
+  return new BrowserWindow({
+    show: false,
+    width: 1400, // larger than the biggest page, which is captured by its rectangle
+    height: 1000,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      backgroundThrottling: false
+    }
+  })
 }
 
 let settingsWindow: BrowserWindow | undefined

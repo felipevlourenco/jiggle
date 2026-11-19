@@ -8,11 +8,13 @@ import { ToolbarSlotContext } from './components/ToolbarSlot'
 import { Apps } from './screens/Apps'
 import { Banner } from './components/Banner'
 import { Toast } from './components/Toast'
+import { ExportPrint } from './screens/ExportPrint'
 import { History } from './screens/History'
 import { HomeScreen } from './screens/HomeScreen'
 import { Organize } from './screens/Organize'
 import { SettingsWindow } from './settings/SettingsWindow'
 import { appError } from '@shared/errors'
+import { ExportSheet } from './sheets/Export'
 import { SaveLayoutSheet } from './sheets/SaveLayout'
 import { PinsProvider } from './state/pins'
 import { useDevices, useDeviceEvents, useLayout, useSidecarStatus } from './state/queries'
@@ -32,7 +34,9 @@ const TITLES: Record<string, string> = {
 
 export function App() {
   // The Settings window loads this same page at #/settings.
-  return useLocation().pathname === '/settings' ? <SettingsWindow /> : <Shell />
+  const { pathname } = useLocation()
+  if (pathname === '/export-print') return <ExportPrint />
+  return pathname === '/settings' ? <SettingsWindow /> : <Shell />
 }
 
 function Shell() {
@@ -59,7 +63,10 @@ function Shell() {
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null)
   // File > Save Layout… and History's button both open the same sheet.
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false) // File > Export… and the toolbar buttons
   useEffect(() => window.jiggle.snapshots.onSaveRequested(() => setSaving(true)), [])
+  useEffect(() => window.jiggle.export.onRequested(() => setExporting(true)), [])
+  if (exporting && !usable) setExporting(false)
   if (saving && !usable) setSaving(false) // not to pop up again when the phone comes back
 
   // Connect is shown whenever there is no usable device, and left as soon as there is one.
@@ -131,8 +138,18 @@ function Shell() {
                       />
                     }
                   />
-                  {device && <Route path="/home" element={<HomeScreen device={device} />} />}
-                  {device && <Route path="/apps" element={<Apps device={device} />} />}
+                  {device && (
+                    <Route
+                      path="/home"
+                      element={<HomeScreen device={device} onExport={() => setExporting(true)} />}
+                    />
+                  )}
+                  {device && (
+                    <Route
+                      path="/apps"
+                      element={<Apps device={device} onExport={() => setExporting(true)} />}
+                    />
+                  )}
                   {device && <Route path="/organize" element={<Organize device={device} />} />}
                   <Route
                     path="/history"
@@ -159,6 +176,9 @@ function Shell() {
       </main>
       {saving && usable && device && (
         <SaveLayoutSheet device={device} onClose={() => setSaving(false)} />
+      )}
+      {exporting && usable && device && (
+        <ExportSheet device={device} onClose={() => setExporting(false)} />
       )}
       <Toast />
     </div>

@@ -1,14 +1,25 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, session } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  nativeImage,
+  nativeTheme,
+  session,
+  shell
+} from 'electron'
 import log from 'electron-log/main'
 import type { Broadcast } from '@shared/ipc-contract'
 import { dominantColor } from '@shared/layout/color'
 import { registerIpc } from './ipc'
 import { restoreLastBackup } from './ipc/apply'
-import { backUpActiveDevice, requestSaveLayout } from './ipc/snapshots'
+import { backUpActiveDevice, requestSaveLayout, requestSheet } from './ipc/snapshots'
 import { enforceNetworkAllowlist } from './network'
 import { handleAssetProtocol, registerAssetScheme } from './protocol'
 import { ApplyService } from './services/ApplyService'
+import { ElectronPageRenderer } from './services/ElectronPageRenderer'
+import { ExportService } from './services/ExportService'
 import { CategoryService } from './services/CategoryService'
 import { IconService } from './services/IconService'
 import { PinsService } from './services/PinsService'
@@ -35,6 +46,22 @@ function createMock(): MockBridge | null {
   // Several at once: JIGGLE_MOCK_DEVICE=iphone-basic,ipad-basic
   const dir = join(app.getAppPath(), 'tests/fixtures')
   return new MockBridge(name.split(',').map((one) => loadFixture(dir, one.trim())))
+}
+
+// The macOS save dialog, attached to the window. JIGGLE_EXPORT_DIR=<folder> (tests; ignored in packaged builds)
+// saves there without asking, and JIGGLE_EXPORT_DIR=cancel acts like a cancelled dialog.
+async function chooseExportFile(defaultName: string, ext: string): Promise<string | undefined> {
+  const dir = app.isPackaged ? undefined : process.env['JIGGLE_EXPORT_DIR']
+  if (dir) return dir === 'cancel' ? undefined : join(dir, defaultName)
+  const options = {
+    defaultPath: defaultName,
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }]
+  }
+  const win = BrowserWindow.getFocusedWindow()
+  const { canceled, filePath } = win
+    ? await dialog.showSaveDialog(win, options)
+    : await dialog.showSaveDialog(options)
+  return canceled ? undefined : filePath
 }
 
 // Packaged: the frozen engine in Resources. Dev: the sidecar's own venv.
@@ -100,6 +127,14 @@ if (!app.requestSingleInstanceLock()) {
       keepAutoBackups: () => settings.get().backupRetention
     })
     const pins = new PinsService(userData, log.scope('pins'))
+    const exporter = new ExportService({
+      bridge,
+      renderer: new ElectronPageRenderer(),
+      choose: chooseExportFile,
+      reveal: (path) => shell.showItemInFolder(path),
+      broadcast,
+      log: log.scope('export')
+    })
     const apply = new ApplyService({ bridge, snapshots, broadcast, log: log.scope('apply') })
     registerIpc(ipcMain, {
       bridge,
@@ -108,6 +143,7 @@ if (!app.requestSingleInstanceLock()) {
       categories,
       snapshots,
       apply,
+      exporter,
       settings,
       pins,
       sidecarStatus: () => sidecar?.getStatus() ?? 'ready'
@@ -123,7 +159,8 @@ if (!app.requestSingleInstanceLock()) {
       openSettings: openSettingsWindow,
       checkForUpdates: () => void updater.check(true),
       backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }),
-      saveLayout: () => void requestSaveLayout({ bridge, snapshots, broadcast }),
+      saveLayout: () => void requestSaveLayout({ bridge, broadcast }),
+      exportLayout: () => void requestSheet({ bridge, broadcast }, 'menu:export', 'export it'),
       restoreLast: () =>
         void restoreLastBackup({
           bridge,

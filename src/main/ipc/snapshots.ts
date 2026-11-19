@@ -90,14 +90,21 @@ async function changeSaved(
   }
 }
 
-// File > Save Layout…: the window asks for a name, so it needs a phone to read first.
-export async function requestSaveLayout({ bridge, broadcast }: Deps): Promise<void> {
+// File > Save Layout… and File > Export…: the window opens a sheet, which needs a phone to read first.
+export async function requestSheet(
+  { bridge, broadcast }: Pick<Deps, 'bridge' | 'broadcast'>,
+  event: 'menu:save-layout' | 'menu:export',
+  what: string
+): Promise<void> {
   const ready = (await bridge.listDevices()).some(
     (d) => d.state === 'ready' || d.state === 'unsupported-os'
   )
-  if (ready) broadcast('menu:save-layout', undefined)
-  else broadcast('toast', 'Connect an unlocked iPhone or iPad to save its layout.')
+  if (ready) broadcast(event, undefined)
+  else broadcast('toast', `Connect an unlocked iPhone or iPad to ${what}.`)
 }
+
+export const requestSaveLayout = (deps: Pick<Deps, 'bridge' | 'broadcast'>): Promise<void> =>
+  requestSheet(deps, 'menu:save-layout', 'save its layout')
 
 export function registerSnapshotsIpc(ipc: IpcLike, deps: Deps): void {
   handle(ipc, 'snapshots:save-layout', (udid, name) => saveLayout(deps, udid, name))

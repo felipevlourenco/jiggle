@@ -16,13 +16,15 @@ export const savedNames = (entries: SnapshotEntry[] | undefined, exceptId?: stri
   )
 
 // A modal like the Apply sheet: opened by being mounted, closed by `onClose` (Esc included).
-function Sheet({
+export function Sheet({
   label,
   onClose,
+  width,
   children
 }: {
   label: string
   onClose: () => void
+  width?: number // 520 unless given
   children: ReactNode
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
@@ -30,7 +32,13 @@ function Sheet({
     dialog.current?.showModal()
   }, [])
   return (
-    <dialog ref={dialog} className={s.sheet} aria-label={label} onClose={onClose}>
+    <dialog
+      ref={dialog}
+      className={s.sheet}
+      style={width ? { width } : undefined}
+      aria-label={label}
+      onClose={onClose}
+    >
       {children}
     </dialog>
   )

@@ -9,6 +9,7 @@ import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
 import { CategoryService } from '../../services/CategoryService'
 import { ApplyService } from '../../services/ApplyService'
 import { IconService } from '../../services/IconService'
+import { ExportService } from '../../services/ExportService'
 import { PinsService } from '../../services/PinsService'
 import { SettingsService } from '../../services/SettingsService'
 import { SnapshotService } from '../../services/SnapshotService'
@@ -51,6 +52,14 @@ function setup() {
     apply,
     settings,
     pins: new PinsService(root, silent),
+    exporter: new ExportService({
+      bridge,
+      renderer: { png: async () => Buffer.alloc(0), pdf: async () => Buffer.alloc(0), close() {} },
+      choose: async () => undefined,
+      reveal() {},
+      broadcast,
+      log: silent
+    }),
     sidecarStatus: () => 'ready'
   })
   const call = async (ch: string, ...args: unknown[]) => await handlers.get(ch)!(...args)

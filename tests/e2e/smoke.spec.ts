@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
@@ -98,6 +98,7 @@ test('window.jiggle exposes only the API groups and rejects bad payloads', async
     'apply',
     'apps',
     'device',
+    'export',
     'layout',
     'pins',
     'settings',
@@ -904,6 +905,123 @@ test.describe('iPad', () => {
     await expect(card).toContainText('iPhone 16 Pro')
     await win.getByRole('link', { name: 'Home Screen' }).click()
     await expect(win.locator('[data-frame="iPhone"]')).toBeVisible()
+    await app.close()
+  })
+})
+
+test.describe('Export', () => {
+  const exportDir = () => mkdtempSync(join(tmpdir(), 'jiggle-export-e2e-'))
+  const sheetOf = (win: Page) => win.getByRole('dialog', { name: 'Export' })
+  const menuExport = (app: Awaited<ReturnType<typeof launch>>) =>
+    app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('export')!.click())
+
+  test('⌘E → PNG, all pages: one picture per page, the size of the screen, and Show in Finder', async () => {
+    const dir = exportDir()
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-widgets', JIGGLE_EXPORT_DIR: dir })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const pageCount = await win.getByRole('group', { name: 'Pages' }).getByRole('button').count()
+
+    await menuExport(app)
+    const sheet = sheetOf(win)
+    await expect(sheet.getByRole('radio', { name: 'Image (PNG)' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    await expect(sheet.getByLabel('Pages')).toHaveValue('all')
+    await sheet.getByRole('button', { name: 'Export…' }).click()
+    await expect(sheet).toHaveCount(0)
+    await expect(win.getByText(/^Exported to .* – page 1\.png/)).toBeVisible()
+
+    const files = readdirSync(dir).sort()
+    expect(files).toHaveLength(pageCount)
+    for (const file of files) {
+      const png = readFileSync(join(dir, file))
+      expect(png.subarray(1, 4).toString()).toBe('PNG')
+      // IHDR: width and height, the iPhone's 402 × 874 screen at the display's scale
+      const [w, h] = [png.readUInt32BE(16), png.readUInt32BE(20)]
+      expect(w / h).toBeCloseTo(402 / 874, 2)
+      expect(w).toBeGreaterThanOrEqual(402)
+    }
+
+    // Show in Finder reveals the first file (stubbed: the test can't look at Finder)
+    await app.evaluate(({ shell }) => {
+      const seen: string[] = []
+      ;(globalThis as unknown as { revealed: string[] }).revealed = seen
+      shell.showItemInFolder = (p: string) => void seen.push(p)
+    })
+    await win.getByRole('button', { name: 'Show in Finder' }).click()
+    await expect
+      .poll(() => app.evaluate(() => (globalThis as unknown as { revealed: string[] }).revealed))
+      .toEqual([join(dir, files[0]!)])
+    await app.close()
+  })
+
+  test('PDF with no wallpaper: one PDF page per home screen page', async () => {
+    const dir = exportDir()
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-widgets', JIGGLE_EXPORT_DIR: dir })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const pageCount = await win.getByRole('group', { name: 'Pages' }).getByRole('button').count()
+
+    await win.getByRole('button', { name: 'Export' }).click() // the Home Screen toolbar
+    const sheet = sheetOf(win)
+    await sheet.getByRole('radio', { name: 'PDF' }).click()
+    await sheet.getByLabel('Include wallpaper').uncheck()
+    await sheet.getByRole('button', { name: 'Export…' }).click()
+    await expect(sheet).toHaveCount(0)
+    await expect(win.getByText(/^Exported to .*\.pdf/)).toBeVisible()
+
+    const [file] = readdirSync(dir)
+    expect(file).toBe("Sam's iPhone – Home Screen.pdf")
+    const pdf = readFileSync(join(dir, file!)).toString('latin1')
+    expect(pdf.startsWith('%PDF')).toBe(true)
+    expect(pdf.match(/\/Type\s*\/Page\b(?!s)/g)).toHaveLength(pageCount)
+    await app.close()
+  })
+
+  test('CSV: one row per app and the five columns, matching the Apps table', async () => {
+    const dir = exportDir()
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_EXPORT_DIR: dir })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    const count = Number((await win.getByText(/^\d+ apps$/).innerText()).split(' ')[0])
+
+    await win.getByRole('button', { name: 'Export' }).click()
+    const sheet = sheetOf(win)
+    await sheet.getByRole('radio', { name: 'App List (CSV)' }).click()
+    await expect(sheet.getByRole('checkbox')).toHaveCount(5)
+    await sheet.getByRole('button', { name: 'Export…' }).click()
+    await expect(sheet).toHaveCount(0)
+
+    const text = readFileSync(join(dir, "Sam's iPhone – Apps.csv"), 'utf8')
+    expect(text.startsWith('﻿')).toBe(true)
+    const lines = text.slice(1).trimEnd().split('\r\n')
+    expect(lines[0]).toBe('Name,Bundle ID,Category,Developer,Location')
+    expect(lines).toHaveLength(count + 1)
+
+    // leaving a column out leaves it out, and with none left there is nothing to export
+    await win.getByRole('button', { name: 'Export' }).click()
+    await sheet.getByRole('radio', { name: 'App List (CSV)' }).click()
+    for (const name of ['Name', 'Bundle ID', 'Category', 'Developer', 'Location']) {
+      await sheet.getByRole('checkbox', { name }).uncheck()
+    }
+    await expect(sheet.getByRole('button', { name: 'Export…' })).toBeDisabled()
+    await app.close()
+  })
+
+  test('cancelling the save dialog writes nothing and shows no error', async () => {
+    const dir = exportDir()
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_EXPORT_DIR: 'cancel' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await win.getByRole('button', { name: 'Export' }).click()
+    const sheet = sheetOf(win)
+    await sheet.getByRole('button', { name: 'Export…' }).click()
+    await expect(sheet.getByRole('button', { name: 'Export…' })).toBeEnabled() // back from "busy"
+    await expect(sheet.getByRole('alert')).toHaveCount(0)
+    await expect(win.getByText(/^Exported to/)).toHaveCount(0)
+    expect(readdirSync(dir)).toEqual([])
     await app.close()
   })
 })

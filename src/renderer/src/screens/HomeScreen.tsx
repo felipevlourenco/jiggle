@@ -30,7 +30,7 @@ const SWIPE_PAUSE_MS = 120 // a swipe ends when the wheel events stop (inertia i
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n))
 
-export function HomeScreen({ device }: { device: Device }) {
+export function HomeScreen({ device, onExport }: { device: Device; onExport: () => void }) {
   const navigate = useNavigate()
   const { data, isPending, isError, refetch, isRefetching } = useLayout(device.udid)
   const [page, setPage] = useState(0)
@@ -240,6 +240,9 @@ export function HomeScreen({ device }: { device: Device }) {
             </button>
           </>
         )}
+        <button className="tbtn" onClick={onExport}>
+          Export
+        </button>
         {mine && changes > 0 && (
           <>
             <button className="btn btn-quiet" onClick={draftActions.reset}>

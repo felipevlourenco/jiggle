@@ -44,3 +44,36 @@ export function PhoneFrame({ zoom, kind = 'iPhone', children }: Props) {
     </div>
   )
 }
+
+export const screenSize = (kind: FrameKind): { width: number; height: number } => ({
+  width: FRAMES[kind].width,
+  height: FRAMES[kind].height
+})
+
+// With no wallpaper an export gets a plain dark screen: icon labels are white.
+const PLAIN = '#3a3a3c'
+
+// Just the screen, at 1:1 and with square corners: what an export draws.
+export function PhoneScreen({
+  kind = 'iPhone',
+  plain,
+  children
+}: {
+  kind?: FrameKind
+  plain?: boolean
+  children: ReactNode
+}) {
+  const { width, height } = screenSize(kind)
+  return (
+    <div className={kind === 'iPad' ? s.ipad : undefined}>
+      <div
+        className={s.screen}
+        data-frame={kind}
+        data-export-page=""
+        style={{ width, height, borderRadius: 0, ...(plain ? { background: PLAIN } : {}) }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}

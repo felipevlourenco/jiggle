@@ -120,6 +120,15 @@ export interface DamagedSnapshot {
 }
 export type SnapshotEntry = SnapshotSummary | DamagedSnapshot
 
+// File > Export…: the home screen as pictures, or the app list as a spreadsheet. `page` is 1-based.
+// The window builds the CSV text (it has the app list); main renders the pages and writes the file.
+export type ExportRequest =
+  | { format: 'png' | 'pdf'; udid: Udid; page: 'all' | number; wallpaper: boolean }
+  | { format: 'csv'; udid: Udid; content: string }
+// `canceled`: the person closed the save dialog, which is not an error.
+export type ExportResult =
+  { ok: true; paths: string[] } | { ok: false; canceled: boolean; message: string }
+
 // Saving, renaming or deleting a saved layout: done, or why not (shown under the name field).
 export type SavedLayoutResult =
   { ok: true; layout: SnapshotSummary } | { ok: false; message: string }

@@ -47,6 +47,13 @@ const api: JiggleApi = {
     onSaveRequested: (listener) => on('menu:save-layout', () => listener())
   },
   toast: { onShow: (listener) => on('toast', listener) },
+  export: {
+    run: (request) => invoke('export:run', request),
+    reveal: (path) => invoke('export:reveal', path),
+    onProgress: (listener) => on('export:progress', listener),
+    onSaved: (listener) => on('export:saved', listener),
+    onRequested: (listener) => on('menu:export', () => listener())
+  },
   pins: {
     get: (udid) => invoke('pins:get', udid),
     set: (udid, pins) => invoke('pins:set', udid, pins)

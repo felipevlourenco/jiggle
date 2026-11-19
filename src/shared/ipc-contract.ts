@@ -5,6 +5,8 @@ import type {
   ApplyStep,
   AppsResult,
   Device,
+  ExportRequest,
+  ExportResult,
   Layout,
   LayoutResult,
   Pins,
@@ -62,6 +64,16 @@ const Pins_ = z.object({
   page1: z.boolean()
 }) satisfies z.ZodType<Pins>
 
+const ExportRequest_ = z.discriminatedUnion('format', [
+  z.object({
+    format: z.enum(['png', 'pdf']),
+    udid: Udid,
+    page: z.union([z.literal('all'), z.number().int().min(1)]),
+    wallpaper: z.boolean()
+  }),
+  z.object({ format: z.literal('csv'), udid: Udid, content: z.string().max(5_000_000) })
+])
+
 const Settings_ = z.object({
   theme: z.enum(['system', 'light', 'dark']),
   storefront: z.string().regex(/^[a-z]{2}$/),
@@ -96,6 +108,10 @@ export const channels = {
     args: z.tuple([Udid, z.string().min(1)]),
     result: z.custom<SavedLayoutResult>()
   },
+  // Asks where to save (the macOS save dialog), then writes. Always resolves.
+  'export:run': { args: z.tuple([ExportRequest_]), result: z.custom<ExportResult>() },
+  // "Show in Finder": only for a file this export just wrote.
+  'export:reveal': { args: z.tuple([z.string().min(1)]), result: z.void() },
   'settings:get': { args: z.tuple([]), result: z.custom<Settings>() },
   'settings:set': { args: z.tuple([Settings_.partial()]), result: z.custom<Settings>() },
   // Forget the category and icon caches (they are re-fetched when needed).
@@ -126,6 +142,11 @@ export const events = {
   'snapshots:changed': z.undefined(),
   // File > Save Layout…: the window opens its Save Layout sheet.
   'menu:save-layout': z.undefined(),
+  // File > Export…
+  'menu:export': z.undefined(),
+  'export:progress': z.object({ done: z.number(), total: z.number() }),
+  // A file was written: the window shows "Exported to …" with Show in Finder.
+  'export:saved': z.string(),
   'settings:changed': z.custom<Settings>(),
   'apply:progress': z.enum(['checking', 'backing-up', 'writing', 'verifying']),
   // A short message to show the person, e.g. "Backed up · 187 apps".
@@ -175,6 +196,14 @@ export interface JiggleApi {
   pins: {
     get(udid: string): Promise<Pins>
     set(udid: string, pins: Pins): Promise<Pins>
+  }
+  export: {
+    run(request: ExportRequest): Promise<ExportResult>
+    reveal(path: string): Promise<void>
+    onProgress(listener: (progress: { done: number; total: number }) => void): () => void
+    onSaved(listener: (path: string) => void): () => void
+    // File > Export…
+    onRequested(listener: () => void): () => void
   }
   settings: {
     get(): Promise<Settings>

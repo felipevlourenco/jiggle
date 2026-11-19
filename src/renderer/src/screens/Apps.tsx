@@ -32,7 +32,7 @@ const NAMES_SHOWN = 6
 const text = (row: Row, key: Key): string =>
   key === 'developer' ? (row.developer ?? 'Unknown') : row[key]
 
-export function Apps({ device }: { device: Device }) {
+export function Apps({ device, onExport }: { device: Device; onExport: () => void }) {
   const apps = useApps(device.udid)
   const layout = useLayout(device.udid)
   const { pins, openMenu } = usePins()
@@ -100,6 +100,9 @@ export function Apps({ device }: { device: Device }) {
   return (
     <div className={s.root}>
       <ToolbarActions>
+        <button className="btn" onClick={onExport}>
+          Export
+        </button>
         <button
           className="btn"
           disabled={chosen.length === 0 || !before || device.state === 'unsupported-os'}
