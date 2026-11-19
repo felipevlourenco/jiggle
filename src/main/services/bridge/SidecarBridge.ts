@@ -167,6 +167,10 @@ export class SidecarBridge implements DeviceBridge {
     return InstalledApps.parse(await this.request('list_apps', { udid }, 30_000))
   }
 
+  async uninstall(udid: Udid, bundleId: string): Promise<void> {
+    await this.request('uninstall', { udid, bundle_id: bundleId }, 120_000)
+  }
+
   request<T = unknown>(method: string, params: object = {}, timeoutMs?: number): Promise<T> {
     const stdin = this.child?.stdin
     if (!stdin?.writable) return Promise.reject(new Error('Engine is not running'))

@@ -25,6 +25,13 @@ def bundle_ids_param(params: dict) -> list[str]:
     return ids
 
 
+def bundle_id_param(params: dict) -> str:
+    bundle_id = params.get("bundle_id")
+    if not isinstance(bundle_id, str) or not bundle_id:
+        raise RpcError("invalid_params", "Needs a 'bundle_id' string")
+    return bundle_id
+
+
 def icon_state_param(params: dict) -> list:
     state = params.get("state")
     ok = isinstance(state, list) and all(
@@ -85,6 +92,13 @@ def build_server(write=write_line) -> Server:
     async def list_apps(params):
         async with apps.open_installation_proxy(udid_param(params)) as ip:
             return await apps.read_apps(ip)
+
+    @server.method("uninstall")
+    async def uninstall(params):
+        udid, bundle_id = udid_param(params), bundle_id_param(params)
+        async with apps.open_installation_proxy(udid) as ip:
+            await apps.uninstall_app(ip, bundle_id)
+        return {"uninstalled": True}
 
     return server
 

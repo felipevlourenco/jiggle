@@ -15,6 +15,8 @@ export interface DeviceBridge {
   setIconState(udid: Udid, state: RawIconState): Promise<void>
   // Every app a person can see on the phone, on the home screen or only in the App Library.
   listApps(udid: Udid): Promise<InstalledApp[]>
+  // Deletes one app and its data. The engine refuses an app the phone doesn't list as removable.
+  uninstall(udid: Udid, bundleId: string): Promise<void>
   // Returns an unsubscribe function.
   onDevicesChanged(listener: () => void): () => void
 }

@@ -14,7 +14,8 @@ import type {
   SavedLayoutResult,
   Settings,
   SnapshotEntry,
-  SnapshotSummary
+  SnapshotSummary,
+  UninstallResult
 } from './types'
 
 const Udid = z.string().min(1)
@@ -98,6 +99,11 @@ export const channels = {
     args: z.tuple([z.string().min(1), z.string().min(1).max(100), z.string()]),
     result: z.custom<{ ok: true } | { ok: false; message: string }>()
   },
+  // Backs the layout up, then deletes the apps one by one (`uninstall:progress`). Refuses a non-removable app.
+  'apps:uninstall': {
+    args: z.tuple([Udid, z.array(z.string().min(1)).min(1).max(300)]),
+    result: z.custom<UninstallResult>()
+  },
   'apps:reset-category': { args: z.tuple([z.string().min(1)]), result: z.void() },
   // No udid: every device's snapshots, so History still works with nothing plugged in.
   'snapshots:list': { args: z.tuple([Udid.optional()]), result: z.custom<SnapshotEntry[]>() },
@@ -152,6 +158,7 @@ export const events = {
   'menu:save-layout': z.undefined(),
   // File > Export…
   'menu:export': z.undefined(),
+  'uninstall:progress': z.object({ done: z.number(), total: z.number(), name: z.string() }),
   'export:progress': z.object({ done: z.number(), total: z.number() }),
   // A file was written: the window shows "Exported to …" with Show in Finder.
   'export:saved': z.string(),
@@ -186,6 +193,10 @@ export interface JiggleApi {
       category: string
     ): Promise<{ ok: true } | { ok: false; message: string }>
     resetCategory(bundleId: string): Promise<void>
+    uninstall(udid: string, bundleIds: string[]): Promise<UninstallResult>
+    onUninstallProgress(
+      listener: (progress: { done: number; total: number; name: string }) => void
+    ): () => void
     // Categories arrived from the App Store: refetch.
     onChanged(listener: () => void): () => void
   }

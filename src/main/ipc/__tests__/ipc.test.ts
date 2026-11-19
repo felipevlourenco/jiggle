@@ -10,6 +10,7 @@ import { CategoryService } from '../../services/CategoryService'
 import { ApplyService } from '../../services/ApplyService'
 import { IconService } from '../../services/IconService'
 import { ExportService } from '../../services/ExportService'
+import { UninstallService } from '../../services/UninstallService'
 import { PinsService } from '../../services/PinsService'
 import { SettingsService } from '../../services/SettingsService'
 import { SnapshotService } from '../../services/SnapshotService'
@@ -52,6 +53,7 @@ function setup() {
     apply,
     settings,
     pins: new PinsService(root, silent),
+    uninstaller: new UninstallService({ bridge, snapshots, apply, broadcast, log: silent }),
     exporter: new ExportService({
       bridge,
       renderer: { png: async () => Buffer.alloc(0), pdf: async () => Buffer.alloc(0), close() {} },

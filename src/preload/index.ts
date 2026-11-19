@@ -33,6 +33,8 @@ const api: JiggleApi = {
     setCategory: (bundleId, name, category) =>
       invoke('apps:set-category', bundleId, name, category),
     resetCategory: (bundleId) => invoke('apps:reset-category', bundleId),
+    uninstall: (udid, bundleIds) => invoke('apps:uninstall', udid, bundleIds),
+    onUninstallProgress: (listener) => on('uninstall:progress', listener),
     onChanged: (listener) => on('apps:changed', () => listener())
   },
   apply: {

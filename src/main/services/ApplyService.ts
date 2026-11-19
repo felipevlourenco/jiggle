@@ -88,6 +88,14 @@ export class ApplyService {
     })
   }
 
+  // For another service that changes a device (uninstall): one change per device at a time.
+  // Returns the release function, or null while something else is running.
+  lock(udid: Udid): (() => void) | null {
+    if (this.busy.has(udid)) return null
+    this.busy.add(udid)
+    return () => void this.busy.delete(udid)
+  }
+
   // Switch to a saved layout: its arrangement fitted to the apps the phone has now (see reflow).
   switchTo(udid: Udid, snapshotId: string): Promise<ApplyResult> {
     return this.exclusive(udid, async (device) => {

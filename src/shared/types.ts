@@ -127,6 +127,10 @@ export interface DamagedSnapshot {
 }
 export type SnapshotEntry = SnapshotSummary | DamagedSnapshot
 
+// Deleting apps from the device. `removed`: how many went before it stopped.
+export type UninstallResult =
+  { ok: true; removed: number } | { ok: false; message: string; removed: number }
+
 // File > Export…: the home screen as pictures, or the app list as a spreadsheet. `page` is 1-based.
 // The window builds the CSV text (it has the app list); main renders the pages and writes the file.
 export type ExportRequest =

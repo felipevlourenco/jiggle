@@ -20,11 +20,13 @@ export function Sheet({
   label,
   onClose,
   width,
+  locked,
   children
 }: {
   label: string
   onClose: () => void
   width?: number // 520 unless given
+  locked?: boolean // Esc does nothing: something is being written
   children: ReactNode
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
@@ -37,6 +39,7 @@ export function Sheet({
       className={s.sheet}
       style={width ? { width } : undefined}
       aria-label={label}
+      onCancel={(e) => locked && e.preventDefault()}
       onClose={onClose}
     >
       {children}

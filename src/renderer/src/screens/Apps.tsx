@@ -12,6 +12,7 @@ import { Thumb } from '../components/Thumb'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { ApplySheet } from '../sheets/Apply'
 import { ChangeCategorySheet } from '../sheets/ChangeCategory'
+import { UninstallSheet } from '../sheets/Uninstall'
 import { usePins } from '../state/pins'
 import { useApps, useLayout } from '../state/queries'
 import s from './apps.module.css'
@@ -27,7 +28,8 @@ const COLUMNS: { key: Key; label: string }[] = [
   { key: 'developer', label: 'Developer' },
   { key: 'location', label: 'Location' }
 ]
-// Apps on a home screen page (or in a folder on one) can leave it; the dock's and the Library's can't.
+// Any app can be picked. Apps on a home screen page (or in a folder on one) can leave it; the dock's
+// and the Library's can't. Only removable apps can be uninstalled.
 const canLeave = (row: Row): boolean => row.location !== 'Dock' && row.location !== APP_LIBRARY
 const NAMES_SHOWN = 6
 const text = (row: Row, key: Key): string =>
@@ -38,6 +40,7 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
   const layout = useLayout(device.udid)
   const { pins, openMenu } = usePins()
   const qc = useQueryClient()
+  const [uninstalling, setUninstalling] = useState<Row[]>()
   const [changing, setChanging] = useState<AppInfo>()
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
@@ -76,7 +79,10 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
       return next
     })
   // Only what is still shown and still on a page counts, whatever the search or the phone did since.
-  const chosen = rows.filter((r) => picked.has(r.bundleId) && canLeave(r))
+  const chosen = rows.filter((r) => picked.has(r.bundleId))
+  const allLeave = chosen.every(canLeave)
+  const allRemovable = chosen.every((r) => r.removable)
+  const readOnly = device.state === 'unsupported-os'
   const before = layout.data?.layout
 
   if (apps.isError) {
@@ -105,13 +111,30 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
         <button className="btn" onClick={onExport}>
           Export
         </button>
-        <button
-          className="btn"
-          disabled={chosen.length === 0 || !before || device.state === 'unsupported-os'}
-          onClick={() => before && setSending({ apps: chosen, before })}
+        <span title={chosen.length > 0 && !allRemovable ? 'This app can’t be removed' : undefined}>
+          <button
+            className="btn btn-danger"
+            disabled={chosen.length === 0 || !allRemovable || readOnly}
+            onClick={() => setUninstalling(chosen)}
+          >
+            Uninstall…
+          </button>
+        </span>
+        <span
+          title={
+            chosen.length > 0 && !allLeave
+              ? 'Apps in the dock or the App Library can’t be sent'
+              : undefined
+          }
         >
-          Send to App Library{chosen.length > 0 ? ` (${chosen.length})` : ''}
-        </button>
+          <button
+            className="btn"
+            disabled={chosen.length === 0 || !allLeave || !before || readOnly}
+            onClick={() => before && setSending({ apps: chosen, before })}
+          >
+            Send to App Library{chosen.length > 0 ? ` (${chosen.length})` : ''}
+          </button>
+        </span>
         <label className={s.search}>
           <SearchIcon size={14} />
           <input
@@ -171,14 +194,13 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
                   openMenu(e, r, [{ label: 'Change Category…', onSelect: () => setChanging(r) }])
                 }
                 // ⌘-click picks a row, like in Finder.
-                onClick={(e) => (e.metaKey || e.ctrlKey) && canLeave(r) && toggle(r.bundleId)}
+                onClick={(e) => (e.metaKey || e.ctrlKey) && toggle(r.bundleId)}
               >
                 <td>
                   <input
                     type="checkbox"
                     aria-label={`Select ${r.name}`}
-                    disabled={!canLeave(r)}
-                    checked={picked.has(r.bundleId) && canLeave(r)}
+                    checked={picked.has(r.bundleId)}
                     onChange={() => toggle(r.bundleId)}
                   />
                 </td>
@@ -215,6 +237,16 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
           </div>
         )}
       </div>
+      {uninstalling && (
+        <UninstallSheet
+          device={device}
+          apps={uninstalling}
+          onClose={(changed) => {
+            setUninstalling(undefined)
+            if (changed) setPicked(new Set())
+          }}
+        />
+      )}
       {changing && (
         <ChangeCategorySheet
           app={changing}

@@ -3,6 +3,7 @@ import { appLocations } from '@shared/layout/locations'
 import { normalize } from '@shared/layout/normalize'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
 import type { CategoryService } from '../services/CategoryService'
+import type { UninstallService } from '../services/UninstallService'
 import type { IconService } from '../services/IconService'
 import { handle, type IpcLike } from './handle'
 
@@ -10,7 +11,8 @@ export function registerAppsIpc(
   ipc: IpcLike,
   bridge: DeviceBridge,
   icons: IconService,
-  categories: CategoryService
+  categories: CategoryService,
+  uninstaller: UninstallService
 ): void {
   handle(ipc, 'apps:list', async (udid) => {
     const [installed, raw] = await Promise.all([bridge.listApps(udid), bridge.getIconState(udid)])
@@ -28,6 +30,7 @@ export function registerAppsIpc(
       apps: result.apps.map((a) => ({ ...a, iconColor: colors[a.bundleId] ?? null }))
     }
   })
+  handle(ipc, 'apps:uninstall', (udid, bundleIds) => uninstaller.run(udid, bundleIds))
   handle(ipc, 'apps:overrides', () => categories.getOverrides())
   handle(ipc, 'apps:set-category', async (bundleId, name, category) => {
     try {

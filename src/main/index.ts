@@ -23,6 +23,7 @@ import { ExportService } from './services/ExportService'
 import { CategoryService } from './services/CategoryService'
 import { IconService } from './services/IconService'
 import { PinsService } from './services/PinsService'
+import { UninstallService } from './services/UninstallService'
 import { SettingsService } from './services/SettingsService'
 import { SnapshotService } from './services/SnapshotService'
 import type { DeviceBridge } from './services/bridge/DeviceBridge'
@@ -144,6 +145,13 @@ if (!app.requestSingleInstanceLock()) {
       snapshots,
       apply,
       exporter,
+      uninstaller: new UninstallService({
+        bridge,
+        snapshots,
+        apply,
+        broadcast,
+        log: log.scope('uninstall')
+      }),
       settings,
       pins,
       sidecarStatus: () => sidecar?.getStatus() ?? 'ready'

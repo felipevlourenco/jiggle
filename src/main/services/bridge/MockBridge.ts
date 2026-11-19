@@ -4,7 +4,15 @@ import { z } from 'zod'
 import { schemas } from '@shared/ipc-contract'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
-import type { Device, Grid, InstalledApp, LayoutItem, RawIconState, Udid } from '@shared/types'
+import type {
+  Device,
+  Grid,
+  InstalledApp,
+  LayoutItem,
+  RawIconState,
+  RawItem,
+  Udid
+} from '@shared/types'
 import type { DeviceBridge } from './DeviceBridge'
 
 const Fixture = z.object({ device: schemas.Device, rawState: schemas.RawIconState })
@@ -18,11 +26,18 @@ export function loadFixture(dir: string, name: string): Fixture {
 // Serves recorded devices (none, one or several) from memory. Used for dev, tests and E2E.
 export class MockBridge implements DeviceBridge {
   // Each mock phone remembers what is written to it, so apply and restore can be tried without a phone.
-  private readonly phones = new Map<Udid, { fixture: Fixture; rawState: RawIconState }>()
+  private readonly phones = new Map<
+    Udid,
+    { fixture: Fixture; rawState: RawIconState; uninstalled: Set<string> }
+  >()
 
   constructor(fixtures: Fixture | Fixture[] | null = null) {
     for (const fixture of [fixtures ?? []].flat()) {
-      this.phones.set(fixture.device.udid, { fixture, rawState: structuredClone(fixture.rawState) })
+      this.phones.set(fixture.device.udid, {
+        fixture,
+        rawState: structuredClone(fixture.rawState),
+        uninstalled: new Set()
+      })
     }
   }
 
@@ -50,14 +65,14 @@ export class MockBridge implements DeviceBridge {
   }
 
   // The mock has no installation proxy: every app on the recorded home screen counts as installed,
-  // so an app sent to the App Library stays in the list.
+  // so an app sent to the App Library stays in the list (an uninstalled one does not).
   async listApps(udid: Udid): Promise<InstalledApp[]> {
-    const { fixture } = this.phone(udid)
+    const { fixture, uninstalled } = this.phone(udid)
     const { dock, pages } = normalize(fixture.rawState, gridFor(fixture.device.deviceClass))
     const apps = new Map<string, InstalledApp>()
     const visit = (item: LayoutItem): void => {
       if (item.kind === 'folder') item.pages.flat().forEach(visit)
-      else if (item.kind === 'app') {
+      else if (item.kind === 'app' && !uninstalled.has(item.bundleId)) {
         apps.set(item.bundleId, {
           bundleId: item.bundleId,
           name: item.name,
@@ -69,11 +84,33 @@ export class MockBridge implements DeviceBridge {
     return [...apps.values()]
   }
 
+  // Like the phone: only a user app can go, and its icon leaves the home screen (an emptied folder goes too).
+  async uninstall(udid: Udid, bundleId: string): Promise<void> {
+    const phone = this.phone(udid)
+    if (bundleId.startsWith('com.apple.')) throw new Error(`${bundleId} can't be removed`)
+    phone.uninstalled.add(bundleId)
+    const idOf = (i: RawItem): unknown => i['bundleIdentifier'] ?? i['displayIdentifier']
+    phone.rawState = phone.rawState.map((page) =>
+      page.flatMap((item) => {
+        if (item['listType'] !== 'folder') return idOf(item) === bundleId ? [] : [item]
+        const lists = (item['iconLists'] as RawItem[][]).map((l) =>
+          l.filter((i) => idOf(i) !== bundleId)
+        )
+        const kept = lists.filter((l) => l.length > 0)
+        return kept.length ? [{ ...item, iconLists: kept }] : []
+      })
+    )
+  }
+
   onDevicesChanged(): () => void {
     return () => {}
   }
 
-  private phone(udid: Udid): { fixture: Fixture; rawState: RawIconState } {
+  private phone(udid: Udid): {
+    fixture: Fixture
+    rawState: RawIconState
+    uninstalled: Set<string>
+  } {
     const phone = this.phones.get(udid)
     if (!phone) throw new Error(`Unknown device: ${udid}`)
     return phone

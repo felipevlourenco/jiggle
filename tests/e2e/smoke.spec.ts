@@ -682,9 +682,12 @@ test.describe('Send to App Library', () => {
     const send = win.getByRole('button', { name: /^Send to App Library/ })
     await expect(send).toBeDisabled()
 
-    // the dock's apps can't leave the home screen
+    // a dock app can be picked, but can't be sent to the App Library
     const dockRow = win.getByRole('row', { name: /Dock/ }).first()
-    await expect(dockRow.getByRole('checkbox')).toBeDisabled()
+    await dockRow.getByRole('checkbox').check()
+    await expect(send).toBeDisabled()
+    await expect(win.getByTitle('Apps in the dock or the App Library can’t be sent')).toBeVisible()
+    await dockRow.getByRole('checkbox').uncheck()
 
     const onPages = win.getByRole('row', { name: /Page \d/ })
     const names: string[] = []
@@ -1135,6 +1138,61 @@ test.describe('Cleanup', () => {
     await win.getByRole('link', { name: /Cleanup/ }).click()
     await expect(win.getByRole('heading', { name: 'Your home screen is tidy.' })).toBeVisible()
     await expect(win.locator('.nav-badge')).toHaveCount(0)
+    await app.close()
+  })
+})
+
+test.describe('Uninstall apps', () => {
+  const rowOf = (win: Page, name: string) =>
+    win.getByRole('row').filter({ has: win.getByLabel(`Select ${name}`, { exact: true }) })
+
+  test('names the apps, cancel keeps them, confirming removes them from the table and the phone', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    const uninstall = win.getByRole('button', { name: 'Uninstall…' })
+    await expect(uninstall).toBeDisabled()
+
+    // two user apps (not com.apple.*): the ones whose developer is not Apple and that are on a page
+    const rows = win.getByRole('row').filter({ hasText: 'Unknown' })
+    const names: string[] = []
+    for (const i of [0, 1]) {
+      const box = rows.nth(i).getByRole('checkbox')
+      names.push(((await box.getAttribute('aria-label')) ?? '').slice(7))
+      await box.check()
+    }
+    const total = Number((await win.getByText(/^\d+ apps$/).innerText()).split(' ')[0])
+    await uninstall.click()
+    const alert = win.getByRole('dialog', { name: /Uninstall 2 apps from Sam's iPhone\?/ })
+    for (const n of names) await expect(alert).toContainText(n)
+    await expect(alert).toContainText(' will be deleted with their data')
+    await expect(alert).toContainText('restoring it can’t reinstall apps')
+
+    await alert.getByRole('button', { name: 'Cancel' }).click()
+    await expect(alert).toHaveCount(0)
+    for (const n of names) await expect(rowOf(win, n)).toHaveCount(1)
+
+    await uninstall.click()
+    await alert.getByRole('button', { name: 'Uninstall', exact: true }).click()
+    await expect(alert.getByText('Done! 2 apps uninstalled.')).toBeVisible()
+    await alert.getByRole('button', { name: 'Close' }).click()
+    for (const n of names) await expect(rowOf(win, n)).toHaveCount(0)
+    await expect(win.getByText(`${total - 2} apps`, { exact: true })).toBeVisible()
+    await expect(uninstall).toBeDisabled() // the selection is cleared
+
+    // the backup taken first is in History, named for it
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByText('Before uninstalling 2 apps')).toBeVisible()
+    await app.close()
+  })
+
+  test('a built-in app can’t be removed: the action is off, with a tooltip', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    await win.getByRole('row').filter({ hasText: 'Apple' }).first().getByRole('checkbox').check()
+    await expect(win.getByRole('button', { name: 'Uninstall…' })).toBeDisabled()
+    await expect(win.getByTitle('This app can’t be removed')).toBeVisible()
     await app.close()
   })
 })

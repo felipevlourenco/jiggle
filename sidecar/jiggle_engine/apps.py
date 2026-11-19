@@ -1,8 +1,10 @@
-"""List the apps installed on the phone through the installation proxy."""
+"""List and uninstall the apps installed on the phone through the installation proxy."""
 from contextlib import asynccontextmanager
 
 from pymobiledevice3.lockdown import create_using_usbmux
 from pymobiledevice3.services.installation_proxy import InstallationProxyService
+
+from jiggle_engine.rpc import RpcError
 
 
 @asynccontextmanager
@@ -38,3 +40,12 @@ async def read_apps(ip) -> list[dict]:
         for bundle_id, app in apps.items()
         if is_visible(app)
     ]
+
+
+async def uninstall_app(ip, bundle_id: str) -> None:
+    """Delete one app and its data. Refuses anything the phone doesn't list as removable, so a bad call
+    can't take out a system app."""
+    removable = {a["bundleId"] for a in await read_apps(ip) if a["removable"]}
+    if bundle_id not in removable:
+        raise RpcError("not_removable", f"{bundle_id} can't be removed")
+    await ip.uninstall(bundle_id)

@@ -1,5 +1,6 @@
 import type { Broadcast, SidecarStatus } from '@shared/ipc-contract'
 import type { ApplyService } from '../services/ApplyService'
+import type { UninstallService } from '../services/UninstallService'
 import type { ExportService } from '../services/ExportService'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
 import type { CategoryService } from '../services/CategoryService'
@@ -24,6 +25,7 @@ export interface IpcDeps {
   snapshots: SnapshotService
   apply: ApplyService
   exporter: ExportService
+  uninstaller: UninstallService
   settings: SettingsService
   pins: PinsService
   sidecarStatus: () => SidecarStatus
@@ -32,7 +34,7 @@ export interface IpcDeps {
 export function registerIpc(ipc: IpcLike, d: IpcDeps): void {
   registerDeviceIpc(ipc, d.bridge, d.broadcast)
   registerLayoutIpc(ipc, d.bridge, d.icons)
-  registerAppsIpc(ipc, d.bridge, d.icons, d.categories)
+  registerAppsIpc(ipc, d.bridge, d.icons, d.categories, d.uninstaller)
   registerSnapshotsIpc(ipc, { bridge: d.bridge, snapshots: d.snapshots, broadcast: d.broadcast })
   registerApplyIpc(ipc, d.apply)
   registerExportIpc(ipc, d.exporter)
