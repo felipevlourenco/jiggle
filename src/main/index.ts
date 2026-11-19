@@ -170,6 +170,8 @@ if (!app.requestSingleInstanceLock()) {
       checkForUpdates: () => void updater.check(true),
       backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }),
       saveLayout: () => void requestSaveLayout({ bridge, broadcast }),
+      copyLayout: () =>
+        void requestSheet({ bridge, broadcast }, 'menu:copy-layout', 'copy a layout to it'),
       exportLayout: () => void requestSheet({ bridge, broadcast }, 'menu:export', 'export it'),
       restoreLast: () =>
         void restoreLastBackup({

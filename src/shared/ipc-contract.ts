@@ -111,6 +111,8 @@ export const channels = {
   'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() },
   // Both always resolve: a refusal or failure is an `ok: false` result, not a thrown error.
   // Saved layouts. Save reads the phone as it is now. Rename and delete never need a phone.
+  // A saved layout as a Layout (grid of the device it came from), e.g. as the source of a Copy Layout.
+  'snapshots:layout': { args: z.tuple([Udid, z.string().min(1)]), result: z.custom<Layout>() },
   'snapshots:save-layout': {
     args: z.tuple([Udid, z.string()]),
     result: z.custom<SavedLayoutResult>()
@@ -159,6 +161,8 @@ export const events = {
   'menu:save-layout': z.undefined(),
   // File > Export…
   'menu:export': z.undefined(),
+  // File > Copy Layout to Another Device…
+  'menu:copy-layout': z.undefined(),
   'uninstall:progress': z.object({ done: z.number(), total: z.number(), name: z.string() }),
   'export:progress': z.object({ done: z.number(), total: z.number() }),
   // A file was written: the window shows "Exported to …" with Show in Finder.
@@ -216,6 +220,9 @@ export interface JiggleApi {
     onChanged(listener: () => void): () => void
     // File > Save Layout…
     onSaveRequested(listener: () => void): () => void
+    // File > Copy Layout to Another Device…
+    onCopyRequested(listener: () => void): () => void
+    layout(udid: string, id: string): Promise<Layout>
   }
   toast: {
     onShow(listener: (message: string) => void): () => void

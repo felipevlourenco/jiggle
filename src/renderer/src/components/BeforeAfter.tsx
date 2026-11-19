@@ -18,13 +18,20 @@ export function BeforeAfter({
   after,
   moved,
   udid,
-  kind = 'iPhone'
+  kind = 'iPhone',
+  beforeKind = kind,
+  beforeUdid = udid,
+  beforeLabel = 'Before'
 }: {
   before: Layout
   after: Layout
   moved: ReadonlySet<string>
   udid: string
   kind?: FrameKind
+  // For a copy between devices the left side is another device: its own frame, icons and caption.
+  beforeKind?: FrameKind
+  beforeUdid?: string
+  beforeLabel?: string
 }) {
   const [page, setPage] = useState(0)
   const [open, setOpen] = useState<{ label: string; folder: FolderItem } | null>(null)
@@ -41,30 +48,40 @@ export function BeforeAfter({
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
-  const frame = frameSize(kind)
+  const left = frameSize(beforeKind)
+  const right = frameSize(kind)
   const zoom = size.height
     ? clamp(
-        Math.min((size.height - CAPTION) / frame.height, (size.width - GAP) / 2 / frame.width),
+        Math.min(
+          (size.height - CAPTION) / Math.max(left.height, right.height),
+          (size.width - GAP) / (left.width + right.width)
+        ),
         0.15,
         1
       )
     : 0.5
 
-  const side = (label: string, layout: Layout, marked?: ReadonlySet<string>) => (
+  const side = (
+    label: string,
+    layout: Layout,
+    frameKind: FrameKind,
+    icons: string,
+    marked?: ReadonlySet<string>
+  ) => (
     <figure className={s.side} aria-label={label}>
       <figcaption>{label}</figcaption>
-      <PhoneFrame zoom={zoom} kind={kind}>
+      <PhoneFrame zoom={zoom} kind={frameKind}>
         <PageGrid
           key={current}
           items={layout.pages[current] ?? []}
           grid={layout.grid}
-          udid={udid}
+          udid={icons}
           marked={marked}
           onFolder={(folder) => setOpen({ label, folder })}
         />
-        <Dock items={layout.dock} udid={udid} />
+        <Dock items={layout.dock} udid={icons} />
         {open?.label === label && (
-          <FolderPopover folder={open.folder} udid={udid} onClose={() => setOpen(null)} />
+          <FolderPopover folder={open.folder} udid={icons} onClose={() => setOpen(null)} />
         )}
       </PhoneFrame>
     </figure>
@@ -73,8 +90,8 @@ export function BeforeAfter({
   return (
     <div className={s.root}>
       <div className={s.stage} ref={stageRef}>
-        {side('Before', before)}
-        {side('After', after, moved)}
+        {side(beforeLabel, before, beforeKind, beforeUdid)}
+        {side('After', after, kind, udid, moved)}
       </div>
       <div className={s.pager}>
         <button

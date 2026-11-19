@@ -16,6 +16,7 @@ import { HomeScreen } from './screens/HomeScreen'
 import { Organize } from './screens/Organize'
 import { SettingsWindow } from './settings/SettingsWindow'
 import { appError } from '@shared/errors'
+import { CopyLayoutSheet } from './sheets/CopyLayout'
 import { ExportSheet } from './sheets/Export'
 import { SaveLayoutSheet } from './sheets/SaveLayout'
 import { PinsProvider } from './state/pins'
@@ -66,9 +67,12 @@ function Shell() {
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null)
   // File > Save Layout… and History's button both open the same sheet.
   const [saving, setSaving] = useState(false)
+  const [copying, setCopying] = useState(false) // File > Copy Layout to Another Device…
   const [exporting, setExporting] = useState(false) // File > Export… and the toolbar buttons
   useEffect(() => window.jiggle.snapshots.onSaveRequested(() => setSaving(true)), [])
   useEffect(() => window.jiggle.export.onRequested(() => setExporting(true)), [])
+  useEffect(() => window.jiggle.snapshots.onCopyRequested(() => setCopying(true)), [])
+  if (copying && !usable) setCopying(false)
   if (exporting && !usable) setExporting(false)
   if (saving && !usable) setSaving(false) // not to pop up again when the phone comes back
 
@@ -185,6 +189,9 @@ function Shell() {
       </main>
       {saving && usable && device && (
         <SaveLayoutSheet device={device} onClose={() => setSaving(false)} />
+      )}
+      {copying && usable && device && (
+        <CopyLayoutSheet device={device} onClose={() => setCopying(false)} />
       )}
       {exporting && usable && device && (
         <ExportSheet device={device} onClose={() => setExporting(false)} />

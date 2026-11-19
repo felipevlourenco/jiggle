@@ -1,3 +1,5 @@
+import { gridFor } from '@shared/layout/grid'
+import { normalize } from '@shared/layout/normalize'
 import type { Broadcast } from '@shared/ipc-contract'
 import type { SavedLayoutResult, SnapshotSummary, Udid } from '@shared/types'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
@@ -93,7 +95,7 @@ async function changeSaved(
 // File > Save Layout… and File > Export…: the window opens a sheet, which needs a phone to read first.
 export async function requestSheet(
   { bridge, broadcast }: Pick<Deps, 'bridge' | 'broadcast'>,
-  event: 'menu:save-layout' | 'menu:export',
+  event: 'menu:save-layout' | 'menu:export' | 'menu:copy-layout',
   what: string
 ): Promise<void> {
   const ready = (await bridge.listDevices()).some(
@@ -107,6 +109,10 @@ export const requestSaveLayout = (deps: Pick<Deps, 'bridge' | 'broadcast'>): Pro
   requestSheet(deps, 'menu:save-layout', 'save its layout')
 
 export function registerSnapshotsIpc(ipc: IpcLike, deps: Deps): void {
+  handle(ipc, 'snapshots:layout', async (udid, id) => {
+    const saved = await deps.snapshots.get(udid, id)
+    return normalize(saved.rawState, gridFor(saved.deviceClass ?? 'iPhone'))
+  })
   handle(ipc, 'snapshots:save-layout', (udid, name) => saveLayout(deps, udid, name))
   handle(ipc, 'snapshots:rename-layout', (udid, id, name) =>
     changeSaved(deps, () => deps.snapshots.renameLayout(udid, id, name))

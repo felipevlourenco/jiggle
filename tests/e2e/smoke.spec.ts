@@ -1249,3 +1249,87 @@ test.describe('Wi‑Fi', () => {
     await app.close()
   })
 })
+
+test.describe('Copy Layout', () => {
+  const menu = (app: Awaited<ReturnType<typeof launch>>, id: string) =>
+    app.evaluate(
+      ({ Menu }, itemId) => Menu.getApplicationMenu()!.getMenuItemById(itemId)!.click(),
+      id
+    )
+
+  test('copies the iPhone’s arrangement onto the iPad: preview, summary, apply, backup', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy,ipad-widgets' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await win.getByTestId('device-card').click()
+    await win.getByRole('menuitemradio').filter({ hasText: 'iPad' }).click()
+    await expect(win.locator('[data-frame="iPad"]')).toBeVisible()
+    const iPadFirst = await win
+      .getByTestId('page')
+      .locator('[data-kind="app"]')
+      .first()
+      .getAttribute('title')
+
+    await menu(app, 'copy-layout')
+    const sheet = win.getByRole('dialog', { name: "Copy Layout to Sam's iPad" })
+    await expect(sheet.getByLabel('Copy from')).toHaveValue(/^device:/)
+    await expect(sheet.getByRole('option', { name: "Sam's iPhone (connected)" })).toHaveCount(1)
+    await expect(sheet.getByTestId('copy-summary')).toContainText(
+      /\d+ shared apps keep the iPhone order · \d+ iPad‑only apps? added at the end · \d+ iPhone‑only apps? skipped/
+    )
+    // a phone on the left and an iPad on the right
+    await expect(sheet.locator('[data-frame="iPhone"]')).toBeVisible()
+    await expect(sheet.locator('[data-frame="iPad"]')).toBeVisible()
+
+    await sheet.getByRole('button', { name: 'Continue' }).click()
+    const apply = win.getByRole('dialog', {
+      name: /^Copy Sam's iPhone \(connected\) to Sam's iPad\?/
+    })
+    await apply.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(apply.getByText(/Done! Sam's iPad follows/)).toBeVisible()
+    await apply.getByRole('button', { name: 'Close' }).click()
+    await expect(sheet).toHaveCount(0)
+
+    // the iPad now starts with the iPhone's first page; the widget page is still the first one (keep-pages)
+    await expect(win.getByTestId('page').locator('[data-kind="widget"]').first()).toBeVisible()
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByText('Before copying a layout')).toBeVisible()
+    expect(iPadFirst).toBeTruthy()
+    await app.close()
+  })
+
+  test('a layout saved on another device works as the source, and a lone device has nothing to copy from', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic,ipad-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await menu(app, 'save-layout') // save "Work" on the iPhone (the active device)
+    await win
+      .getByRole('dialog', { name: 'Save Current Layout' })
+      .getByLabel('Layout name')
+      .fill('Work')
+    await win
+      .getByRole('dialog', { name: 'Save Current Layout' })
+      .getByLabel('Layout name')
+      .press('Enter')
+    await expect(win.getByText('Saved layout “Work”')).toBeVisible()
+
+    await win.getByTestId('device-card').click()
+    await win.getByRole('menuitemradio').filter({ hasText: 'iPad' }).click()
+    await menu(app, 'copy-layout')
+    const sheet = win.getByRole('dialog', { name: "Copy Layout to Sam's iPad" })
+    await sheet.getByLabel('Copy from').selectOption({ label: "Sam's iPhone · Work" })
+    await expect(sheet.getByTestId('copy-summary')).toContainText('keep the iPhone order')
+    await sheet.getByRole('button', { name: 'Cancel' }).click()
+    await expect(sheet).toHaveCount(0)
+    await app.close()
+
+    const lone = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const w = await lone.firstWindow()
+    await expect(w.getByTestId('page')).toBeVisible()
+    await menu(lone, 'copy-layout')
+    const empty = w.getByRole('dialog', { name: /^Copy Layout to/ })
+    await expect(empty).toContainText('Connect another device or save a layout on it first.')
+    await expect(empty.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    await lone.close()
+  })
+})

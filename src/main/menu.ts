@@ -14,6 +14,7 @@ export function buildMenu(handlers: {
   checkForUpdates: () => void
   saveLayout: () => void
   exportLayout: () => void
+  copyLayout: () => void
 }): void {
   const template: MenuItemConstructorOptions[] = [
     {
@@ -38,7 +39,11 @@ export function buildMenu(handlers: {
           click: handlers.saveLayout
         },
         { id: 'export', label: 'Export…', accelerator: 'Cmd+E', click: handlers.exportLayout },
-        todo('Copy Layout to Another Device…')
+        {
+          id: 'copy-layout',
+          label: 'Copy Layout to Another Device…',
+          click: handlers.copyLayout
+        }
       ]
     },
     {
