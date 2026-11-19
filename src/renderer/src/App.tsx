@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
+import { findCleanup } from '@shared/layout/cleanup'
+import { Cleanup } from './screens/Cleanup'
 import { Connect } from './screens/Connect'
 import { DeviceCard } from './components/DeviceCard'
 import { AppsIcon, CleanupIcon, HistoryIcon, HomeIcon, OrganizeIcon } from './components/icons'
@@ -58,7 +60,8 @@ function Shell() {
     device?.state === 'ready' ||
     (device?.state === 'unsupported-os' && device.udid === readOnlyUdid)
   // Load the layout (and cache its icons) as soon as a device is usable; screens share the result.
-  useLayout(usable ? device?.udid : undefined)
+  const phoneLayout = useLayout(usable ? device?.udid : undefined).data?.layout
+  const tidyCount = phoneLayout ? findCleanup(phoneLayout).length : 0
   const title = TITLES[pathname] ?? 'Jiggle'
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null)
   // File > Save Layout… and History's button both open the same sheet.
@@ -89,6 +92,11 @@ function Shell() {
               <NavLink key={n.path} to={n.path} className="nav-item">
                 <Icon />
                 {n.label}
+                {n.path === '/cleanup' && tidyCount > 0 && (
+                  <span className="nav-badge" aria-label={`${tidyCount} things to tidy`}>
+                    {tidyCount}
+                  </span>
+                )}
               </NavLink>
             ) : (
               <span key={n.path} className="nav-item disabled" aria-disabled="true">
@@ -151,6 +159,7 @@ function Shell() {
                     />
                   )}
                   {device && <Route path="/organize" element={<Organize device={device} />} />}
+                  {device && <Route path="/cleanup" element={<Cleanup device={device} />} />}
                   <Route
                     path="/history"
                     element={
@@ -164,7 +173,7 @@ function Shell() {
                     }
                   />
                   {NAV_ITEMS.filter(
-                    (n) => !['/home', '/apps', '/organize', '/history'].includes(n.path)
+                    (n) => !['/home', '/apps', '/organize', '/history', '/cleanup'].includes(n.path)
                   ).map((n) => (
                     <Route key={n.path} path={n.path} element={<Placeholder name={n.label} />} />
                   ))}

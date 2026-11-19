@@ -1087,3 +1087,54 @@ test.describe('Category overrides', () => {
     await app.close()
   })
 })
+
+test.describe('Cleanup', () => {
+  test('lists 2 empty pages and 3 one-app folders, fixes what is ticked, and the badge and list clear', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    const link = win.getByRole('link', { name: /Cleanup/ })
+    await expect(link.locator('.nav-badge')).toHaveText('5')
+
+    await link.click()
+    await expect(win.getByRole('heading', { name: '5 things to tidy up' })).toBeVisible()
+    const boxes = win.getByRole('checkbox')
+    await expect(boxes).toHaveCount(5)
+    await expect(win.getByRole('checkbox', { name: /is empty/ })).toHaveCount(2)
+    await expect(win.getByRole('checkbox', { name: /has only 1 app/ })).toHaveCount(3)
+    await expect(win.getByText('Move the app out and remove the folder')).toHaveCount(3)
+    for (let i = 0; i < 5; i++) await expect(boxes.nth(i)).toBeChecked()
+
+    // leave one folder alone: 4 things get fixed, 1 stays
+    await win.getByRole('checkbox', { name: /Folder “Games”/ }).uncheck()
+    await win.getByRole('button', { name: 'Fix Selected' }).click()
+    const sheet = win.getByRole('dialog', { name: /Fix 4 things/ })
+    await expect(sheet).toContainText('Move 2 apps out of one-app folders')
+    await expect(sheet).toContainText('Remove 2 empty pages')
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done! Sam's iPhone is tidy/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+
+    await expect(win.getByRole('heading', { name: '1 thing to tidy up' })).toBeVisible()
+    await expect(link.locator('.nav-badge')).toHaveText('1')
+    await expect(win.getByRole('button', { name: 'Fix Selected' })).toBeDisabled() // it is still unticked
+    await win.getByRole('checkbox', { name: /Folder “Games”/ }).check()
+    await win.getByRole('button', { name: 'Fix Selected' }).click()
+    const again = win.getByRole('dialog', { name: /Fix 1 thing/ })
+    await again.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(again.getByText(/Done!/)).toBeVisible()
+    await again.getByRole('button', { name: 'Close' }).click()
+    await expect(win.getByRole('heading', { name: 'Your home screen is tidy.' })).toBeVisible()
+    await expect(link.locator('.nav-badge')).toHaveCount(0)
+    await expect(win.getByRole('button', { name: 'Fix Selected' })).toBeDisabled()
+    await app.close()
+  })
+
+  test('a tidy phone shows the tidy state and no badge', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: /Cleanup/ }).click()
+    await expect(win.getByRole('heading', { name: 'Your home screen is tidy.' })).toBeVisible()
+    await expect(win.locator('.nav-badge')).toHaveCount(0)
+    await app.close()
+  })
+})
