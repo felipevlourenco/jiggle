@@ -12,15 +12,18 @@ export class ElectronPageRenderer implements PageRenderer {
   async png({ udid, page, wallpaper }: { udid: string; page: number; wallpaper: boolean }) {
     const win = await this.show({ udid, pages: String(page), wallpaper })
     const r = (await win.webContents.executeJavaScript(
-      `(() => { const r = document.querySelector('[data-export-page]').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height } })()`
-    )) as { x: number; y: number; width: number; height: number }
-    const image = await win.webContents.capturePage({
-      x: Math.round(r.x),
-      y: Math.round(r.y),
-      width: Math.round(r.width),
-      height: Math.round(r.height)
-    })
-    return image.toPNG()
+      `(() => { const r = document.querySelector('[data-export-page]').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height, scale: window.devicePixelRatio } })()`
+    )) as { x: number; y: number; width: number; height: number; scale: number }
+    // Through the debugger, not capturePage: capturePage only sees the visible window, which a small display
+    // (a CI runner) crops, while this draws the whole rectangle whatever the window's size.
+    const dbg = win.webContents.debugger
+    if (!dbg.isAttached()) dbg.attach('1.3')
+    const shot = (await dbg.sendCommand('Page.captureScreenshot', {
+      format: 'png',
+      captureBeyondViewport: true,
+      clip: { x: r.x, y: r.y, width: r.width, height: r.height, scale: r.scale }
+    })) as { data: string }
+    return Buffer.from(shot.data, 'base64')
   }
 
   async pdf({ udid, pages, wallpaper }: { udid: string; pages: number[]; wallpaper: boolean }) {
