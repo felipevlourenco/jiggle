@@ -11,3 +11,7 @@ sidecar/build
 sidecar/__pycache__
 __pycache__
 .pytest_cache
+
+# Real-device data from the proof of concept and fixture generator: never commit
+/backup.plist
+/icons/

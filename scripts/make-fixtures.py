@@ -2,6 +2,10 @@
 """Rebuild tests/fixtures/*.json from the POC's backup.plist.
 
 Run from the repo root: python3 scripts/make-fixtures.py
+
+WARNING: backup.plist is a dump of a real phone's home screen (git-ignored). The generated fixtures would
+carry that phone's app list. Before committing regenerated fixtures, swap personal apps for made-up ones
+(see the "com.example.*" apps already in tests/fixtures).
 """
 import copy
 import json
