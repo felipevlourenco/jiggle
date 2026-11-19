@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import type { AppsResult, SnapshotSummary } from '@shared/types'
+import type { ApplyResult, AppsResult, SavedLayoutResult, SnapshotSummary } from '@shared/types'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
@@ -13,6 +13,7 @@ import { PinsService } from '../../services/PinsService'
 import { SettingsService } from '../../services/SettingsService'
 import { SnapshotService } from '../../services/SnapshotService'
 import { registerIpc } from '..'
+import { requestSaveLayout } from '../snapshots'
 import type { IpcLike } from '../handle'
 
 const fixture = loadFixture(join(__dirname, '../../../../tests/fixtures'), 'iphone-basic')
@@ -91,6 +92,34 @@ describe('IPC validation', () => {
     expect(broadcast).toHaveBeenCalledWith('toast', expect.stringContaining('Couldn’t back up'))
   })
 
+  it('saves, renames, switches to and deletes a layout; a bad name is a result, not an error', async () => {
+    const { call, broadcast } = setup()
+    const udid = fixture.device.udid
+    const saved = (await call('snapshots:save-layout', udid, ' Work ')) as SavedLayoutResult
+    expect(saved).toMatchObject({ ok: true, layout: { kind: 'saved-layout', name: 'Work' } })
+    expect(broadcast).toHaveBeenCalledWith('toast', 'Saved layout “Work”')
+    const id = saved.ok ? saved.layout.id : ''
+
+    expect(await call('snapshots:save-layout', udid, 'work')).toEqual({
+      ok: false,
+      message: 'A layout named “work” already exists.'
+    })
+    expect(await call('snapshots:save-layout', 'UNKNOWN-1', 'Other')).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('Couldn’t read the iPhone')
+    })
+    expect(await call('snapshots:rename-layout', udid, id, 'Office')).toMatchObject({
+      ok: true,
+      layout: { name: 'Office' }
+    })
+    expect(await call('apply:switch', udid, id)).toMatchObject({ ok: true })
+    expect(((await call('apply:switch', udid, 'nope')) as ApplyResult).ok).toBe(false)
+
+    expect(await call('snapshots:delete-layout', udid, id)).toMatchObject({ ok: true })
+    expect(await call('snapshots:delete-layout', udid, id)).toMatchObject({ ok: false })
+    await expect(call('snapshots:save-layout', udid)).rejects.toThrow(/Invalid arguments/)
+  })
+
   it('reads and changes settings, and refuses a bad value', async () => {
     const { call } = setup()
     expect(await call('settings:get')).toEqual({
@@ -119,5 +148,30 @@ describe('IPC validation', () => {
     await expect(call('layout:get')).rejects.toThrow(/Invalid arguments/)
     await expect(call('layout:get', '')).rejects.toThrow(/Invalid arguments/)
     await expect(call('device:list', 'extra')).rejects.toThrow(/Invalid arguments/)
+  })
+})
+
+describe('File > Save Layout…', () => {
+  const silent = { debug() {}, info() {}, warn() {}, error() {} }
+  const deps = (bridge: MockBridge) => ({
+    bridge,
+    broadcast: vi.fn(),
+    snapshots: new SnapshotService(mkdtempSync(join(tmpdir(), 'jiggle-')), silent)
+  })
+
+  it('asks the window to open its sheet when a phone is ready', async () => {
+    const d = deps(new MockBridge(fixture))
+    await requestSaveLayout(d)
+    expect(d.broadcast).toHaveBeenCalledWith('menu:save-layout', undefined)
+  })
+
+  it('says so in a toast when there is no phone', async () => {
+    const d = deps(new MockBridge(null))
+    await requestSaveLayout(d)
+    expect(d.broadcast).toHaveBeenCalledWith(
+      'toast',
+      'Connect an unlocked iPhone to save its layout.'
+    )
+    expect(d.broadcast).not.toHaveBeenCalledWith('menu:save-layout', undefined)
   })
 })

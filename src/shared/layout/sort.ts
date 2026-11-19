@@ -26,7 +26,11 @@ const isMovable = (item: LayoutItem): item is Movable =>
 // A–Z the way a person reads it: case and accents don't matter, and the invisible direction
 // marks some apps put in their names (e.g. "‎WhatsApp") don't push them to the end.
 const collator = new Intl.Collator('en', { sensitivity: 'base' })
-const nameOf = (item: Movable): string => item.name.replace(/\p{Cf}/gu, '').trim()
+const nameOf = (item: { name: string }): string => item.name.replace(/\p{Cf}/gu, '').trim()
+
+// Also used to place apps added to a layout (reflow).
+export const compareNames = (a: { name: string }, b: { name: string }): number =>
+  collator.compare(nameOf(a), nameOf(b))
 
 // Folders are sorted as single items by their name. In category and color mode they come first.
 function compare(a: Movable, b: Movable, opts: SortOptions): number {
@@ -46,7 +50,7 @@ function compare(a: Movable, b: Movable, opts: SortOptions): number {
     )
     if (byColor) return byColor
   }
-  return collator.compare(nameOf(a), nameOf(b))
+  return compareNames(a, b)
 }
 
 const withFolders = (movable: Movable[], opts: SortOptions): Movable[] =>

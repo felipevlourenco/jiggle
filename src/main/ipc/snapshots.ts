@@ -1,5 +1,5 @@
 import type { Broadcast } from '@shared/ipc-contract'
-import type { SnapshotSummary, Udid } from '@shared/types'
+import type { SavedLayoutResult, SnapshotSummary, Udid } from '@shared/types'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
 import type { SnapshotService } from '../services/SnapshotService'
 import { handle, type IpcLike } from './handle'
@@ -44,7 +44,65 @@ export async function backUpActiveDevice(deps: Deps): Promise<void> {
   await backUpNow(deps, device.udid).catch(() => {}) // already toasted
 }
 
+// A saved layout is the phone as it is now, under a name. A bad name or an unreadable phone is a result
+// for the sheet to show, not an error.
+export async function saveLayout(
+  { bridge, snapshots, broadcast }: Deps,
+  udid: Udid,
+  name: string
+): Promise<SavedLayoutResult> {
+  try {
+    const [rawState, devices] = await Promise.all([
+      bridge.getIconState(udid),
+      bridge.listDevices()
+    ]).catch((err: Error) => {
+      throw new Error(`Couldn’t read the iPhone: ${err.message}`, { cause: err })
+    })
+    const layout = await snapshots.saveLayout({
+      udid,
+      name,
+      osVersion: devices.find((d) => d.udid === udid)?.osVersion ?? '',
+      rawState
+    })
+    broadcast('snapshots:changed', undefined)
+    broadcast('toast', `Saved layout “${layout.name}”`)
+    return { ok: true, layout }
+  } catch (err) {
+    return { ok: false, message: (err as Error).message }
+  }
+}
+
+// Rename and delete change a file, so they work with no phone plugged in.
+async function changeSaved(
+  { broadcast }: Deps,
+  change: () => Promise<SnapshotSummary>
+): Promise<SavedLayoutResult> {
+  try {
+    const layout = await change()
+    broadcast('snapshots:changed', undefined)
+    return { ok: true, layout }
+  } catch (err) {
+    return { ok: false, message: (err as Error).message }
+  }
+}
+
+// File > Save Layout…: the window asks for a name, so it needs a phone to read first.
+export async function requestSaveLayout({ bridge, broadcast }: Deps): Promise<void> {
+  const ready = (await bridge.listDevices()).some(
+    (d) => d.state === 'ready' || d.state === 'unsupported-os'
+  )
+  if (ready) broadcast('menu:save-layout', undefined)
+  else broadcast('toast', 'Connect an unlocked iPhone to save its layout.')
+}
+
 export function registerSnapshotsIpc(ipc: IpcLike, deps: Deps): void {
+  handle(ipc, 'snapshots:save-layout', (udid, name) => saveLayout(deps, udid, name))
+  handle(ipc, 'snapshots:rename-layout', (udid, id, name) =>
+    changeSaved(deps, () => deps.snapshots.renameLayout(udid, id, name))
+  )
+  handle(ipc, 'snapshots:delete-layout', (udid, id) =>
+    changeSaved(deps, () => deps.snapshots.deleteLayout(udid, id))
+  )
   handle(ipc, 'snapshots:list', (udid) => deps.snapshots.list(udid))
   handle(ipc, 'snapshots:backup', (udid) => backUpNow(deps, udid))
 }

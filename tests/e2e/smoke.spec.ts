@@ -714,3 +714,130 @@ test.describe('Send to App Library', () => {
     await app.close()
   })
 })
+
+test.describe('Saved layouts', () => {
+  const firstIcon = async (win: Page): Promise<string | null> =>
+    win.getByTestId('page').locator('[data-kind="app"]').first().getAttribute('title')
+  const clickMenu = (app: Awaited<ReturnType<typeof launch>>, id: string) =>
+    app.evaluate(
+      ({ Menu }, itemId) => Menu.getApplicationMenu()!.getMenuItemById(itemId)!.click(),
+      id
+    )
+
+  test('saves from File > Save Layout…, refuses a duplicate name, and switches back after a sort', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await firstIcon(win)
+
+    await clickMenu(app, 'save-layout')
+    const sheet = win.getByRole('dialog', { name: 'Save Current Layout' })
+    await expect(sheet).toContainText(/Sam's iPhone · \d+ apps · \d+ pages/)
+    const save = sheet.getByRole('button', { name: 'Save', exact: true })
+    await expect(save).toBeDisabled() // no name yet, and no error either
+    await expect(sheet.getByRole('alert')).toHaveCount(0)
+    await sheet.getByLabel('Layout name').fill('Work')
+    await save.click()
+    await expect(sheet).toHaveCount(0)
+    await expect(win.getByText('Saved layout “Work”')).toBeVisible()
+
+    // History lists it as a saved layout, not as a backup
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByRole('heading', { name: 'Saved layouts' })).toBeVisible()
+    await expect(win.getByRole('button', { name: 'Switch to Work' })).toBeEnabled()
+    await expect(win.getByText('Before switching to Work')).toHaveCount(0)
+
+    // the same name again: the error shows as you type and Save stays off
+    await win.getByRole('button', { name: 'Save Current Layout…' }).click()
+    const again = win.getByRole('dialog', { name: 'Save Current Layout' })
+    await again.getByLabel('Layout name').fill('work')
+    await expect(again.getByRole('alert')).toHaveText('A layout named “work” already exists.')
+    await expect(again.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
+    await again.getByRole('button', { name: 'Cancel' }).click()
+    await expect(again).toHaveCount(0)
+
+    // sort by color, then switch back to Work
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win.getByRole('radio', { name: /Color/ }).click()
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    const apply = win.getByRole('dialog', { name: /Apply Color to Sam/ })
+    await apply.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(apply.getByText(/Done!/)).toBeVisible()
+    await apply.getByRole('button', { name: 'Close' }).click()
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect.poll(() => firstIcon(win)).not.toBe(original)
+
+    await win.getByRole('link', { name: 'History' }).click()
+    await win.getByRole('button', { name: 'Switch to Work' }).click()
+    const sw = win.getByRole('dialog', { name: 'Switch to “Work”?' })
+    await expect(sw).toContainText('Your current layout will be backed up first')
+    await sw.getByRole('button', { name: 'Switch', exact: true }).click()
+    await expect(sw.getByText(/Done! Sam's iPhone now shows “Work”/)).toBeVisible()
+    await sw.getByRole('button', { name: 'Close' }).click()
+    await expect(win.getByText('Before switching to Work')).toBeVisible()
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect.poll(() => firstIcon(win)).toBe(original)
+    await app.close()
+  })
+
+  test('renames and deletes a saved layout, and both stick after a relaunch', async () => {
+    const env = {
+      JIGGLE_MOCK_DEVICE: 'iphone-messy',
+      JIGGLE_USER_DATA: mkdtempSync(join(tmpdir(), 'jiggle-e2e-'))
+    }
+    let app = await launch(env)
+    let win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible() // the page is listening
+    await clickMenu(app, 'save-layout')
+    const sheet = win.getByRole('dialog', { name: 'Save Current Layout' })
+    await sheet.getByLabel('Layout name').fill('Work')
+    await sheet.getByLabel('Layout name').press('Enter') // Enter saves, like the button
+    await expect(sheet).toHaveCount(0)
+    await win.getByRole('link', { name: 'History' }).click()
+
+    await win.getByRole('button', { name: 'Rename Work' }).click()
+    const rename = win.getByRole('dialog', { name: 'Rename Layout' })
+    await expect(rename.getByLabel('Layout name')).toHaveValue('Work')
+    await expect(rename.getByRole('button', { name: 'Rename', exact: true })).toBeDisabled() // unchanged
+    await rename.getByLabel('Layout name').fill('Office')
+    await rename.getByRole('button', { name: 'Rename', exact: true }).click()
+    await expect(win.getByRole('button', { name: 'Switch to Office' })).toBeVisible()
+    await expect(win.getByRole('button', { name: 'Switch to Work' })).toHaveCount(0)
+    await app.close()
+
+    app = await launch(env)
+    win = await app.firstWindow()
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByRole('button', { name: 'Switch to Office' })).toBeVisible()
+
+    // delete asks first: Cancel keeps it
+    await win.getByRole('button', { name: 'Delete Office' }).click()
+    const confirm = win.getByRole('dialog', { name: 'Delete “Office”?' })
+    await confirm.getByRole('button', { name: 'Cancel' }).click()
+    await expect(win.getByRole('button', { name: 'Switch to Office' })).toBeVisible()
+    await win.getByRole('button', { name: 'Delete Office' }).click()
+    await win
+      .getByRole('dialog', { name: 'Delete “Office”?' })
+      .getByRole('button', { name: 'Delete', exact: true })
+      .click()
+    await expect(win.getByRole('button', { name: 'Switch to Office' })).toHaveCount(0)
+    await app.close()
+
+    app = await launch(env)
+    win = await app.firstWindow()
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByRole('heading', { name: 'No backups yet' })).toBeVisible()
+    await expect(win.getByRole('button', { name: /^Switch to/ })).toHaveCount(0)
+    await app.close()
+  })
+
+  test('File > Save Layout… with no phone says so instead of opening a sheet', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'none' })
+    const win = await app.firstWindow()
+    await expect(win.getByRole('heading', { name: 'Connect your iPhone' })).toBeVisible() // the page is listening
+    await clickMenu(app, 'save-layout')
+    await expect(win.getByText('Connect an unlocked iPhone to save its layout.')).toBeVisible()
+    await expect(win.getByRole('dialog')).toHaveCount(0)
+    await app.close()
+  })
+})

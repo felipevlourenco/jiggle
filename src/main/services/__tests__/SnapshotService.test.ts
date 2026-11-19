@@ -98,3 +98,67 @@ describe('SnapshotService', () => {
     await expect(service.list('../evil')).rejects.toThrow('Bad device id')
   })
 })
+
+describe('saved layouts', () => {
+  const save = (service: SnapshotService, name: string, udid = 'AB-12') =>
+    service.saveLayout({ udid, name, osVersion: '26.1', rawState })
+
+  it('saves the exact state under a trimmed name, and lists it as a saved layout', async () => {
+    const { service } = setup()
+    const made = await save(service, '  Work ')
+    expect(made).toMatchObject({ kind: 'saved-layout', name: 'Work', reason: null, appCount: 4 })
+    expect((await service.get('AB-12', made.id)).rawState).toEqual(rawState)
+    expect((await service.list('AB-12')).map((e) => !e.damaged && e.name)).toEqual(['Work'])
+  })
+
+  it('refuses a name that is empty or already used on the device, whatever its case', async () => {
+    const { service } = setup()
+    await save(service, 'Work')
+    await expect(save(service, 'work')).rejects.toThrow('A layout named “work” already exists.')
+    await expect(save(service, '   ')).rejects.toThrow('Give the layout a name.')
+    expect(await service.list('AB-12')).toHaveLength(1)
+    await expect(save(service, 'Work', 'CD-34')).resolves.toBeTruthy() // another device: fine
+  })
+
+  it('does not count automatic backups or damaged files as taken names', async () => {
+    const { service, dir } = setup()
+    await service.create({ ...input, reason: 'Work' })
+    writeFileSync(join(dir, '01ARZ3NDEKTSV4RRFFQ69G5FAV.json'), '{ not json')
+    await expect(save(service, 'Work')).resolves.toBeTruthy()
+  })
+
+  it('renames in place: same id and date, new name, and it sticks after a relaunch', async () => {
+    const { root, service } = setup()
+    const made = await save(service, 'Work')
+    const renamed = await service.renameLayout('AB-12', made.id, ' Office ')
+    expect(renamed).toMatchObject({ id: made.id, name: 'Office', createdAt: made.createdAt })
+    const reread = await new SnapshotService(root, silent).get('AB-12', made.id)
+    expect(reread).toMatchObject({ name: 'Office', rawState })
+  })
+
+  it('lets a layout keep its own name when renamed, but not take another’s', async () => {
+    const { service } = setup()
+    const work = await save(service, 'Work')
+    await save(service, 'Weekend')
+    await expect(service.renameLayout('AB-12', work.id, 'WORK')).resolves.toMatchObject({
+      name: 'WORK'
+    })
+    await expect(service.renameLayout('AB-12', work.id, 'weekend')).rejects.toThrow(
+      'already exists'
+    )
+  })
+
+  it('deletes a saved layout, and only a saved layout', async () => {
+    const { service, dir } = setup()
+    const work = await save(service, 'Work')
+    const backup = await service.create(input)
+    await expect(service.deleteLayout('AB-12', backup.id)).rejects.toThrow('Only saved layouts')
+    await expect(service.renameLayout('AB-12', backup.id, 'X')).rejects.toThrow(
+      'Only saved layouts'
+    )
+    await service.deleteLayout('AB-12', work.id)
+    expect(readdirSync(dir)).toEqual([`${backup.id}.json`])
+    await expect(service.deleteLayout('AB-12', work.id)).rejects.toThrow('No such backup')
+    await expect(save(service, 'Work')).resolves.toBeTruthy() // the name is free again
+  })
+})

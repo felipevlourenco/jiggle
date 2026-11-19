@@ -5,7 +5,7 @@ import type { Broadcast } from '@shared/ipc-contract'
 import { dominantColor } from '@shared/layout/color'
 import { registerIpc } from './ipc'
 import { restoreLastBackup } from './ipc/apply'
-import { backUpActiveDevice } from './ipc/snapshots'
+import { backUpActiveDevice, requestSaveLayout } from './ipc/snapshots'
 import { enforceNetworkAllowlist } from './network'
 import { handleAssetProtocol, registerAssetScheme } from './protocol'
 import { ApplyService } from './services/ApplyService'
@@ -121,6 +121,7 @@ if (!app.requestSingleInstanceLock()) {
       openSettings: openSettingsWindow,
       checkForUpdates: () => void updater.check(true),
       backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }),
+      saveLayout: () => void requestSaveLayout({ bridge, snapshots, broadcast }),
       restoreLast: () =>
         void restoreLastBackup({
           bridge,

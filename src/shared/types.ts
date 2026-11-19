@@ -119,6 +119,10 @@ export interface DamagedSnapshot {
 }
 export type SnapshotEntry = SnapshotSummary | DamagedSnapshot
 
+// Saving, renaming or deleting a saved layout: done, or why not (shown under the name field).
+export type SavedLayoutResult =
+  { ok: true; layout: SnapshotSummary } | { ok: false; message: string }
+
 // A change to write to a device, built in the renderer and re-checked in main.
 export interface ApplyPlan {
   udid: Udid

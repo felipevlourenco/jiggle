@@ -19,6 +19,7 @@ import { HomeScreen } from './screens/HomeScreen'
 import { Organize } from './screens/Organize'
 import { SettingsWindow } from './settings/SettingsWindow'
 import { appError } from '@shared/errors'
+import { SaveLayoutSheet } from './sheets/SaveLayout'
 import { PinsProvider } from './state/pins'
 import { useDevices, useDeviceEvents, useLayout, useSidecarStatus } from './state/queries'
 
@@ -58,6 +59,10 @@ function Shell() {
   useLayout(usable ? device?.udid : undefined)
   const title = TITLES[pathname] ?? 'Jiggle'
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null)
+  // File > Save Layout… and History's button both open the same sheet.
+  const [saving, setSaving] = useState(false)
+  useEffect(() => window.jiggle.snapshots.onSaveRequested(() => setSaving(true)), [])
+  if (saving && !usable) setSaving(false) // not to pop up again when the phone comes back
 
   // Connect is shown whenever there is no usable device, and left as soon as there is one.
   useEffect(() => {
@@ -169,8 +174,10 @@ function Shell() {
                     element={
                       <History
                         udid={device?.udid}
+                        deviceName={device?.name}
                         canBackUp={usable}
                         canRestore={device?.state === 'ready'}
+                        onSaveLayout={() => setSaving(true)}
                       />
                     }
                   />
@@ -185,6 +192,9 @@ function Shell() {
           )}
         </section>
       </main>
+      {saving && usable && device && (
+        <SaveLayoutSheet device={device} onClose={() => setSaving(false)} />
+      )}
       <Toast />
     </div>
   )

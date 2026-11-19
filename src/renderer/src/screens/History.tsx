@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import type { SnapshotEntry, SnapshotSummary } from '@shared/types'
 import { BackUpIcon, HistoryIcon, WarnIcon } from '../components/icons'
+import { SnapshotThumb } from '../components/LayoutThumb'
 import { Banner } from '../components/Banner'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { ApplySheet } from '../sheets/Apply'
+import { DeleteLayoutSheet, RenameLayoutSheet, savedNames } from '../sheets/SaveLayout'
 import { useBackUp, useSnapshots } from '../state/queries'
 import s from './history.module.css'
 
@@ -15,6 +17,9 @@ const when = (iso: string, today: boolean): string => {
     : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${time(d)}`
 }
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+const day = (iso: string): string =>
+  new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short' })
+const isSaved = (e: SnapshotEntry): e is SnapshotSummary => !e.damaged && e.kind === 'saved-layout'
 const isToday = (iso: string): boolean => new Date(iso).toDateString() === new Date().toDateString()
 
 function Row({
@@ -60,18 +65,67 @@ function Row({
   )
 }
 
+// A saved layout: a small page 1, its name and what you can do with it.
+function SavedCard({
+  layout,
+  onSwitch,
+  onRename,
+  onDelete
+}: {
+  layout: SnapshotSummary
+  onSwitch?: () => void // undefined: no phone to switch
+  onRename: () => void
+  onDelete: () => void
+}) {
+  const name = layout.name ?? 'Layout'
+  return (
+    <li className={`${s.card} card`}>
+      <SnapshotThumb snapshot={layout} />
+      <div className={s.cardBody}>
+        <strong className="headline">{name}</strong>
+        <div className={s.meta}>
+          {plural(layout.appCount, 'app')} · saved {day(layout.createdAt)}
+        </div>
+        <div className={s.actions}>
+          <button
+            className="btn btn-primary btn-sm"
+            aria-label={`Switch to ${name}`}
+            disabled={!onSwitch}
+            onClick={onSwitch}
+          >
+            Switch
+          </button>
+          <button className="btn btn-sm" aria-label={`Rename ${name}`} onClick={onRename}>
+            Rename
+          </button>
+          <button className="btn btn-sm" aria-label={`Delete ${name}`} onClick={onDelete}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </li>
+  )
+}
+
 export function History({
   udid,
+  deviceName,
   canBackUp,
-  canRestore
+  canRestore,
+  onSaveLayout
 }: {
   udid: string | undefined
+  deviceName?: string
   canBackUp: boolean // a phone we can read
   canRestore: boolean // a phone we may write to (not read-only)
+  onSaveLayout: () => void // opens the Save Layout sheet
 }) {
   const { data, isPending, isError, refetch } = useSnapshots(udid)
   const backUp = useBackUp()
   const [restoring, setRestoring] = useState<SnapshotSummary>()
+  const [switching, setSwitching] = useState<SnapshotSummary>()
+  const [renaming, setRenaming] = useState<SnapshotSummary>()
+  const [deleting, setDeleting] = useState<SnapshotSummary>()
   const button = (large: boolean) => (
     <button
       className={`btn btn-primary${large ? ' btn-lg' : ''}`}
@@ -100,9 +154,15 @@ export function History({
       </p>
     )
   }
+  const saveButton = (
+    <button className="btn" disabled={!canBackUp || !udid} onClick={onSaveLayout}>
+      Save Current Layout…
+    </button>
+  )
   if (data.length === 0) {
     return (
       <div className={s.message}>
+        <ToolbarActions>{saveButton}</ToolbarActions>
         <h2>No backups yet</h2>
         <p>Jiggle backs up automatically before every change.</p>
         {button(true)}
@@ -110,8 +170,10 @@ export function History({
     )
   }
 
-  const today = data.filter((e) => isToday(e.createdAt))
-  const earlier = data.filter((e) => !isToday(e.createdAt))
+  const saved = data.filter(isSaved)
+  const backups = data.filter((e) => !isSaved(e))
+  const today = backups.filter((e) => isToday(e.createdAt))
+  const earlier = backups.filter((e) => !isToday(e.createdAt))
   const group = (title: string, entries: SnapshotEntry[], isTodayGroup: boolean) =>
     entries.length > 0 && (
       <section className={`${s.group} card`}>
@@ -131,14 +193,56 @@ export function History({
 
   return (
     <div className={s.root}>
-      <ToolbarActions>{button(false)}</ToolbarActions>
+      <ToolbarActions>
+        {button(false)}
+        {saveButton}
+      </ToolbarActions>
       {!canBackUp && (
         <Banner>No iPhone connected. You can look at your backups, not change anything.</Banner>
       )}
+      {saved.length > 0 && (
+        <>
+          <h2 className="headline">Saved layouts</h2>
+          <ul className={s.cards}>
+            {saved.map((l) => (
+              <SavedCard
+                key={l.id}
+                layout={l}
+                onSwitch={canRestore ? () => setSwitching(l) : undefined}
+                onRename={() => setRenaming(l)}
+                onDelete={() => setDeleting(l)}
+              />
+            ))}
+          </ul>
+        </>
+      )}
       <h2 className="headline">Automatic backups</h2>
+      {backups.length === 0 && <p className={s.footer}>None yet.</p>}
       {group('Today', today, true)}
       {group('Earlier', earlier, false)}
       <p className={s.footer}>Jiggle keeps the last 50 automatic backups for each device.</p>
+      {switching && (
+        <ApplySheet
+          title={`Switch to “${switching.name}”?`}
+          lines={[
+            `${plural(switching.appCount, 'app')} on ${plural(switching.pageCount, 'page')}, as saved ${day(switching.createdAt)}`,
+            'Apps installed since are added at the end.'
+          ]}
+          confirmLabel="Switch"
+          doneMessage={`Done! ${deviceName ?? 'Your iPhone'} now shows “${switching.name}”.`}
+          udid={switching.udid}
+          run={() => window.jiggle.apply.switchTo(switching.udid, switching.id)}
+          onClose={() => setSwitching(undefined)}
+        />
+      )}
+      {renaming && (
+        <RenameLayoutSheet
+          layout={renaming}
+          taken={savedNames(data, renaming.id)}
+          onClose={() => setRenaming(undefined)}
+        />
+      )}
+      {deleting && <DeleteLayoutSheet layout={deleting} onClose={() => setDeleting(undefined)} />}
       {restoring && (
         <ApplySheet
           title={`Restore “${restoring.name ?? restoring.reason ?? 'backup'}”?`}

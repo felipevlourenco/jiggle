@@ -2,6 +2,7 @@ import { appError, type ErrorVars } from '@shared/errors'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import { serialize } from '@shared/layout/serialize'
+import { reflow } from '@shared/layout/reflow'
 import { layoutSignature } from '@shared/layout/signature'
 import { describeIssue, validateLayout } from '@shared/layout/validate'
 import type { Broadcast } from '@shared/ipc-contract'
@@ -78,7 +79,37 @@ export class ApplyService {
     })
   }
 
-  // Back up `current`, write `next`, read it back. Shared by apply and restore.
+  // Switch to a saved layout: its arrangement fitted to the apps the phone has now (see reflow).
+  switchTo(udid: Udid, snapshotId: string): Promise<ApplyResult> {
+    return this.exclusive(udid, async (device) => {
+      let saved
+      try {
+        saved = await this.deps.snapshots.get(udid, snapshotId)
+      } catch (err) {
+        return this.fail('not-found', { detail: reason(err) })
+      }
+      const current = await this.read(udid, 'checking')
+      if (typeof current === 'string') return this.fail('no-device', { detail: current })
+      let next: RawIconState
+      try {
+        const grid = gridFor(device.deviceClass)
+        const before = normalize(current, grid)
+        const after = reflow(normalize(saved.rawState, grid), before)
+        // The saved layout brings its own widgets, like a restore does, so only the apps are checked.
+        const issues = validateLayout(before, after).filter((i) => i.code !== 'widget-changed')
+        if (issues.length) {
+          return this.fail('invalid', { detail: `${issues.map(describeIssue).join('; ')}.` })
+        }
+        next = serialize(after)
+      } catch (err) {
+        return this.fail('invalid', { detail: reason(err) })
+      }
+      const what = saved.name ?? saved.reason ?? 'backup'
+      return this.writeAndVerify(device, current, `Before switching to ${what}`, next)
+    })
+  }
+
+  // Back up `current`, write `next`, read it back. Shared by apply, switch and restore.
   private async writeAndVerify(
     device: Device,
     current: RawIconState,

@@ -199,6 +199,84 @@ describe('ApplyService.restore', () => {
   })
 })
 
+describe('ApplyService.switchTo', () => {
+  const save = (t: ReturnType<typeof setup>, name = 'Work') =>
+    t.snapshots.saveLayout({ udid: t.udid, name, osVersion: '26.1', rawState: t.original })
+  const grid = gridFor('iPhone')
+
+  it('puts the saved layout back after another sort, with a backup named for the switch', async () => {
+    const t = setup()
+    const work = await save(t)
+    t.ok(await t.service.apply(t.plan()))
+    expect(await t.phone()).not.toBe(layoutSignature(t.original))
+    const { backup } = t.ok(await t.service.switchTo(t.udid, work.id))
+    expect(await t.phone()).toBe(layoutSignature(t.original))
+    expect(backup).toMatchObject({ kind: 'auto-backup', reason: 'Before switching to Work' })
+    // the backup is the sorted layout it replaced, so the switch can be undone
+    expect(layoutSignature((await t.snapshots.get(t.udid, backup.id)).rawState)).toBe(
+      layoutSignature(serialize(t.after))
+    )
+  })
+
+  it('adds an app installed since at the end, and leaves everything else as saved', async () => {
+    const t = setup()
+    const work = await save(t)
+    const now = structuredClone(t.original)
+    now[now.length - 1]!.push({ bundleIdentifier: 'com.new.app', displayName: 'New App' })
+    await t.bridge.setIconState(t.udid, now)
+    t.ok(await t.service.switchTo(t.udid, work.id))
+    const after = normalize(await t.bridge.getIconState(t.udid), grid)
+    expect(after.pages[after.pages.length - 1]!.at(-1)).toMatchObject({ bundleId: 'com.new.app' })
+    const expected = structuredClone(t.original)
+    expected[expected.length - 1]!.push({ bundleIdentifier: 'com.new.app' })
+    expect(await t.phone()).toBe(layoutSignature(expected))
+  })
+
+  it('leaves out an app that is gone from the phone, instead of refusing', async () => {
+    const t = setup()
+    const work = await save(t)
+    const now = structuredClone(t.original)
+    const gone = now[2]!.splice(1, 1)[0]!
+    await t.bridge.setIconState(t.udid, now)
+    t.ok(await t.service.switchTo(t.udid, work.id))
+    const apps = JSON.stringify(await t.bridge.getIconState(t.udid))
+    expect(apps).not.toContain(JSON.stringify(gone['bundleIdentifier']))
+    expect(await t.phone()).toBe(layoutSignature(now.map((p, i) => (i === 2 ? p : t.original[i]!))))
+  })
+
+  it('switches even when the widgets differ from the saved ones, like a restore', async () => {
+    const t = setup()
+    const work = await save(t)
+    const now = structuredClone(t.original)
+    now[1] = now[1]!.filter((item) => !('gridSize' in item)) // a widget was removed since
+    await t.bridge.setIconState(t.udid, now)
+    expect(await t.service.switchTo(t.udid, work.id)).toMatchObject({ ok: true })
+    expect(await t.phone()).toBe(layoutSignature(t.original))
+  })
+
+  it('refuses an unknown or damaged layout, a read-only phone and a busy one, writing nothing', async () => {
+    const t = setup()
+    expect(await t.service.switchTo(t.udid, '01ARZ3NDEKTSV4RRFFQ69G5FAV')).toMatchObject({
+      ok: false,
+      code: 'not-found'
+    })
+    const work = await save(t)
+    writeFileSync(join(snapshotsDir(t.root, t.udid), `${work.id}.json`), '{ broken')
+    expect(await t.service.switchTo(t.udid, work.id)).toMatchObject({
+      ok: false,
+      code: 'not-found'
+    })
+    expect(await t.phone()).toBe(layoutSignature(t.original))
+
+    const ro = setup('iphone-ios16')
+    const saved = await save(ro)
+    expect(await ro.service.switchTo(ro.udid, saved.id)).toMatchObject({
+      ok: false,
+      code: 'read-only'
+    })
+  })
+})
+
 describe('Device > Restore Last Backup', () => {
   it('asks first, then restores the newest backup', async () => {
     const t = setup()

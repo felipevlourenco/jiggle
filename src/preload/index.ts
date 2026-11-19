@@ -34,12 +34,17 @@ const api: JiggleApi = {
   apply: {
     run: (plan) => invoke('apply:run', plan),
     restore: (udid, snapshotId) => invoke('apply:restore', udid, snapshotId),
+    switchTo: (udid, snapshotId) => invoke('apply:switch', udid, snapshotId),
     onProgress: (listener) => on('apply:progress', listener)
   },
   snapshots: {
     list: (udid) => invoke('snapshots:list', udid),
     backup: (udid) => invoke('snapshots:backup', udid),
-    onChanged: (listener) => on('snapshots:changed', () => listener())
+    saveLayout: (udid, name) => invoke('snapshots:save-layout', udid, name),
+    renameLayout: (udid, id, name) => invoke('snapshots:rename-layout', udid, id, name),
+    deleteLayout: (udid, id) => invoke('snapshots:delete-layout', udid, id),
+    onChanged: (listener) => on('snapshots:changed', () => listener()),
+    onSaveRequested: (listener) => on('menu:save-layout', () => listener())
   },
   toast: { onShow: (listener) => on('toast', listener) },
   pins: {

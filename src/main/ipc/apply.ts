@@ -6,6 +6,7 @@ import { handle, type IpcLike } from './handle'
 
 export function registerApplyIpc(ipc: IpcLike, apply: ApplyService): void {
   handle(ipc, 'apply:run', (plan) => apply.apply(plan))
+  handle(ipc, 'apply:switch', (udid, snapshotId) => apply.switchTo(udid, snapshotId))
   handle(ipc, 'apply:restore', (udid, snapshotId) => apply.restore(udid, snapshotId))
 }
 

@@ -8,6 +8,7 @@ import type {
   Layout,
   LayoutResult,
   Pins,
+  SavedLayoutResult,
   Settings,
   SnapshotEntry,
   SnapshotSummary
@@ -81,6 +82,19 @@ export const channels = {
   'snapshots:list': { args: z.tuple([Udid.optional()]), result: z.custom<SnapshotEntry[]>() },
   'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() },
   // Both always resolve: a refusal or failure is an `ok: false` result, not a thrown error.
+  // Saved layouts. Save reads the phone as it is now. Rename and delete never need a phone.
+  'snapshots:save-layout': {
+    args: z.tuple([Udid, z.string()]),
+    result: z.custom<SavedLayoutResult>()
+  },
+  'snapshots:rename-layout': {
+    args: z.tuple([Udid, z.string().min(1), z.string()]),
+    result: z.custom<SavedLayoutResult>()
+  },
+  'snapshots:delete-layout': {
+    args: z.tuple([Udid, z.string().min(1)]),
+    result: z.custom<SavedLayoutResult>()
+  },
   'settings:get': { args: z.tuple([]), result: z.custom<Settings>() },
   'settings:set': { args: z.tuple([Settings_.partial()]), result: z.custom<Settings>() },
   // Forget the category and icon caches (they are re-fetched when needed).
@@ -92,6 +106,8 @@ export const channels = {
   'pins:get': { args: z.tuple([Udid]), result: z.custom<Pins>() },
   'pins:set': { args: z.tuple([Udid, Pins_]), result: z.custom<Pins>() },
   'apply:run': { args: z.tuple([ApplyPlan_]), result: z.custom<ApplyResult>() },
+  // A saved layout, fitted to the apps the phone has now (see reflow).
+  'apply:switch': { args: z.tuple([Udid, z.string().min(1)]), result: z.custom<ApplyResult>() },
   'apply:restore': { args: z.tuple([Udid, z.string().min(1)]), result: z.custom<ApplyResult>() }
 } as const
 
@@ -107,6 +123,8 @@ export const events = {
   'device:changed': z.undefined(),
   'apps:changed': z.undefined(),
   'snapshots:changed': z.undefined(),
+  // File > Save Layout…: the window opens its Save Layout sheet.
+  'menu:save-layout': z.undefined(),
   'settings:changed': z.custom<Settings>(),
   'apply:progress': z.enum(['checking', 'backing-up', 'writing', 'verifying']),
   // A short message to show the person, e.g. "Backed up · 187 apps".
@@ -137,12 +155,18 @@ export interface JiggleApi {
   apply: {
     run(plan: ApplyPlan): Promise<ApplyResult>
     restore(udid: string, snapshotId: string): Promise<ApplyResult>
+    switchTo(udid: string, snapshotId: string): Promise<ApplyResult>
     onProgress(listener: (step: ApplyStep) => void): () => void
   }
   snapshots: {
     list(udid?: string): Promise<SnapshotEntry[]>
     backup(udid: string): Promise<SnapshotSummary>
+    saveLayout(udid: string, name: string): Promise<SavedLayoutResult>
+    renameLayout(udid: string, id: string, name: string): Promise<SavedLayoutResult>
+    deleteLayout(udid: string, id: string): Promise<SavedLayoutResult>
     onChanged(listener: () => void): () => void
+    // File > Save Layout…
+    onSaveRequested(listener: () => void): () => void
   }
   toast: {
     onShow(listener: (message: string) => void): () => void

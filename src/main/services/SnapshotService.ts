@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import writeFileAtomic from 'write-file-atomic'
 import { schemas } from '@shared/ipc-contract'
 import { gridFor } from '@shared/layout/grid'
+import { checkLayoutName } from '@shared/layout/names'
 import { normalize } from '@shared/layout/normalize'
 import { summarize } from '@shared/layout/summarize'
 import type { Snapshot, SnapshotEntry, SnapshotSummary, Udid } from '@shared/types'
@@ -54,6 +55,31 @@ export class SnapshotService {
     return summarizeSnapshot(snapshot)
   }
 
+  // A saved layout: the phone's state under a name the person chose. Names are unique per device.
+  // Throws a message fit for the name field when the name won't do.
+  async saveLayout(input: Pick<NewSnapshot, 'udid' | 'osVersion' | 'rawState'> & { name: string }) {
+    const name = input.name.trim()
+    await this.checkName(input.udid, name)
+    return this.create({ ...input, name, kind: 'saved-layout', reason: null })
+  }
+
+  async renameLayout(udid: Udid, id: string, name: string): Promise<SnapshotSummary> {
+    const saved = await this.getSaved(udid, id)
+    const clean = name.trim()
+    await this.checkName(udid, clean, id)
+    const renamed = { ...saved, name: clean }
+    await writeFileAtomic(join(this.dir(udid), `${id}.json`), JSON.stringify(renamed, null, 2))
+    return summarizeSnapshot(renamed)
+  }
+
+  // Only saved layouts can be deleted by hand; automatic backups are pruned by count.
+  async deleteLayout(udid: Udid, id: string): Promise<SnapshotSummary> {
+    const saved = await this.getSaved(udid, id)
+    await unlink(join(this.dir(udid), `${id}.json`))
+    this.log.info(`snapshot ${id} deleted (saved layout “${saved.name}”)`)
+    return summarizeSnapshot(saved)
+  }
+
   // Newest first. A device's snapshots, or every device's when no udid is given.
   async list(udid?: Udid): Promise<SnapshotEntry[]> {
     const udids = udid ? [udid] : await this.devicesWithSnapshots()
@@ -78,6 +104,22 @@ export class SnapshotService {
   // The most recent readable snapshot of a device, or undefined.
   async latest(udid: Udid): Promise<SnapshotSummary | undefined> {
     return (await this.list(udid)).find((e): e is SnapshotSummary => !e.damaged)
+  }
+
+  private async getSaved(udid: Udid, id: string): Promise<Snapshot> {
+    const snapshot = await this.get(udid, id)
+    if (snapshot.kind !== 'saved-layout') throw new Error('Only saved layouts can be changed.')
+    return snapshot
+  }
+
+  private async checkName(udid: Udid, name: string, exceptId?: string): Promise<void> {
+    const taken = (await this.readAll(udid))
+      .filter(
+        (e): e is SnapshotSummary => !e.damaged && e.kind === 'saved-layout' && e.id !== exceptId
+      )
+      .map((e) => e.name ?? '')
+    const problem = checkLayoutName(name, taken)
+    if (problem) throw new Error(problem)
   }
 
   private dir(udid: Udid): string {
