@@ -49,6 +49,7 @@ export function createExportWindow(): BrowserWindow {
     show: false,
     width: 1400, // larger than the biggest page, which is captured by its rectangle
     height: 1000,
+    enableLargerThanScreen: true, // a small display (a CI runner) must not crop the page
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

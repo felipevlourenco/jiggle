@@ -62,7 +62,7 @@ describe('CategoryService', () => {
   it('makes zero requests on the next launch for what is cached, including "not on the App Store"', async () => {
     const a = setup()
     a.service.resolve([app('com.spotify.client'), app('ghost.app')])
-    await settle()
+    await vi.waitFor(() => expect(a.onChange).toHaveBeenCalled()) // called once the cache is saved
     const b = setup(async (u) => respond(u), a.dir)
     const got = b.service.resolve([app('com.spotify.client'), app('ghost.app')])
     await settle()
