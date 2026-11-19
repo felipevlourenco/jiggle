@@ -51,9 +51,11 @@ export class MockBridge implements DeviceBridge {
     return new Map()
   }
 
-  // The mock has no installation proxy: every app on the home screen counts as installed.
+  // The mock has no installation proxy: every app on the recorded home screen counts as installed,
+  // so an app sent to the App Library stays in the list.
   async listApps(udid: Udid): Promise<InstalledApp[]> {
-    const { dock, pages } = normalize(await this.getIconState(udid), gridFor('iPhone'))
+    await this.getIconState(udid) // checks the udid
+    const { dock, pages } = normalize(this.fixture!.rawState, gridFor('iPhone'))
     const apps = new Map<string, InstalledApp>()
     const visit = (item: LayoutItem): void => {
       if (item.kind === 'folder') item.pages.flat().forEach(visit)

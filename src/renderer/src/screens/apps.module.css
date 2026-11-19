@@ -127,3 +127,12 @@
   display: inline-flex;
   color: var(--secondary);
 }
+
+.table th:first-child,
+.table td:first-child {
+  width: 36px;
+  padding-right: 0;
+}
+.table tbody tr[aria-selected='true'] {
+  background: var(--surface-2);
+}

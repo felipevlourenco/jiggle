@@ -672,3 +672,45 @@ test.describe('Auto-folders', () => {
     await app.close()
   })
 })
+
+test.describe('Send to App Library', () => {
+  test('picks three apps, lists them in the sheet, applies, and the Location changes', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    const send = win.getByRole('button', { name: /^Send to App Library/ })
+    await expect(send).toBeDisabled()
+
+    // the dock's apps can't leave the home screen
+    const dockRow = win.getByRole('row', { name: /Dock/ }).first()
+    await expect(dockRow.getByRole('checkbox')).toBeDisabled()
+
+    const onPages = win.getByRole('row', { name: /Page \d/ })
+    const names: string[] = []
+    for (const i of [0, 1, 2]) {
+      const row = onPages.nth(i)
+      names.push(((await row.getByRole('checkbox').getAttribute('aria-label')) ?? '').slice(7))
+      // ⌘-click picks; the third uses its checkbox
+      if (i < 2)
+        await row
+          .getByRole('cell')
+          .nth(1)
+          .click({ modifiers: ['Meta'] })
+      else await row.getByRole('checkbox').click()
+    }
+    await expect(send).toHaveText('Send to App Library (3)')
+    await send.click()
+    const sheet = win.getByRole('dialog', { name: 'Send 3 apps to the App Library?' })
+    for (const name of names) await expect(sheet).toContainText(name)
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done! 3 apps are in the App Library/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+
+    for (const name of names) {
+      const row = win.getByRole('row').filter({ has: win.getByLabel(`Select ${name}`) })
+      await expect(row).toContainText('App Library')
+    }
+    await expect(send).toBeDisabled()
+    await app.close()
+  })
+})

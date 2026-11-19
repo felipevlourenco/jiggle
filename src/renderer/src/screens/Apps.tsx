@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { sendToAppLibrary } from '@shared/layout/appLibrary'
 import { APP_LIBRARY, appLocations } from '@shared/layout/locations'
-import type { AppInfo, Device } from '@shared/types'
+import { serialize } from '@shared/layout/serialize'
+import { layoutSignature } from '@shared/layout/signature'
+import type { AppInfo, Device, Layout } from '@shared/types'
 import { appError } from '@shared/errors'
 import { Banner } from '../components/Banner'
 import { PinIcon, SearchIcon } from '../components/icons'
 import { Thumb } from '../components/Thumb'
 import { ToolbarActions } from '../components/ToolbarSlot'
+import { ApplySheet } from '../sheets/Apply'
 import { usePins } from '../state/pins'
 import { useApps, useLayout } from '../state/queries'
 import s from './apps.module.css'
@@ -21,6 +26,9 @@ const COLUMNS: { key: Key; label: string }[] = [
   { key: 'developer', label: 'Developer' },
   { key: 'location', label: 'Location' }
 ]
+// Apps on a home screen page (or in a folder on one) can leave it; the dock's and the Library's can't.
+const canLeave = (row: Row): boolean => row.location !== 'Dock' && row.location !== APP_LIBRARY
+const NAMES_SHOWN = 6
 const text = (row: Row, key: Key): string =>
   key === 'developer' ? (row.developer ?? 'Unknown') : row[key]
 
@@ -28,7 +36,11 @@ export function Apps({ device }: { device: Device }) {
   const apps = useApps(device.udid)
   const layout = useLayout(device.udid)
   const { pins, openMenu } = usePins()
+  const qc = useQueryClient()
   const [query, setQuery] = useState('')
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
+  // What the sheet was opened for, kept apart from the live selection: the phone changes under it.
+  const [sending, setSending] = useState<{ apps: Row[]; before: Layout } | null>(null)
   const [sort, setSort] = useState<{ key: Key; desc: boolean }>({ key: 'name', desc: false })
 
   const rows = useMemo<Row[]>(() => {
@@ -55,6 +67,16 @@ export function Apps({ device }: { device: Device }) {
     )
   }, [rows, query, sort])
 
+  const toggle = (bundleId: string): void =>
+    setPicked((now) => {
+      const next = new Set(now)
+      if (!next.delete(bundleId)) next.add(bundleId)
+      return next
+    })
+  // Only what is still shown and still on a page counts, whatever the search or the phone did since.
+  const chosen = rows.filter((r) => picked.has(r.bundleId) && canLeave(r))
+  const before = layout.data?.layout
+
   if (apps.isError) {
     return (
       <div className={s.message}>
@@ -78,6 +100,13 @@ export function Apps({ device }: { device: Device }) {
   return (
     <div className={s.root}>
       <ToolbarActions>
+        <button
+          className="btn"
+          disabled={chosen.length === 0 || !before || device.state === 'unsupported-os'}
+          onClick={() => before && setSending({ apps: chosen, before })}
+        >
+          Send to App Library{chosen.length > 0 ? ` (${chosen.length})` : ''}
+        </button>
         <label className={s.search}>
           <SearchIcon size={14} />
           <input
@@ -110,6 +139,7 @@ export function Apps({ device }: { device: Device }) {
         <table className={s.table}>
           <thead>
             <tr>
+              <th aria-label="Select" />
               {COLUMNS.map(({ key, label }) => (
                 <th
                   key={key}
@@ -128,7 +158,23 @@ export function Apps({ device }: { device: Device }) {
           </thead>
           <tbody>
             {shown.map((r) => (
-              <tr key={r.bundleId} title={r.bundleId} onContextMenu={(e) => openMenu(e, r)}>
+              <tr
+                key={r.bundleId}
+                title={r.bundleId}
+                aria-selected={picked.has(r.bundleId)}
+                onContextMenu={(e) => openMenu(e, r)}
+                // ⌘-click picks a row, like in Finder.
+                onClick={(e) => (e.metaKey || e.ctrlKey) && canLeave(r) && toggle(r.bundleId)}
+              >
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${r.name}`}
+                    disabled={!canLeave(r)}
+                    checked={picked.has(r.bundleId) && canLeave(r)}
+                    onChange={() => toggle(r.bundleId)}
+                  />
+                </td>
                 <td>
                   <span className={s.name}>
                     <Thumb udid={device.udid} app={r} />
@@ -157,6 +203,34 @@ export function Apps({ device }: { device: Device }) {
           </div>
         )}
       </div>
+      {sending && (
+        <ApplySheet
+          title={`Send ${sending.apps.length} app${sending.apps.length === 1 ? '' : 's'} to the App Library?`}
+          lines={[
+            ...sending.apps.slice(0, NAMES_SHOWN).map((r) => r.name),
+            ...(sending.apps.length > NAMES_SHOWN
+              ? [`and ${sending.apps.length - NAMES_SHOWN} more`]
+              : []),
+            'They stay installed and can be found in the App Library.'
+          ]}
+          doneMessage={`Done! ${sending.apps.length} app${sending.apps.length === 1 ? ' is' : 's are'} in the App Library.`}
+          udid={device.udid}
+          run={() =>
+            window.jiggle.apply.run({
+              udid: device.udid,
+              reason: 'Send to App Library',
+              beforeSignature: layoutSignature(serialize(sending.before)),
+              after: sendToAppLibrary(sending.before, new Set(sending.apps.map((r) => r.bundleId))),
+              removedFromHomeScreen: sending.apps.map((r) => r.bundleId)
+            })
+          }
+          onRefresh={() => void qc.invalidateQueries({ queryKey: ['layout'] })}
+          onClose={() => {
+            setSending(null)
+            setPicked(new Set())
+          }}
+        />
+      )}
     </div>
   )
 }
