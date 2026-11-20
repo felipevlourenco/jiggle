@@ -60,3 +60,15 @@
   outline: none;
   box-shadow: 0 0 0 3px var(--ring);
 }
+
+.removed {
+  position: absolute;
+  top: 38%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 34px /* the frame is drawn at full size and scaled down */;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}

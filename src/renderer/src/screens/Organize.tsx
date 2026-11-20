@@ -79,6 +79,7 @@ export function Organize({ device }: { device: Device }) {
       moved,
       movedApps,
       totalApps: appsOf([...before.dock, ...before.pages.flat()]).length,
+      removedPages: Math.max(0, before.pages.length - after.pages.length),
       widgetPages: after.pages.filter((p) => p.some((i) => i.kind !== 'app' && i.kind !== 'folder'))
         .length,
       issues: validateLayout(before, after),
@@ -215,6 +216,8 @@ export function Organize({ device }: { device: Device }) {
           </b>
           {preview.widgetPages > 0 &&
             ` · ${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`}
+          {preview.removedPages > 0 &&
+            ` · ${preview.removedPages} page${preview.removedPages === 1 ? '' : 's'} removed`}
           {preview.newFolders > 0 &&
             ` · ${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`}
         </span>
@@ -225,6 +228,9 @@ export function Organize({ device }: { device: Device }) {
           title={`Apply ${presetTitle} to ${device.name}?`}
           lines={[
             `${preview.movedApps} apps will move`,
+            ...(preview.removedPages > 0
+              ? [`${preview.removedPages} page${preview.removedPages === 1 ? '' : 's'} removed`]
+              : []),
             ...(preview.newFolders > 0
               ? [`${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`]
               : []),

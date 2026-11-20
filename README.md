@@ -15,7 +15,7 @@ Jiggle connects to an iPhone or iPad over a cable, shows a realistic preview of 
 
 - **Preview** the Home Screen as it is: wallpaper, pages, dock, folders and widget placeholders.
 - **Apps table**: searchable and sortable by name, category, developer and location. Change an app's category (kept per Mac) or remove apps in bulk.
-- **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, from 2 apps) and pins. Pages with widgets are kept as they are, cleared of apps (sort around widgets), or sorted too with every widget staying in its spot (sort widget pages too).
+- **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, from 2 apps) and pins. Pages with widgets are kept as they are, cleared of apps (sort around widgets), or sorted too with every widget staying in its spot and the other pages packed full (sort widget pages too).
 - **Edit by hand**: drag and drop (or Space and arrow keys), with undo and redo, then push to the phone.
 - **Send to App Library**: take apps off the Home Screen in bulk. They stay installed.
 - **Saved layouts**: name the current layout ("Work", "Weekend") and switch back to it in one click.
