@@ -6,6 +6,7 @@ import {
   locate,
   makeFolder,
   moveItem,
+  moveItems,
   redo,
   renameFolder,
   startDraft,
@@ -187,6 +188,66 @@ describe('draft history', () => {
 describe('compact', () => {
   it('drops empty pages only', () => {
     expect(compact(layout()).pages).toHaveLength(2)
+  })
+})
+
+describe('moveItems', () => {
+  it('moves several to a page together, in the order they have on the phone', () => {
+    // selected out of order, from two pages
+    const l = moveItems(layout(), ['f', 'b', 'a'], { zone: 'page', page: 2, index: 0 })!
+    expect(ids(l.pages[2]!)).toEqual(['a', 'b', 'f'])
+    expect(ids(l.pages[0]!)).toEqual(['c', 'd'])
+    expect(ids(l.pages[1]!)).toEqual(['e'])
+  })
+
+  it('a single id behaves like moveItem', () => {
+    expect(moveItems(layout(), ['a'], { zone: 'page', page: 0, index: 2 })).toEqual(
+      moveItem(layout(), 'a', { zone: 'page', page: 0, index: 2 })
+    )
+  })
+
+  it('refuses a page or dock that would overflow, and changes nothing', () => {
+    const full = layout({
+      pages: [Array.from({ length: 24 }, (_, i) => app(`p${i}`)), [app('x'), app('y')]]
+    })
+    expect(moveItems(full, ['x', 'y'], { zone: 'page', page: 0, index: 0 })).toBeNull()
+    expect(moveItems(layout(), ['a', 'b', 'c'], { zone: 'dock', index: 0 })).toBeNull() // 2 + 3 > 4
+    expect(ids(moveItems(layout(), ['a', 'b'], { zone: 'dock', index: 1 })!.dock)).toEqual([
+      'd1',
+      'a',
+      'b',
+      'd2'
+    ])
+  })
+
+  it('puts several apps into a folder, only when they all fit and none is a folder', () => {
+    const l = layout({
+      pages: [[app('a'), app('b'), folder('F', [[app('x')]]), app('c')], []]
+    })
+    const into = moveItems(l, ['a', 'b'], { zone: 'folder', folderId: 'F' })!
+    expect(ids(into.pages[0]!)).toEqual(['F', 'c'])
+    const f = into.pages[0]![0] as FolderItem
+    expect(ids(f.pages[0]!)).toEqual(['x', 'a', 'b'])
+
+    const nearlyFull = layout({
+      pages: [
+        [app('a'), app('b'), folder('F', [Array.from({ length: 8 }, (_, i) => app(`k${i}`))])],
+        []
+      ]
+    })
+    expect(moveItems(nearlyFull, ['a', 'b'], { zone: 'folder', folderId: 'F' })).toBeNull()
+    expect(
+      moveItems(
+        layout({ pages: [[folder('G', [[app('y')]]), folder('F', [[app('x')]])], []] }),
+        ['G'],
+        { zone: 'folder', folderId: 'F' }
+      )
+    ).toBeNull()
+  })
+
+  it('moving the group onto where it already is changes nothing', () => {
+    const l = layout()
+    expect(moveItems(l, ['a', 'b'], { zone: 'page', page: 0, index: 0 })).toBe(l)
   })
 })
 

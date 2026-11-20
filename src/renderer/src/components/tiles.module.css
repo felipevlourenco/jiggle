@@ -163,6 +163,8 @@
 .found {
   display: contents;
 }
+/* Picked for a group move, or pointed at by a search. */
+.cell[data-selected] > *,
 .cell[data-found] > *,
 .found[data-found] > * {
   border-radius: 16px;

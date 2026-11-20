@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import { placeItems } from '@shared/layout/place'
 import type { FolderItem, Grid, LayoutItem } from '@shared/types'
 import { DragCell, DropZone } from './DragCell'
@@ -21,7 +22,11 @@ export function PageGrid({
   udid: string
   marked?: ReadonlySet<string> // item ids that get a coral dot (moved by a sort)
   found?: string // the item a search is pointing at: a ring around it
-  edit?: { page: number; onOpenFolder: (id: string) => void }
+  edit?: {
+    page: number
+    selected: ReadonlySet<string>
+    onPick: (item: LayoutItem, ev: MouseEvent) => void // a click on an app or folder
+  }
   onFolder?: (folder: FolderItem) => void // a click on a folder outside Edit mode (Organize preview)
 }) {
   const props = {
@@ -67,7 +72,8 @@ export function PageGrid({
         draggable={movable}
         {...common}
         className={`${common.className} ${movable ? t.draggable : ''}`}
-        onClick={item.kind === 'folder' ? () => edit.onOpenFolder(item.id) : undefined}
+        selected={edit.selected.has(item.id)}
+        onClick={movable ? (ev) => edit.onPick(item, ev) : undefined}
       >
         <ItemTile item={item} udid={udid} />
       </DragCell>

@@ -496,6 +496,37 @@ test.describe('Edit mode (drag and drop)', () => {
     await app.close()
   })
 
+  test('⌘-click and shift-click pick icons, dragging one moves them all together, and Esc drops the picks', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await titles(win)
+    await win.getByRole('button', { name: 'Edit' }).click()
+
+    await cell(win, original[0]!).click({ modifiers: ['Meta'] })
+    await cell(win, original[1]!).click({ modifiers: ['Meta'] })
+    await expect(win.getByText('2 selected')).toBeVisible()
+    await cell(win, original[1]!).click({ modifiers: ['Meta'] }) // ⌘ again takes it off
+    await expect(win.getByText('1 selected')).toBeVisible()
+    await cell(win, original[3]!).click({ modifiers: ['Shift'] }) // 0 to 3
+    await expect(win.getByText('4 selected')).toBeVisible()
+    await win.keyboard.press('Escape')
+    await expect(win.getByText(/selected/)).toHaveCount(0)
+
+    await cell(win, original[0]!).click({ modifiers: ['Meta'] })
+    await cell(win, original[1]!).click({ modifiers: ['Meta'] })
+    await dragTo(win, await centre(cell(win, original[0]!)), await centre(cell(win, original[4]!)))
+    // both left the front and landed together, in their old order, where the target was
+    await expect
+      .poll(async () => (await titles(win)).slice(4, 6))
+      .toEqual([original[0], original[1]])
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+    await expect(win.getByText(/selected/)).toHaveCount(0)
+    await win.keyboard.press('Meta+z')
+    expect(await titles(win)).toEqual(original)
+    await app.close()
+  })
+
   test('moves an icon with the keyboard: Space picks it up, arrows move it, Space drops it', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
     const win = await app.firstWindow()

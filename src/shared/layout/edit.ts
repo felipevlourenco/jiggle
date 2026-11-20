@@ -58,9 +58,9 @@ export function findItem(layout: Layout, id: string): AppItem | FolderItem | nul
 
 const without = <T extends { id: string }>(list: T[], id: string): T[] =>
   list.filter((x) => x.id !== id)
-const insertAt = <T>(list: T[], index: number, item: T): T[] => {
+const insertAllAt = <T>(list: T[], index: number, items: T[]): T[] => {
   const at = Math.max(0, Math.min(index, list.length))
-  return [...list.slice(0, at), item, ...list.slice(at)]
+  return [...list.slice(0, at), ...items, ...list.slice(at)]
 }
 
 // Takes the item out of wherever it is. A folder left with no apps goes too, like on the phone.
@@ -82,22 +82,35 @@ const cells = (items: LayoutItem[], grid: Layout['grid']): number =>
 
 // Moves an app or folder. Returns the new layout, the same layout when nothing changes, or null when the
 // move isn't allowed (a full page, a full dock, a full folder, a folder inside a folder).
-export function moveItem(layout: Layout, id: string, target: DropTarget): Layout | null {
-  const item = findItem(layout, id)
-  if (!item) return null
-  const from = locate(layout, id)
-  if (!from) return null
-  const rest = remove(layout, id)
+export const moveItem = (layout: Layout, id: string, target: DropTarget): Layout | null =>
+  moveItems(layout, [id], target)
+
+// Several at once (a multi-selection): they keep the order they have on the phone, and land together at the
+// target. `index` counts in the list left after all of them are lifted out.
+export function moveItems(layout: Layout, ids: string[], target: DropTarget): Layout | null {
+  const order = new Map<string, number>()
+  ;[...layout.dock, ...layout.pages.flat()].forEach((it, i) => order.set(it.id, i))
+  const sorted = [...new Set(ids)].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
+  const items = sorted.map((id) => findItem(layout, id))
+  if (items.length === 0 || items.some((it) => !it) || sorted.some((id) => !locate(layout, id))) {
+    return null
+  }
+  const group = items as (AppItem | FolderItem)[]
+  const rest = sorted.reduce(remove, layout)
 
   if (target.zone === 'folder') {
-    if (item.kind !== 'app' || target.folderId === id) return null
+    if (group.some((it) => it.kind !== 'app' || it.id === target.folderId)) return null
+    const inside = (id: string): boolean => {
+      const at = locate(layout, id)
+      return at?.zone === 'folder' && at.folderId === target.folderId
+    }
     if (target.index !== undefined) {
-      // A slot inside the folder: only for an app already in it (reordering). Pages are rebuilt, 9 to a page.
-      if (from.zone !== 'folder' || from.folderId !== target.folderId) return null
+      // A slot inside the folder: only for apps already in it (reordering). Pages are rebuilt, 9 to a page.
+      if (!sorted.every(inside)) return null
       const reorder = (list: LayoutItem[]): LayoutItem[] =>
         list.map((it) => {
           if (it.kind !== 'folder' || it.id !== target.folderId) return it
-          const flat = insertAt(it.pages.flat(), target.index!, item)
+          const flat = insertAllAt(it.pages.flat(), target.index!, group as AppItem[])
           const pages = Array.from({ length: Math.ceil(flat.length / FOLDER_PAGE_MAX) }, (_, i) =>
             flat.slice(i * FOLDER_PAGE_MAX, (i + 1) * FOLDER_PAGE_MAX)
           )
@@ -106,39 +119,41 @@ export function moveItem(layout: Layout, id: string, target: DropTarget): Layout
       const next = { ...rest, dock: reorder(rest.dock), pages: rest.pages.map(reorder) }
       return layoutsEqual(next, layout) ? layout : next
     }
+    // Already in that folder: nothing to do.
+    if (sorted.every(inside)) return layout
     let placed = false
-    const into = (items: LayoutItem[]): LayoutItem[] =>
-      items.map((it) => {
+    const into = (list: LayoutItem[]): LayoutItem[] =>
+      list.map((it) => {
         if (it.kind !== 'folder' || it.id !== target.folderId) return it
         const pages = it.pages.map((p) => [...p])
         const last = pages[pages.length - 1]
-        if (!last || last.length >= FOLDER_PAGE_MAX) return it // full
-        last.push(item)
+        if (!last || last.length + group.length > FOLDER_PAGE_MAX) return it // full
+        last.push(...(group as AppItem[]))
         placed = true
         return { ...it, pages }
       })
     const next = { ...rest, dock: into(rest.dock), pages: rest.pages.map(into) }
-    // Already in that folder: nothing to do.
-    if (from.zone === 'folder' && from.folderId === target.folderId) return layout
     return placed ? next : null
   }
 
   if (target.zone === 'dock') {
-    const dock = insertAt(rest.dock, target.index, item)
+    const dock = insertAllAt(rest.dock, target.index, group)
     if (dock.length > layout.grid.dockMax) return null
-    const same = from.zone === 'dock' && dock.every((it, i) => it === layout.dock[i])
+    const same = dock.length === layout.dock.length && dock.every((it, i) => it === layout.dock[i])
     return same ? layout : { ...rest, dock }
   }
 
   const page = rest.pages[target.page]
   if (!page) return null
-  const list = insertAt(page, target.index, item)
+  const list = insertAllAt(page, target.index, group)
   if (cells(list, layout.grid) > pageCapacity(layout.grid)) return null
   const pages = rest.pages.map((p, i) => (i === target.page ? list : p))
   const same =
-    from.zone === 'page' &&
-    from.page === target.page &&
-    list.every((it, i) => it === layout.pages[target.page]![i])
+    pages.length === layout.pages.length &&
+    pages.every(
+      (p, i) =>
+        p.length === layout.pages[i]!.length && p.every((it, j) => it === layout.pages[i]![j])
+    )
   return same ? layout : { ...rest, pages }
 }
 
