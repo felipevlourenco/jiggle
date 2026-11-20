@@ -7,7 +7,7 @@ import { itemSpan } from './place'
 export type DropTarget =
   | { zone: 'page'; page: number; index: number }
   | { zone: 'dock'; index: number }
-  | { zone: 'folder'; folderId: string }
+  | { zone: 'folder'; folderId: string; index?: number } // index: a slot inside the folder, to reorder; none: the end
 
 export type Place =
   | { zone: 'dock'; index: number }
@@ -91,6 +91,21 @@ export function moveItem(layout: Layout, id: string, target: DropTarget): Layout
 
   if (target.zone === 'folder') {
     if (item.kind !== 'app' || target.folderId === id) return null
+    if (target.index !== undefined) {
+      // A slot inside the folder: only for an app already in it (reordering). Pages are rebuilt, 9 to a page.
+      if (from.zone !== 'folder' || from.folderId !== target.folderId) return null
+      const reorder = (list: LayoutItem[]): LayoutItem[] =>
+        list.map((it) => {
+          if (it.kind !== 'folder' || it.id !== target.folderId) return it
+          const flat = insertAt(it.pages.flat(), target.index!, item)
+          const pages = Array.from({ length: Math.ceil(flat.length / FOLDER_PAGE_MAX) }, (_, i) =>
+            flat.slice(i * FOLDER_PAGE_MAX, (i + 1) * FOLDER_PAGE_MAX)
+          )
+          return { ...it, pages }
+        })
+      const next = { ...rest, dock: reorder(rest.dock), pages: rest.pages.map(reorder) }
+      return layoutsEqual(next, layout) ? layout : next
+    }
     let placed = false
     const into = (items: LayoutItem[]): LayoutItem[] =>
       items.map((it) => {
@@ -125,6 +140,66 @@ export function moveItem(layout: Layout, id: string, target: DropTarget): Layout
     from.page === target.page &&
     list.every((it, i) => it === layout.pages[target.page]![i])
   return same ? layout : { ...rest, pages }
+}
+
+const sameItems = (a: LayoutItem[], b: LayoutItem[]): boolean =>
+  a.length === b.length &&
+  a.every((it, i) => {
+    const other = b[i]
+    if (it === other) return true
+    return (
+      it.kind === 'folder' &&
+      other?.kind === 'folder' &&
+      it.id === other.id &&
+      it.name === other.name &&
+      it.pages.length === other.pages.length &&
+      it.pages.every(
+        (p, j) =>
+          p.length === other.pages[j]!.length && p.every((app, k) => app === other.pages[j]![k])
+      )
+    )
+  })
+const layoutsEqual = (a: Layout, b: Layout): boolean =>
+  sameItems(a.dock, b.dock) &&
+  a.pages.length === b.pages.length &&
+  a.pages.every((p, i) => sameItems(p, b.pages[i]!))
+
+// Renames a folder. Null when the name is empty or there is no such folder; the same layout when unchanged.
+export function renameFolder(layout: Layout, folderId: string, name: string): Layout | null {
+  const clean = name.trim()
+  if (!clean) return null
+  let found = false
+  const rename = (list: LayoutItem[]): LayoutItem[] =>
+    list.map((it) => {
+      if (it.kind !== 'folder' || it.id !== folderId) return it
+      found = true
+      return it.name === clean ? it : { ...it, name: clean, raw: { ...it.raw, displayName: clean } }
+    })
+  const next = { ...layout, dock: rename(layout.dock), pages: layout.pages.map(rename) }
+  return found ? (layoutsEqual(next, layout) ? layout : next) : null
+}
+
+export const NEW_FOLDER_NAME = 'New Folder'
+
+// Drops an app onto another app: a folder takes the target's place and holds the target, then the dropped
+// app. Both must be apps, and the target must not already be inside a folder.
+export function makeFolder(layout: Layout, appId: string, ontoId: string): Layout | null {
+  const app = findItem(layout, appId)
+  const onto = findItem(layout, ontoId)
+  const at = locate(layout, ontoId)
+  if (app?.kind !== 'app' || onto?.kind !== 'app' || appId === ontoId) return null
+  if (!at || at.zone === 'folder') return null
+  const rest = remove(layout, appId)
+  const folder: FolderItem = {
+    kind: 'folder',
+    id: `folder:new-${app.id}`,
+    name: NEW_FOLDER_NAME,
+    pages: [[onto, app]],
+    raw: { displayName: NEW_FOLDER_NAME, iconLists: [], listType: 'folder' }
+  }
+  const swap = (list: LayoutItem[]): LayoutItem[] =>
+    list.map((it) => (it.id === ontoId ? folder : it))
+  return { ...rest, dock: swap(rest.dock), pages: rest.pages.map(swap) }
 }
 
 // For pushing: the phone drops empty pages, so don't send them.

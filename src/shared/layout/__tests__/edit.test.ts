@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { AppItem, FolderItem, Layout, WidgetItem } from '../../types'
-import { commit, compact, locate, moveItem, redo, startDraft, undo } from '../edit'
+import {
+  commit,
+  compact,
+  locate,
+  makeFolder,
+  moveItem,
+  redo,
+  renameFolder,
+  startDraft,
+  undo
+} from '../edit'
 import { gridFor } from '../grid'
 import { validateLayout } from '../validate'
 
@@ -177,5 +187,64 @@ describe('draft history', () => {
 describe('compact', () => {
   it('drops empty pages only', () => {
     expect(compact(layout()).pages).toHaveLength(2)
+  })
+})
+
+describe('folder editing', () => {
+  const withFolder = (): Layout =>
+    layout({
+      pages: [[app('a'), folder('F', [[app('x'), app('y'), app('z')]]), app('b')], []]
+    })
+  const inside = (l: Layout): string[] => ids((l.pages[0]![1] as FolderItem).pages.flat())
+
+  it('renames a folder, in its name and in the raw dict the phone reads', () => {
+    const l = renameFolder(withFolder(), 'F', '  Travel ')!
+    const f = l.pages[0]![1] as FolderItem
+    expect(f.name).toBe('Travel')
+    expect(f.raw['displayName']).toBe('Travel')
+    expect(renameFolder(withFolder(), 'F', '   ')).toBeNull()
+    expect(renameFolder(withFolder(), 'nope', 'x')).toBeNull()
+    const same = withFolder()
+    expect(renameFolder(same, 'F', 'F')).toBe(same)
+  })
+
+  it('reorders apps inside a folder, and repages it nine to a page', () => {
+    expect(
+      inside(moveItem(withFolder(), 'x', { zone: 'folder', folderId: 'F', index: 2 })!)
+    ).toEqual(['y', 'z', 'x'])
+    expect(
+      inside(moveItem(withFolder(), 'z', { zone: 'folder', folderId: 'F', index: 0 })!)
+    ).toEqual(['z', 'x', 'y'])
+    const l = withFolder()
+    expect(moveItem(l, 'x', { zone: 'folder', folderId: 'F', index: 0 })).toBe(l)
+    // an app from outside can't be slotted in, only added at the end
+    expect(moveItem(l, 'a', { zone: 'folder', folderId: 'F', index: 0 })).toBeNull()
+    const ten = layout({
+      pages: [[folder('F', [Array.from({ length: 9 }, (_, i) => app(`k${i}`)), [app('m')]])], []]
+    })
+    const moved = moveItem(ten, 'm', { zone: 'folder', folderId: 'F', index: 0 })!
+    const pages = (moved.pages[0]![0] as FolderItem).pages
+    expect(pages.map((p) => p.length)).toEqual([9, 1])
+    expect(ids(pages[0]!)[0]).toBe('m')
+  })
+
+  it('dropping an app on another app makes a folder in the target’s place', () => {
+    const l = makeFolder(layout(), 'a', 'c')!
+    const f = l.pages[0]!.find((i) => i.kind === 'folder') as FolderItem
+    expect(f.name).toBe('New Folder')
+    expect(ids(f.pages[0]!)).toEqual(['c', 'a'])
+    expect(ids(l.pages[0]!)).toEqual(['b', 'folder:new-a', 'd'])
+    expect(l.pages[0]!.some((i) => i.id === 'a')).toBe(false)
+  })
+
+  it('makeFolder works from another page and the dock, and refuses non-apps and apps in folders', () => {
+    const l = makeFolder(layout(), 'e', 'd1')!
+    expect(ids(l.dock)).toEqual(['folder:new-e', 'd2'])
+    expect(ids(l.pages[1]!)).toEqual(['f'])
+    const wf = withFolder()
+    expect(makeFolder(wf, 'a', 'F')).toBeNull() // onto a folder: that's a move into it
+    expect(makeFolder(wf, 'a', 'x')).toBeNull() // onto an app inside a folder
+    expect(makeFolder(wf, 'a', 'a')).toBeNull()
+    expect(makeFolder(layout({ pages: [[app('a'), widget], []] }), 'a', 'w')).toBeNull()
   })
 })
