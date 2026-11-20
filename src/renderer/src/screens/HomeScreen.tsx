@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { compact } from '@shared/layout/edit'
+import { compact, renameFolder } from '@shared/layout/edit'
 import { gridFor, pageCapacity } from '@shared/layout/grid'
 import { findApps, type AppMatch } from '@shared/layout/search'
 import { serialize } from '@shared/layout/serialize'
@@ -284,7 +284,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   }
 
   const folder = openFolder
-    ? ([...layout.dock, ...layout.pages.flat()].find(
+    ? ([...view.dock, ...view.pages.flat()].find(
         (i) => i.id === openFolder && i.kind === 'folder'
       ) as FolderItem | undefined)
     : undefined
@@ -417,6 +417,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
       <p className={s.strip}>
         {plural(summary.apps, 'app')} · {plural(summary.pages, 'page')} ·{' '}
         {plural(summary.widgets, 'widget')}
+        {editing && ' · Hold ⌥ and drop an app on another to make a folder'}
       </p>
 
       <EditorDnd
@@ -428,7 +429,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
         onChange={draftActions.change}
         onPreview={setPreview}
         onFlip={(dir) => goTo(current + dir)}
-        onDone={() => setOpenFolder(null)}
+        onDone={(keep) => keep || setOpenFolder(null)}
       >
         <div className={s.stage} ref={stageRef} onWheel={onWheel}>
           <PhoneFrame zoom={zoom} kind={device.deviceClass}>
@@ -448,7 +449,15 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
             />
             {editing && <FlipZones />}
             {editing && folder && (
-              <FolderPanel folder={folder} udid={device.udid} onClose={() => setOpenFolder(null)} />
+              <FolderPanel
+                folder={folder}
+                udid={device.udid}
+                onRename={(name) => {
+                  const next = renameFolder(layout, folder.id, name)
+                  if (next) draftActions.change(next)
+                }}
+                onClose={() => setOpenFolder(null)}
+              />
             )}
             {!editing && folder && (
               <FolderPopover

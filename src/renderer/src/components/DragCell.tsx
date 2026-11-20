@@ -10,6 +10,7 @@ export function DragCell({
   className,
   style,
   dropTarget = true,
+  panel,
   draggable = true,
   onClick,
   selected,
@@ -19,7 +20,8 @@ export function DragCell({
   id: string
   className?: string
   style?: CSSProperties
-  dropTarget?: boolean // false: can be picked up but nothing is dropped on it (apps in the folder panel)
+  dropTarget?: boolean // false: can be picked up but nothing is dropped on it
+  panel?: boolean // an app in the open folder's panel: drops there take priority while the pointer is over it
   draggable?: boolean // false: widgets and the like stay put but still take a drop next to them
   onClick?: (ev: MouseEvent) => void
   selected?: boolean // picked for a group move (⌘-click, shift-click)
@@ -28,7 +30,7 @@ export function DragCell({
   'data-found'?: true
 }) {
   const drag = useDraggable({ id: `drag:${id}`, disabled: !draggable })
-  const drop = useDroppable({ id: `cell:${id}`, disabled: !dropTarget })
+  const drop = useDroppable({ id: `cell:${id}`, disabled: !dropTarget, data: { panel } })
   const { active } = useDndContext()
   const node = useRef<HTMLDivElement | null>(null)
   const last = useRef<{ left: number; top: number } | null>(null)
@@ -78,16 +80,20 @@ export function DropZone({
   id,
   className,
   style,
+  disabled,
+  panel,
   children,
   ...rest
 }: {
   id: string
   className?: string
   style?: CSSProperties
+  disabled?: boolean
+  panel?: boolean
   children: ReactNode
   'data-testid'?: string
 }) {
-  const { setNodeRef } = useDroppable({ id })
+  const { setNodeRef } = useDroppable({ id, disabled, data: { panel } })
   return (
     <div ref={setNodeRef} className={className} style={style} {...rest}>
       {children}
