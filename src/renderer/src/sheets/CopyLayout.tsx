@@ -31,6 +31,8 @@ export function CopyLayoutSheet({ device, onClose }: { device: Device; onClose: 
   const saved = useSnapshots(undefined).data
   const target = useLayout(device.udid).data?.layout
   const [choice, setChoice] = useOrganizeChoice()
+  // Organize's third mode ('fill') has no copy equivalent: a copy reflows pages, so it acts as sort-around.
+  const widgetMode = choice.widgetMode === 'keep-pages' ? 'keep-pages' : 'sort-around'
   const [picked, setPicked] = useState<string>()
   const [applying, setApplying] = useState(false)
 
@@ -67,11 +69,8 @@ export function CopyLayoutSheet({ device, onClose }: { device: Device; onClose: 
     enabled: !!source
   })
   const result = useMemo(
-    () =>
-      loaded.data && target
-        ? copyLayout(loaded.data, target, { widgetMode: choice.widgetMode })
-        : null,
-    [loaded.data, target, choice.widgetMode]
+    () => (loaded.data && target ? copyLayout(loaded.data, target, { widgetMode }) : null),
+    [loaded.data, target, widgetMode]
   )
   const issues = useMemo(
     () => (result && target ? validateLayout(target, result.layout) : []),
@@ -158,7 +157,7 @@ export function CopyLayoutSheet({ device, onClose }: { device: Device; onClose: 
                   <button
                     key={mode}
                     role="radio"
-                    aria-checked={choice.widgetMode === mode}
+                    aria-checked={widgetMode === mode}
                     onClick={() => setChoice({ widgetMode: mode })}
                   >
                     {mode === 'keep-pages' ? 'Keep widget pages' : 'Sort around widgets'}

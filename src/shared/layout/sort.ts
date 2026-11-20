@@ -8,7 +8,8 @@ export interface SortOptions {
   by: 'name' | 'category' | 'color'
   // keep-pages: a page holding a widget (or anything unrecognised) stays exactly as it is.
   // sort-around: apps and folders leave those pages; only the widgets stay on them.
-  widgetMode: 'keep-pages' | 'sort-around'
+  // fill: widget pages are sorted too, with every widget (and every page number) where it was.
+  widgetMode: 'keep-pages' | 'sort-around' | 'fill'
   // Needed for by: 'category'. Apple apps are "Apple", apps the App Store doesn't know "Unknown".
   categoryOf?: (bundleId: string) => string
   // Needed for by: 'color'. null: the icon hasn't been read; it sorts with the neutrals.
@@ -62,7 +63,9 @@ const withFolders = (movable: Movable[], opts: SortOptions): Movable[] =>
 // pages that must stay as they are come first, then the sorted pages, full ones first.
 // ponytail: untouched pages move to the front, like the POC; keep their page numbers if that surprises people.
 export function sortLayout(layout: Layout, opts: SortOptions): Layout {
-  if (opts.pins && (opts.pins.page1 || opts.pins.apps.length)) return sortInPlace(layout, opts)
+  if (opts.widgetMode === 'fill' || opts.pins?.page1 || opts.pins?.apps.length) {
+    return sortInPlace(layout, opts)
+  }
   const frozen: LayoutItem[][] = []
   const movable: Movable[] = []
   for (const page of layout.pages) {
@@ -80,12 +83,12 @@ export function sortLayout(layout: Layout, opts: SortOptions): Layout {
   return { ...layout, pages: [...frozen, ...sorted] }
 }
 
-// With pins every page keeps its number and its size: locked pages stay as they are, and the
+// With pins (or 'fill') every page keeps its number and its size: locked pages stay as they are, and the
 // movable items are dealt back, sorted, into the free slots of the others. A pinned app simply
 // isn't a free slot. Pins on apps inside folders, or on a widget page when widgets are kept, do nothing.
 // ponytail: unlike the no-pin sort, partly filled pages stay partly filled; repack if that surprises people.
 function sortInPlace(layout: Layout, opts: SortOptions): Layout {
-  const pins = opts.pins!
+  const pins = opts.pins ?? { apps: [], page1: false }
   const pinned = new Set(pins.apps)
   const free = (item: LayoutItem): item is Movable =>
     isMovable(item) && !(item.kind === 'app' && pinned.has(item.bundleId))
