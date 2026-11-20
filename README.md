@@ -98,7 +98,9 @@ Apple can change the private SpringBoard services in any iOS update. If Jiggle d
 
 ## Licence
 
-Not decided yet. The engine uses pymobiledevice3, which is GPL-3.0-or-later, and that affects how Jiggle can be distributed (see plan.md §10).
+Jiggle is free software, released under the [GNU General Public License v3.0 or later](LICENSE). Copyright (C) 2026 Felipe Lourenco.
+
+The device engine bundles [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) and its dependencies, which are GPL-3.0-or-later, so Jiggle as a whole is distributed under the same terms. The source for every release is the tagged commit in this repository.
 
 ## Brand
 
