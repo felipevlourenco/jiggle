@@ -36,6 +36,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   const [page, setPage] = useState(0)
   const [chosenZoom, setChosenZoom] = useState<number>()
   const [stage, setStage] = useState({ width: 0, height: 0 })
+  const [preview, setPreview] = useState<Layout | null>(null) // see EditorDnd
 
   const qc = useQueryClient()
   const editor = useDraft()
@@ -172,6 +173,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   }
 
   const layout = shown!
+  const view = preview ?? layout // while dragging: the layout with the dragged icon in its new place
   const summary = summarize(layout)
   if (layout.pages.length === 0 && layout.dock.length === 0) {
     return (
@@ -297,6 +299,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
         zoom={zoom}
         udid={device.udid}
         onChange={draftActions.change}
+        onPreview={setPreview}
         onFlip={(dir) => goTo(current + dir)}
         onDone={() => setOpenFolder(null)}
       >
@@ -304,12 +307,12 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
           <PhoneFrame zoom={zoom} kind={device.deviceClass}>
             <PageGrid
               key={current}
-              items={layout.pages[current] ?? []}
+              items={view.pages[current] ?? []}
               grid={layout.grid}
               udid={device.udid}
               edit={editing ? { page: current, onOpenFolder: setOpenFolder } : undefined}
             />
-            <Dock items={layout.dock} udid={device.udid} edit={editing} />
+            <Dock items={view.dock} udid={device.udid} edit={editing} />
             {editing && <FlipZones />}
             {editing && folder && (
               <FolderPanel folder={folder} udid={device.udid} onClose={() => setOpenFolder(null)} />
