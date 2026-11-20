@@ -67,8 +67,8 @@ Jiggle is a macOS desktop app that connects to an iPhone or iPad over a cable (a
 - Editing App Library categories
 - Managing several devices at once (fleet/MDM features)
 - Windows and Linux builds
-- Scheduled or rule‑based automatic re‑sorting
-- Sharing layouts between users
+- Scheduled or rule‑based automatic re‑sorting (automatic backups on connect are M41)
+- Sharing layouts between users through an online service (plain layout files are M40)
 - Replacing the Python sidecar with a pure TypeScript device engine (see Risks)
 
 ## 4. Tech Stack & Architecture
@@ -849,6 +849,124 @@ Each milestone ends with **Done when** (the pass/fail bar) and a **Manual check*
   3. Click Continue and apply. The iPad matches the preview, and its folders contain only apps the iPad has.
   4. Restore the iPad from History.
   5. Unplug the iPhone, open Copy Layout again and pick a saved iPhone layout (e.g. "Work") as the source. The preview still works.
+
+**M27. Sort widget pages too** (built)
+
+- **Goal:** let a sort also fill the free spots on pages that have widgets, with the widgets staying where they are.
+- **Tasks:**
+  - Add the widget mode `fill`: apps are dealt, sorted, into the free spots of widget pages, and the other pages are packed full around them, so the last pages empty out and go.
+  - With pins, every page keeps its size (as in the pinned in‑place sort).
+  - Show "Page removed" on the After frame and "N pages removed" in the summary and the Apply sheet.
+- **Files touched:** `src/shared/layout/sort.ts`, `src/renderer/src/screens/Organize.tsx`, `src/renderer/src/components/BeforeAfter.tsx`
+- **Done when:** unit tests cover fill with and without pins, and the preview shows removed pages.
+- **Manual check:**
+  1. Choose Sort widget pages too in Organize. Widgets stay on their pages and spots, and apps fill the spaces around them.
+  2. No page is left with a few apps while another page has room. Removed pages show "Page removed".
+
+**M28. Color order** (built)
+
+- **Goal:** let the person choose the order of the colors in the Color sort.
+- **Tasks:**
+  - Group colors into families (red, orange, yellow, green, teal, blue, purple, pink, white, grey, black), with white, grey and black split by lightness.
+  - Add a "Color order" row in Organize, with drag and drop (and Alt + ← / → on the keyboard) and a Reset to the default rainbow order. Keep the order across launches.
+- **Files touched:** `src/shared/layout/color.ts`, `src/shared/layout/sort.ts`, `src/renderer/src/components/ColorOrder.tsx`, `src/renderer/src/state/store.ts`
+- **Done when:** unit tests cover custom and default orders, and the default order sorts exactly as before.
+- **Manual check:**
+  1. Choose Color, drag blue to the front and black second. The After preview starts with blue apps, then black ones.
+  2. Relaunch Jiggle. The order is kept. Reset restores the rainbow.
+
+**M29. Live reorder while dragging** (built)
+
+- **Goal:** drag and drop that feels like the phone: the other icons make room, animated.
+- **Tasks:**
+  - Keep a preview layout while dragging. After resting on an icon for about 250 ms, or on the end of a page or the dock, the others slide aside, and the dragged icon leaves a gap.
+  - Over a folder or a full place nothing moves. Dropping in the gap keeps it, and cancelling puts everything back.
+  - Measure the drop spots again after each reflow.
+- **Files touched:** `src/renderer/src/components/Editor.tsx`, `src/renderer/src/components/DragCell.tsx`, `src/renderer/src/screens/HomeScreen.tsx`
+- **Done when:** the e2e test shows the icons reflowing while an icon is held over another, and the drop keeps the result.
+- **Manual check:**
+  1. In Edit mode, drag an icon slowly over others. They slide aside after a short rest, and passing quickly moves nothing.
+  2. Drop it. Hold it at a page edge to turn the page and drop on the new page. Drop an app onto a folder. It goes into the folder.
+
+### Planned: M33 onwards
+
+M27–M29 above are built (M29 is in PR #7). These are ideas that are not built yet. They are grouped by what they are for, and in the order I would do them. Each has the same shape as the milestones above, in short.
+
+**Quick wins**
+
+**M33. Undo after Apply**
+
+- **Goal:** a one‑click way back right after sorting.
+- **Tasks:** after Apply (and a push from Edit mode) show a toast "Sorted. Undo" that restores the backup taken just before, with the same verification as a restore, for as long as the layout is still the one Jiggle wrote.
+- **Files touched:** `src/main/services/ApplyService.ts`, `src/renderer/src/sheets/Apply.tsx`, `src/renderer/src/components/Toast.tsx`
+- **Done when:** a test applies a sort, undoes it, and gets the original layout back, and the toast disappears when the phone's layout changed.
+- **Manual check:** apply A–Z, click Undo in the toast. The phone is as before. Apply again, change something on the phone, and the Undo is gone.
+
+**M34. Search on the Home Screen**
+
+- **Goal:** find an app on the preview.
+- **Tasks:** add a search field (⌘F). Typing a name flips to the page that has the app and highlights it. Enter goes to the next match. Look inside folders and open the folder.
+- **Files touched:** `src/renderer/src/screens/HomeScreen.tsx`, `src/shared/layout/locations.ts`
+- **Done when:** a test finds an app on page 3 and one inside a folder.
+- **Manual check:** press ⌘F, type part of a name. The page turns and the icon is highlighted.
+
+**M35. Multi‑select in Edit mode**
+
+- **Goal:** move several icons at once.
+- **Tasks:** add ⌘‑click and shift‑click to select icons, with a count badge. Dragging one moves all of them, and a drop on a folder puts them all in. Add the same live room‑making as M29.
+- **Files touched:** `src/renderer/src/components/Editor.tsx`, `src/shared/layout/edit.ts`
+- **Done when:** unit tests cover moving several items to a page, the dock and a folder, including the full cases.
+- **Manual check:** select three icons, drag them to page 2, then into a folder, and undo.
+
+**M36. Folder editing**
+
+- **Goal:** rename folders and reorder the apps inside them.
+- **Tasks:** rename from the open folder (double‑click the name), drag apps to reorder inside it, and create a folder by dropping an app on another app. Validate the 9‑per‑page limit.
+- **Files touched:** `src/renderer/src/components/Editor.tsx`, `src/shared/layout/edit.ts`
+- **Done when:** unit tests cover rename, reorder and creating a folder, and a push to the phone shows the same.
+- **Manual check:** rename a folder, reorder two apps in it, drop an app on another to make a folder, then push.
+
+**M37. App size in the Apps table**
+
+- **Goal:** help decide what to uninstall.
+- **Tasks:** ask the device for disk usage in `list_apps` (`StaticDiskUsage` and `DynamicDiskUsage`, if it reports them), add a Size column, and sort by it. Last‑used time is not available over USB (see Out of scope).
+- **Files touched:** `sidecar/jiggle_engine/apps.py`, `src/renderer/src/screens/Apps.tsx`, `src/shared/types.ts`
+- **Done when:** the column shows sizes on a real phone and sorts, and shows a dash when the device gives none.
+- **Manual check:** sort by Size. The biggest apps match Settings > General > iPhone Storage.
+
+**Bigger bets**
+
+**M38. Smart folders**
+
+- **Goal:** auto‑folders by more than category.
+- **Tasks:** let the folder rule be category (as now), developer, or first letter. Apps in a group of fewer than 2 stay loose. Show the rule in the Organize options.
+- **Files touched:** `src/shared/layout/folders.ts`, `src/renderer/src/screens/Organize.tsx`
+- **Done when:** unit tests cover each rule, and the preview shows the folders.
+- **Manual check:** choose Folders by developer. Apps from the same developer end up in one folder named after it.
+
+**M39. Widget stacks**
+
+- **Goal:** treat widget stacks properly instead of as opaque items.
+- **Tasks:** check how stacks appear in the icon state on a real phone, keep them in their spot in every widget mode, and show them in the preview. Moving, resizing and adding widgets stay out of scope.
+- **Files touched:** `src/shared/layout/place.ts`, `src/shared/layout/sort.ts`, `tests/fixtures/`
+- **Done when:** a fixture with a stack round‑trips and sorts with the stack where it was.
+- **Manual check:** sort a phone that has a widget stack in each of the three widget modes. The stack never moves.
+
+**M40. Layout files**
+
+- **Goal:** share a layout as a file, between your own Macs and devices.
+- **Tasks:** add Export layout and Import layout (a `.jiggle` JSON file with a schema version, validated with zod). Importing adds it to the saved layouts. This is files only: no accounts and no online service.
+- **Files touched:** `src/main/services/SnapshotService.ts`, `src/main/ipc/snapshots.ts`, `src/renderer/src/screens/History.tsx`
+- **Done when:** a layout exported on one Mac imports on another, and a broken or newer file is refused with a clear message.
+- **Manual check:** export a saved layout, delete it, import the file, and apply it.
+
+**M41. Automatic backups on connect**
+
+- **Goal:** always have a recent backup, without doing anything.
+- **Tasks:** add a setting (off by default). When a known phone connects and its layout differs from the newest backup, take one. Keep the latest 50 as now.
+- **Files touched:** `src/main/services/SnapshotService.ts`, `src/main/index.ts`, `src/renderer/src/settings/SettingsWindow.tsx`
+- **Done when:** a test connects a mock phone with a changed layout and gets a new backup, and none when nothing changed.
+- **Manual check:** turn it on, rearrange an icon on the phone, unplug and plug in again. History shows a new automatic backup.
 
 ## 8. Testing Strategy
 
