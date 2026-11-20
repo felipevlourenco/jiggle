@@ -69,6 +69,7 @@ export interface InstalledApp {
   bundleId: string
   name: string
   removable: boolean
+  size?: number | null // bytes the app and its data take; null or missing when the phone doesn't say
 }
 
 // h 0–360, s and l 0–1.

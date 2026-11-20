@@ -24,6 +24,14 @@ export function loadFixture(dir: string, name: string): Fixture {
 }
 
 // Serves recorded devices (none, one or several) from memory. Used for dev, tests and E2E.
+// A made-up but stable size for an app, so tests and the dev mock have something to show; every 7th is
+// unknown, like an app the phone doesn't report.
+export function mockSize(bundleId: string): number | null {
+  let h = 0
+  for (const ch of bundleId) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return h % 7 === 0 ? null : 1_000_000 + (h % 1500) * 1_000_000
+}
+
 export class MockBridge implements DeviceBridge {
   // Each mock phone remembers what is written to it, so apply and restore can be tried without a phone.
   private readonly phones = new Map<
@@ -76,7 +84,8 @@ export class MockBridge implements DeviceBridge {
         apps.set(item.bundleId, {
           bundleId: item.bundleId,
           name: item.name,
-          removable: !item.bundleId.startsWith('com.apple.')
+          removable: !item.bundleId.startsWith('com.apple.'),
+          size: mockSize(item.bundleId)
         })
       }
     }

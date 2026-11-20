@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { sendToAppLibrary } from '@shared/layout/appLibrary'
 import { APP_LIBRARY, appLocations } from '@shared/layout/locations'
+import { formatBytes } from '@shared/format'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import type { AppInfo, Device, Layout } from '@shared/types'
@@ -20,19 +21,20 @@ import s from './apps.module.css'
 interface Row extends AppInfo {
   location: string
 }
-type Key = 'name' | 'category' | 'developer' | 'location'
+type Key = 'name' | 'category' | 'developer' | 'location' | 'size'
 
 const COLUMNS: { key: Key; label: string }[] = [
   { key: 'name', label: 'Name' },
   { key: 'category', label: 'Category' },
   { key: 'developer', label: 'Developer' },
-  { key: 'location', label: 'Location' }
+  { key: 'location', label: 'Location' },
+  { key: 'size', label: 'Size' }
 ]
 // Any app can be picked. Apps on a home screen page (or in a folder on one) can leave it; the dock's
 // and the Library's can't. Only removable apps can be uninstalled.
 const canLeave = (row: Row): boolean => row.location !== 'Dock' && row.location !== APP_LIBRARY
 const NAMES_SHOWN = 6
-const text = (row: Row, key: Key): string =>
+const text = (row: Row, key: Exclude<Key, 'size'>): string =>
   key === 'developer' ? (row.developer ?? 'Unknown') : row[key]
 
 export function Apps({ device, onExport }: { device: Device; onExport: () => void }) {
@@ -65,9 +67,18 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
       : rows
     const dir = sort.desc ? -1 : 1
     // numeric: "Page 2" sorts before "Page 10"
+    const bySize = (a: Row, b: Row): number => {
+      // an app with no size known goes last, whichever way the column is sorted
+      if (a.size == null || b.size == null)
+        return (a.size == null ? 1 : 0) - (b.size == null ? 1 : 0)
+      return dir * (a.size - b.size)
+    }
+    const key = sort.key
     return [...hits].sort(
       (a, b) =>
-        dir * text(a, sort.key).localeCompare(text(b, sort.key), undefined, { numeric: true }) ||
+        (key === 'size'
+          ? bySize(a, b)
+          : dir * text(a, key).localeCompare(text(b, key), undefined, { numeric: true })) ||
         a.name.localeCompare(b.name)
     )
   }, [rows, query, sort])
@@ -223,6 +234,9 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
                 </td>
                 <td className={r.developer ? undefined : s.unknown}>{text(r, 'developer')}</td>
                 <td>{r.location}</td>
+                <td className={r.size == null ? `${s.size} ${s.unknown}` : s.size}>
+                  {r.size == null ? '–' : formatBytes(r.size)}
+                </td>
               </tr>
             ))}
           </tbody>
