@@ -158,3 +158,15 @@
     animation: none;
   }
 }
+
+/* The app a search points at. */
+.found {
+  display: contents;
+}
+.cell[data-found] > *,
+.found[data-found] > * {
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 6px var(--primary);
+}
