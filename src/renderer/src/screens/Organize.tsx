@@ -8,6 +8,7 @@ import { describeIssue, validateLayout } from '@shared/layout/validate'
 import type { AppItem, Device, Layout, LayoutItem } from '@shared/types'
 import { BeforeAfter } from '../components/BeforeAfter'
 import { CheckIcon } from '../components/icons'
+import { ColorOrder } from '../components/ColorOrder'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { Banner } from '../components/Banner'
 import { Thumb } from '../components/Thumb'
@@ -29,7 +30,8 @@ const PRESETS: { by: SortOptions['by']; title: string; blurb: string; sorted: st
 ]
 const WIDGET_MODES: { mode: SortOptions['widgetMode']; label: string }[] = [
   { mode: 'keep-pages', label: 'Keep widget pages' },
-  { mode: 'sort-around', label: 'Sort around widgets' }
+  { mode: 'sort-around', label: 'Sort around widgets' },
+  { mode: 'fill', label: 'Sort widget pages too' }
 ]
 
 const appsOf = (items: LayoutItem[]): AppItem[] =>
@@ -62,7 +64,8 @@ export function Organize({ device }: { device: Device }) {
         pins,
         folders: choice.folders,
         categoryOf,
-        colorOf: (id) => colors.get(id) ?? null
+        colorOf: (id) => colors.get(id) ?? null,
+        colorOrder: choice.colorOrder
       })
     const after = sorted(choice.by)
     const moved = movedIds(before, after)
@@ -78,6 +81,7 @@ export function Organize({ device }: { device: Device }) {
       moved,
       movedApps,
       totalApps: appsOf([...before.dock, ...before.pages.flat()]).length,
+      removedPages: Math.max(0, before.pages.length - after.pages.length),
       widgetPages: after.pages.filter((p) => p.some((i) => i.kind !== 'app' && i.kind !== 'folder'))
         .length,
       issues: validateLayout(before, after),
@@ -183,6 +187,15 @@ export function Organize({ device }: { device: Device }) {
         </label>
       </div>
 
+      {choice.by === 'color' && (
+        <div className={s.options}>
+          <ColorOrder
+            order={choice.colorOrder}
+            onChange={(colorOrder) => setChoice({ colorOrder })}
+          />
+        </div>
+      )}
+
       {blocked && (
         <Banner severity="error">
           This layout can’t be applied: {preview.issues.map(describeIssue).join('; ')}.
@@ -214,6 +227,8 @@ export function Organize({ device }: { device: Device }) {
           </b>
           {preview.widgetPages > 0 &&
             ` · ${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`}
+          {preview.removedPages > 0 &&
+            ` · ${preview.removedPages} page${preview.removedPages === 1 ? '' : 's'} removed`}
           {preview.newFolders > 0 &&
             ` · ${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`}
         </span>
@@ -224,6 +239,9 @@ export function Organize({ device }: { device: Device }) {
           title={`Apply ${presetTitle} to ${device.name}?`}
           lines={[
             `${preview.movedApps} apps will move`,
+            ...(preview.removedPages > 0
+              ? [`${preview.removedPages} page${preview.removedPages === 1 ? '' : 's'} removed`]
+              : []),
             ...(preview.newFolders > 0
               ? [`${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`]
               : []),

@@ -1,5 +1,5 @@
 import type { AppItem, FolderItem, IconColor, Layout, LayoutItem, Pins } from '../types'
-import { compareColors } from './color.ts'
+import { compareColors, type ColorFamily } from './color.ts'
 import { foldByCategory } from './folders.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
@@ -8,11 +8,15 @@ export interface SortOptions {
   by: 'name' | 'category' | 'color'
   // keep-pages: a page holding a widget (or anything unrecognised) stays exactly as it is.
   // sort-around: apps and folders leave those pages; only the widgets stay on them.
-  widgetMode: 'keep-pages' | 'sort-around'
+  // fill: widget pages are sorted too, with every widget where it was, and the pages without widgets are
+  // packed full around them. (With pins, every page keeps its size instead: see sortInPlace.)
+  widgetMode: 'keep-pages' | 'sort-around' | 'fill'
   // Needed for by: 'category'. Apple apps are "Apple", apps the App Store doesn't know "Unknown".
   categoryOf?: (bundleId: string) => string
   // Needed for by: 'color'. null: the icon hasn't been read; it sorts with the neutrals.
   colorOf?: (bundleId: string) => IconColor | null
+  // With by: 'color': the order of the color families (default: the rainbow, then white, grey, black).
+  colorOrder?: readonly ColorFamily[]
   // Pinned apps and page 1 stay exactly where they are (see sortInPlace).
   pins?: Pins
   // With by: 'category': loose apps gather into one folder per category (2 or more apps).
@@ -46,7 +50,8 @@ function compare(a: Movable, b: Movable, opts: SortOptions): number {
     if (b.kind !== 'app') return 1
     const byColor = compareColors(
       opts.colorOf?.(a.bundleId) ?? null,
-      opts.colorOf?.(b.bundleId) ?? null
+      opts.colorOf?.(b.bundleId) ?? null,
+      opts.colorOrder
     )
     if (byColor) return byColor
   }
@@ -62,7 +67,8 @@ const withFolders = (movable: Movable[], opts: SortOptions): Movable[] =>
 // pages that must stay as they are come first, then the sorted pages, full ones first.
 // ponytail: untouched pages move to the front, like the POC; keep their page numbers if that surprises people.
 export function sortLayout(layout: Layout, opts: SortOptions): Layout {
-  if (opts.pins && (opts.pins.page1 || opts.pins.apps.length)) return sortInPlace(layout, opts)
+  if (opts.pins?.page1 || opts.pins?.apps.length) return sortInPlace(layout, opts)
+  if (opts.widgetMode === 'fill') return sortFill(layout, opts)
   const frozen: LayoutItem[][] = []
   const movable: Movable[] = []
   for (const page of layout.pages) {
@@ -80,12 +86,30 @@ export function sortLayout(layout: Layout, opts: SortOptions): Layout {
   return { ...layout, pages: [...frozen, ...sorted] }
 }
 
+// 'fill': pages in order take the sorted items. A page with a widget keeps its widget where it is and has as many
+// free slots as it had apps; any other page is filled up to capacity, so the last pages empty out and go.
+// ponytail: a widget page after the point where the apps run out loses its trailing apps, so its widget moves up.
+function sortFill(layout: Layout, opts: SortOptions): Layout {
+  const movable = layout.pages.flatMap((page) => page.filter(isMovable))
+  const queue = withFolders(movable, opts).sort((a, b) => compare(a, b, opts))
+  const size = pageCapacity(layout.grid)
+  const pages = layout.pages
+    .map((page) =>
+      page.every(isMovable)
+        ? queue.splice(0, size)
+        : page.flatMap<LayoutItem>((item) => (isMovable(item) ? queue.splice(0, 1) : [item]))
+    )
+    .filter((page, i) => page.length > 0 || layout.pages[i]!.length === 0)
+  while (queue.length) pages.push(queue.splice(0, size))
+  return { ...layout, pages }
+}
+
 // With pins every page keeps its number and its size: locked pages stay as they are, and the
 // movable items are dealt back, sorted, into the free slots of the others. A pinned app simply
 // isn't a free slot. Pins on apps inside folders, or on a widget page when widgets are kept, do nothing.
 // ponytail: unlike the no-pin sort, partly filled pages stay partly filled; repack if that surprises people.
 function sortInPlace(layout: Layout, opts: SortOptions): Layout {
-  const pins = opts.pins!
+  const pins = opts.pins ?? { apps: [], page1: false }
   const pinned = new Set(pins.apps)
   const free = (item: LayoutItem): item is Movable =>
     isMovable(item) && !(item.kind === 'app' && pinned.has(item.bundleId))

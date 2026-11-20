@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDevices } from '../state/queries'
+import { offerUndo } from '../state/undo'
 import { appError } from '@shared/errors'
 import type { ApplyResult, ApplyStep, SnapshotSummary } from '@shared/types'
 import {
@@ -56,6 +57,10 @@ export function ApplySheet({
   const stepList = steps(kind)
   const [phase, setPhase] = useState<Phase>({ name: 'confirm' })
   const running = phase.name === 'running'
+  const phaseRef = useRef(phase)
+  useEffect(() => {
+    phaseRef.current = phase
+  })
 
   useEffect(() => {
     dialog.current?.showModal()
@@ -99,7 +104,12 @@ export function ApplySheet({
       aria-label={title}
       // Esc and the backdrop must not close a sheet that is writing to the phone.
       onCancel={(e) => running && e.preventDefault()}
-      onClose={onClose}
+      onClose={() => {
+        // Closed after a change (not after an undo): keep the way back one click away for a while.
+        const p = phaseRef.current
+        if (p.name === 'done' && !p.undone) void offerUndo(qc, udid, p.backup, 'Applied.')
+        onClose()
+      }}
     >
       {phase.name === 'confirm' && (
         <>

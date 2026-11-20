@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import { placeItems } from '@shared/layout/place'
 import type { FolderItem, Grid, LayoutItem } from '@shared/types'
 import { DragCell, DropZone } from './DragCell'
@@ -12,6 +13,7 @@ export function PageGrid({
   grid,
   udid,
   marked,
+  found,
   edit,
   onFolder
 }: {
@@ -19,7 +21,12 @@ export function PageGrid({
   grid: Grid
   udid: string
   marked?: ReadonlySet<string> // item ids that get a coral dot (moved by a sort)
-  edit?: { page: number; onOpenFolder: (id: string) => void }
+  found?: string // the item a search is pointing at: a ring around it
+  edit?: {
+    page: number
+    selected: ReadonlySet<string>
+    onPick: (item: LayoutItem, ev: MouseEvent) => void // a click on an app or folder
+  }
   onFolder?: (folder: FolderItem) => void // a click on a folder outside Edit mode (Organize preview)
 }) {
   const props = {
@@ -31,7 +38,8 @@ export function PageGrid({
     const common = {
       className: `${t.cell} ${item.kind === 'widget' ? t.cellWide : ''}`,
       style: { gridColumn: `${col + 1} / span ${w}`, gridRow: `${row + 1} / span ${h}` },
-      'data-moved': marked?.has(item.id) || undefined
+      'data-moved': marked?.has(item.id) || undefined,
+      'data-found': found === item.id || undefined
     }
     if (!edit) {
       if (item.kind === 'folder' && onFolder) {
@@ -64,7 +72,8 @@ export function PageGrid({
         draggable={movable}
         {...common}
         className={`${common.className} ${movable ? t.draggable : ''}`}
-        onClick={item.kind === 'folder' ? () => edit.onOpenFolder(item.id) : undefined}
+        selected={edit.selected.has(item.id)}
+        onClick={movable ? (ev) => edit.onPick(item, ev) : undefined}
       >
         <ItemTile item={item} udid={udid} />
       </DragCell>

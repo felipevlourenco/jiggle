@@ -15,7 +15,7 @@ Jiggle connects to an iPhone or iPad over a cable, shows a realistic preview of 
 
 - **Preview** the Home Screen as it is: wallpaper, pages, dock, folders and widget placeholders.
 - **Apps table**: searchable and sortable by name, category, developer and location. Change an app's category (kept per Mac) or remove apps in bulk.
-- **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, from 2 apps) and pins. Pages with widgets are kept as they are, or apps are sorted around the widgets.
+- **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, from 2 apps) and pins. Pages with widgets are kept as they are, cleared of apps (sort around widgets), or sorted too with every widget staying in its spot and the other pages packed full (sort widget pages too).
 - **Edit by hand**: drag and drop (or Space and arrow keys), with undo and redo, then push to the phone.
 - **Send to App Library**: take apps off the Home Screen in bulk. They stay installed.
 - **Saved layouts**: name the current layout ("Work", "Weekend") and switch back to it in one click.
@@ -98,7 +98,9 @@ Apple can change the private SpringBoard services in any iOS update. If Jiggle d
 
 ## Licence
 
-Not decided yet. The engine uses pymobiledevice3, which is GPL-3.0-or-later, and that affects how Jiggle can be distributed (see plan.md §10).
+Jiggle is free software, released under the [GNU General Public License v3.0 or later](LICENSE). Copyright (C) 2026 Felipe Lourenco.
+
+The device engine bundles [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) and its dependencies, which are GPL-3.0-or-later, so Jiggle as a whole is distributed under the same terms. The source for every release is the tagged commit in this repository.
 
 ## Brand
 

@@ -28,14 +28,29 @@ def is_visible(app: dict) -> bool:
     )
 
 
-async def read_apps(ip) -> list[dict]:
-    """[{bundleId, name, removable}] for every app a person can see."""
-    apps = await ip.get_apps("Any")
+def disk_usage(app: dict) -> int | None:
+    """Bytes the app takes: the app itself plus its data. None when the phone doesn't say."""
+    parts = [app.get("StaticDiskUsage"), app.get("DynamicDiskUsage")]
+    known = [p for p in parts if isinstance(p, int) and not isinstance(p, bool)]
+    return sum(known) if known else None
+
+
+async def read_apps(ip, with_sizes: bool = True) -> list[dict]:
+    """[{bundleId, name, removable, size}] for every app a person can see. `size` is in bytes, or null."""
+    apps = None
+    if with_sizes:
+        try:
+            apps = await ip.get_apps("Any", calculate_sizes=True)
+        except Exception:  # the size lookup is a bonus: without it the list is still the list
+            pass
+    if apps is None:
+        apps = await ip.get_apps("Any")
     return [
         {
             "bundleId": bundle_id,
             "name": app.get("CFBundleDisplayName") or app.get("CFBundleName") or bundle_id,
             "removable": app.get("ApplicationType") == "User" or bool(app.get("_LSSupportsRemoval")),
+            "size": disk_usage(app),
         }
         for bundle_id, app in apps.items()
         if is_visible(app)
@@ -45,7 +60,7 @@ async def read_apps(ip) -> list[dict]:
 async def uninstall_app(ip, bundle_id: str) -> None:
     """Delete one app and its data. Refuses anything the phone doesn't list as removable, so a bad call
     can't take out a system app."""
-    removable = {a["bundleId"] for a in await read_apps(ip) if a["removable"]}
+    removable = {a["bundleId"] for a in await read_apps(ip, with_sizes=False) if a["removable"]}
     if bundle_id not in removable:
         raise RpcError("not_removable", f"{bundle_id} can't be removed")
     await ip.uninstall(bundle_id)

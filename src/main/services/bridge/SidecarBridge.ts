@@ -49,7 +49,12 @@ const Metrics = z.object({
 })
 const Base64Map = z.record(z.string(), z.string())
 const InstalledApps = z.array(
-  z.object({ bundleId: z.string(), name: z.string(), removable: z.boolean() })
+  z.object({
+    bundleId: z.string(),
+    name: z.string(),
+    removable: z.boolean(),
+    size: z.number().nullish()
+  })
 )
 
 // States that can fix themselves without a new plug-in, so we keep re-checking them.

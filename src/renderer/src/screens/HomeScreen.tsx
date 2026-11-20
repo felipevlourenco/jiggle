@@ -1,19 +1,30 @@
-import { useCallback, useEffect, useRef, useState, type WheelEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyEvent,
+  type MouseEvent,
+  type WheelEvent
+} from 'react'
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { compact } from '@shared/layout/edit'
+import { compact, renameFolder } from '@shared/layout/edit'
 import { gridFor, pageCapacity } from '@shared/layout/grid'
+import { findApps, type AppMatch } from '@shared/layout/search'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import { summarize } from '@shared/layout/summarize'
 import { describeIssue, validateLayout } from '@shared/layout/validate'
-import type { Device, FolderItem, Layout } from '@shared/types'
+import type { Device, FolderItem, Layout, LayoutItem } from '@shared/types'
 import { Dock } from '../components/Dock'
 import { EditorDnd, FlipZones, FolderPanel } from '../components/Editor'
+import { FolderPopover } from '../components/FolderPopover'
 import { PageDots } from '../components/PageDots'
 import { PageGrid } from '../components/PageGrid'
 import { ToolbarActions } from '../components/ToolbarSlot'
-import { RedoIcon, UndoIcon, PencilIcon } from '../components/icons'
+import { RedoIcon, UndoIcon, PencilIcon, SearchIcon } from '../components/icons'
 import { frameSize, PhoneFrame } from '../components/PhoneFrame'
 import t from '../components/tiles.module.css'
 import p from '../components/phone.module.css'
@@ -36,6 +47,12 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   const [page, setPage] = useState(0)
   const [chosenZoom, setChosenZoom] = useState<number>()
   const [stage, setStage] = useState({ width: 0, height: 0 })
+  const [preview, setPreview] = useState<Layout | null>(null) // see EditorDnd
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set()) // ⌘-click / shift-click in Edit mode
+  const anchor = useRef<string | null>(null) // where a shift-click range starts
+  const [query, setQuery] = useState('')
+  const [hit, setHit] = useState(0) // which match of the search is shown
+  const searchBox = useRef<HTMLInputElement>(null)
 
   const qc = useQueryClient()
   const editor = useDraft()
@@ -86,6 +103,84 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
     else if (baseSignature && phoneSignature && baseSignature !== phoneSignature)
       draftActions.reset()
   }, [editor.draft, editor.udid, device.udid, baseSignature, phoneSignature])
+
+  // The picked icons that are still on the phone (an undo can remove one) and only while editing.
+  const selected = useMemo<ReadonlySet<string>>(() => {
+    if (!editing || !shown) return new Set()
+    const there = new Set([...shown.dock, ...shown.pages.flat()].map((i) => i.id))
+    return new Set([...picked].filter((id) => there.has(id)))
+  }, [editing, shown, picked])
+  const clearPicked = (): void => {
+    setPicked(new Set())
+    anchor.current = null
+  }
+  // A click on an icon in Edit mode: ⌘ toggles it, shift picks everything from the last one, a plain click
+  // drops the picks, or opens a folder.
+  const pick = (item: LayoutItem, ev: MouseEvent): void => {
+    if (ev.metaKey || ev.ctrlKey) {
+      const next = new Set(selected)
+      if (!next.delete(item.id)) next.add(item.id)
+      setPicked(next)
+      anchor.current = item.id
+    } else if (ev.shiftKey && anchor.current && shown) {
+      const list = [shown.dock, ...shown.pages].find((l) => l.some((i) => i.id === item.id)) ?? []
+      const [a, b] = [anchor.current, item.id].map((id) => list.findIndex((i) => i.id === id))
+      const range =
+        a === undefined || a < 0 ? [item] : list.slice(Math.min(a, b!), Math.max(a, b!) + 1)
+      setPicked(
+        new Set([
+          ...selected,
+          ...range.filter((i) => i.kind === 'app' || i.kind === 'folder').map((i) => i.id)
+        ])
+      )
+    } else if (selected.size > 0) {
+      clearPicked()
+    } else if (item.kind === 'folder') {
+      setOpenFolder(item.id)
+    }
+  }
+  // Esc drops the picks.
+  useEffect(() => {
+    if (selected.size === 0) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') clearPicked()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selected])
+
+  // Search: the page with the match turns up, and a folder that holds it opens.
+  const matches = useMemo(() => (shown ? findApps(shown, query) : []), [shown, query])
+  const jumpTo = (match: AppMatch | undefined): void => {
+    if (!match) return setOpenFolder(null)
+    if (match.page !== null) setPage(match.page)
+    setOpenFolder(match.folderId)
+  }
+  const search = (text: string): void => {
+    setQuery(text)
+    setHit(0)
+    jumpTo(shown ? findApps(shown, text)[0] : undefined)
+  }
+  const onSearchKey = (e: ReactKeyEvent<HTMLInputElement>): void => {
+    if (e.key === 'Escape') return search('')
+    if (e.key !== 'Enter' || matches.length === 0) return
+    const next = (hit + (e.shiftKey ? -1 : 1) + matches.length) % matches.length
+    setHit(next)
+    jumpTo(matches[next])
+  }
+  const found = matches[hit]
+
+  // ⌘F
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (!e.metaKey || e.key.toLowerCase() !== 'f') return
+      e.preventDefault()
+      searchBox.current?.focus()
+      searchBox.current?.select()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // ⌘Z / ⇧⌘Z
   useEffect(() => {
@@ -172,6 +267,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   }
 
   const layout = shown!
+  const view = preview ?? layout // while dragging: the layout with the dragged icon in its new place
   const summary = summarize(layout)
   if (layout.pages.length === 0 && layout.dock.length === 0) {
     return (
@@ -188,7 +284,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   }
 
   const folder = openFolder
-    ? ([...layout.dock, ...layout.pages.flat()].find(
+    ? ([...view.dock, ...view.pages.flat()].find(
         (i) => i.id === openFolder && i.kind === 'folder'
       ) as FolderItem | undefined)
     : undefined
@@ -199,6 +295,35 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   return (
     <div className={s.root}>
       <ToolbarActions>
+        {selected.size > 0 && (
+          <>
+            <span className="pill" role="status">
+              <i />
+              {selected.size} selected
+            </span>
+            <button className="tbtn" onClick={clearPicked}>
+              Clear
+            </button>
+            <span className="vsep" />
+          </>
+        )}
+        <label className={s.search}>
+          <SearchIcon size={14} />
+          <input
+            ref={searchBox}
+            type="search"
+            placeholder="Find an app"
+            aria-label="Find an app"
+            value={query}
+            onChange={(e) => search(e.target.value)}
+            onKeyDown={onSearchKey}
+          />
+          {query && (
+            <span className="meta" aria-live="polite">
+              {matches.length ? `${hit + 1} of ${matches.length}` : 'No match'}
+            </span>
+          )}
+        </label>
         {mine && changes > 0 && (
           <>
             <span className="pill" role="status">
@@ -214,7 +339,9 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
           disabled={!canEdit}
           title={canEdit ? undefined : 'Editing is turned off for this iOS version'}
           onClick={() =>
-            editing ? draftActions.done() : draftActions.edit(device.udid, data!.layout)
+            editing
+              ? (draftActions.done(), clearPicked())
+              : draftActions.edit(device.udid, data!.layout)
           }
         >
           <PencilIcon size={15} />
@@ -290,29 +417,55 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
       <p className={s.strip}>
         {plural(summary.apps, 'app')} · {plural(summary.pages, 'page')} ·{' '}
         {plural(summary.widgets, 'widget')}
+        {editing && ' · Hold ⌥ and drop an app on another to make a folder'}
       </p>
 
       <EditorDnd
         layout={layout}
         zoom={zoom}
         udid={device.udid}
+        selected={selected}
+        onSelect={(next) => setPicked(next)}
         onChange={draftActions.change}
+        onPreview={setPreview}
         onFlip={(dir) => goTo(current + dir)}
-        onDone={() => setOpenFolder(null)}
+        onDone={(keep) => keep || setOpenFolder(null)}
       >
         <div className={s.stage} ref={stageRef} onWheel={onWheel}>
           <PhoneFrame zoom={zoom} kind={device.deviceClass}>
             <PageGrid
               key={current}
-              items={layout.pages[current] ?? []}
+              items={view.pages[current] ?? []}
               grid={layout.grid}
               udid={device.udid}
-              edit={editing ? { page: current, onOpenFolder: setOpenFolder } : undefined}
+              found={found?.id}
+              edit={editing ? { page: current, selected, onPick: pick } : undefined}
             />
-            <Dock items={layout.dock} udid={device.udid} edit={editing} />
+            <Dock
+              items={view.dock}
+              udid={device.udid}
+              edit={editing ? { selected, onPick: pick } : undefined}
+              found={found?.id}
+            />
             {editing && <FlipZones />}
             {editing && folder && (
-              <FolderPanel folder={folder} udid={device.udid} onClose={() => setOpenFolder(null)} />
+              <FolderPanel
+                folder={folder}
+                udid={device.udid}
+                onRename={(name) => {
+                  const next = renameFolder(layout, folder.id, name)
+                  if (next) draftActions.change(next)
+                }}
+                onClose={() => setOpenFolder(null)}
+              />
+            )}
+            {!editing && folder && (
+              <FolderPopover
+                folder={folder}
+                udid={device.udid}
+                found={found?.id}
+                onClose={() => setOpenFolder(null)}
+              />
             )}
           </PhoneFrame>
         </div>

@@ -7,10 +7,12 @@ import t from './tiles.module.css'
 export function FolderPopover({
   folder,
   udid,
+  found,
   onClose
 }: {
   folder: FolderItem
   udid: string
+  found?: string // the app a search is pointing at
   onClose: () => void
 }) {
   return (
@@ -29,7 +31,7 @@ export function FolderPopover({
         </div>
         <div className={e.panelGrid}>
           {folder.pages.flat().map((app) => (
-            <div key={app.id} className={t.cell}>
+            <div key={app.id} className={t.cell} data-found={found === app.id || undefined}>
               <ItemTile item={app} udid={udid} />
             </div>
           ))}

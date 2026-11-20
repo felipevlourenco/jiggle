@@ -1,5 +1,7 @@
-import { useDraggable, useDroppable } from '@dnd-kit/core'
-import type { CSSProperties, ReactNode } from 'react'
+import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
+import { useLayoutEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+
+const SLIDE_MS = 220
 
 // One draggable, droppable cell of the home screen in Edit mode. The drag handle is the cell itself,
 // so a keyboard can reach it (Tab, Space to pick up, arrows to move, Space to drop).
@@ -8,30 +10,61 @@ export function DragCell({
   className,
   style,
   dropTarget = true,
+  panel,
   draggable = true,
   onClick,
+  selected,
   children,
   ...rest
 }: {
   id: string
   className?: string
   style?: CSSProperties
-  dropTarget?: boolean // false: can be picked up but nothing is dropped on it (apps in the folder panel)
+  dropTarget?: boolean // false: can be picked up but nothing is dropped on it
+  panel?: boolean // an app in the open folder's panel: drops there take priority while the pointer is over it
   draggable?: boolean // false: widgets and the like stay put but still take a drop next to them
-  onClick?: () => void
+  onClick?: (ev: MouseEvent) => void
+  selected?: boolean // picked for a group move (⌘-click, shift-click)
   children: ReactNode
   'data-moved'?: true
+  'data-found'?: true
 }) {
   const drag = useDraggable({ id: `drag:${id}`, disabled: !draggable })
-  const drop = useDroppable({ id: `cell:${id}`, disabled: !dropTarget })
+  const drop = useDroppable({ id: `cell:${id}`, disabled: !dropTarget, data: { panel } })
+  const { active } = useDndContext()
+  const node = useRef<HTMLDivElement | null>(null)
+  const last = useRef<{ left: number; top: number } | null>(null)
+  // While something is dragged the others slide to their new places (the page reflows live, like on the phone).
+  // offsetLeft/Top are layout positions in the cell's own pixels: they ignore the phone frame's zoom and the
+  // slide itself, so a slide in progress doesn't feed back into the next one.
+  useLayoutEffect(() => {
+    const el = node.current
+    if (!el) return
+    const now = { left: el.offsetLeft, top: el.offsetTop }
+    const before = last.current
+    last.current = now
+    if (!before || !active || !dropTarget) return
+    const [dx, dy] = [before.left - now.left, before.top - now.top]
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+    // The tile slides, not the cell: the cell is the drop spot and has to be where it will end up, right away.
+    ;(el.firstElementChild as HTMLElement | null)?.animate(
+      [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+      {
+        duration: SLIDE_MS,
+        easing: 'ease-out'
+      }
+    )
+  })
   return (
     <div
       ref={(el) => {
+        node.current = el
         drag.setNodeRef(el)
         drop.setNodeRef(el)
       }}
       className={className}
-      style={{ ...style, opacity: drag.isDragging ? 0.25 : undefined }}
+      style={{ ...style, opacity: drag.isDragging || (selected && active) ? 0.25 : undefined }}
+      data-selected={selected || undefined}
       onClick={onClick}
       {...(draggable ? drag.attributes : {})}
       {...(draggable ? drag.listeners : {})}
@@ -47,16 +80,20 @@ export function DropZone({
   id,
   className,
   style,
+  disabled,
+  panel,
   children,
   ...rest
 }: {
   id: string
   className?: string
   style?: CSSProperties
+  disabled?: boolean
+  panel?: boolean
   children: ReactNode
   'data-testid'?: string
 }) {
-  const { setNodeRef } = useDroppable({ id })
+  const { setNodeRef } = useDroppable({ id, disabled, data: { panel } })
   return (
     <div ref={setNodeRef} className={className} style={style} {...rest}>
       {children}
