@@ -563,6 +563,50 @@ test.describe('Apply and restore', () => {
     await app.close()
   })
 
+  test('after an apply a toast offers Undo, which puts the layout back', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await firstIcon(win)
+
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    const sheet = win.getByRole('dialog', { name: /Apply A–Z to Sam/ })
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done!/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+
+    const toast = win.locator('div[role="status"]', { hasText: 'Applied.' })
+    await expect(toast).toBeVisible()
+    await toast.getByRole('button', { name: 'Undo' }).click()
+    await expect(win.getByText('Undone. Your layout is back as it was.')).toBeVisible()
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect.poll(() => firstIcon(win)).toBe(original)
+    await app.close()
+  })
+
+  test('a newer change replaces the Undo offer, so Undo only ever undoes the last one', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    const sheet = win.getByRole('dialog', { name: /Apply A–Z to Sam/ })
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+    const undo = win.getByRole('button', { name: 'Undo' })
+    await expect(undo).toBeVisible()
+    // a second change (a restore from History)
+    await win.getByRole('link', { name: 'History' }).click()
+    await win.getByRole('listitem').first().getByRole('button', { name: 'Restore' }).click()
+    const restore = win.getByRole('dialog', { name: /Restore/ })
+    await restore.getByRole('button', { name: 'Restore', exact: true }).click()
+    await expect(restore.getByText(/Restored/)).toBeVisible()
+    await restore.getByRole('button', { name: 'Close' }).click()
+    // the toast now offers to undo the restore, not the sort: one offer at a time
+    await expect(win.getByRole('button', { name: 'Undo' })).toHaveCount(1)
+    await app.close()
+  })
+
   test('read-only devices cannot restore', async () => {
     const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-ro-'))
     let app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_USER_DATA: userData })
