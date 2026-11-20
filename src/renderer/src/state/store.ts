@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { COLOR_FAMILIES, DEFAULT_COLOR_ORDER, type ColorFamily } from '@shared/layout/color'
+import type { FolderRule } from '@shared/layout/folders'
 import type { SortOptions } from '@shared/layout/sort'
 
 // What the Organize screen has chosen. Lives outside the screen so it survives switching tabs.
@@ -7,7 +8,7 @@ import type { SortOptions } from '@shared/layout/sort'
 export interface OrganizeChoice {
   by: SortOptions['by']
   widgetMode: SortOptions['widgetMode']
-  folders: boolean // with by: 'category': one folder per category
+  folders: FolderRule | null // one folder per category, developer or first letter; null: no folders
   colorOrder: readonly ColorFamily[] // with by: 'color'; kept across launches
 }
 
@@ -32,7 +33,7 @@ function savedColorOrder(): readonly ColorFamily[] {
 let choice: OrganizeChoice = {
   by: 'name',
   widgetMode: 'keep-pages',
-  folders: false,
+  folders: null,
   colorOrder: savedColorOrder()
 }
 const listeners = new Set<() => void>()

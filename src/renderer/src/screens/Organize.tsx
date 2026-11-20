@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { movedIds } from '@shared/layout/diff'
+import type { FolderRule } from '@shared/layout/folders'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import { sortLayout, type SortOptions } from '@shared/layout/sort'
@@ -34,6 +35,13 @@ const WIDGET_MODES: { mode: SortOptions['widgetMode']; label: string }[] = [
   { mode: 'fill', label: 'Sort widget pages too' }
 ]
 
+const FOLDER_RULES: { rule: FolderRule | null; label: string }[] = [
+  { rule: null, label: 'Off' },
+  { rule: 'category', label: 'Category' },
+  { rule: 'developer', label: 'Developer' },
+  { rule: 'letter', label: 'First letter' }
+]
+
 const appsOf = (items: LayoutItem[]): AppItem[] =>
   items.flatMap((i) => (i.kind === 'app' ? [i] : i.kind === 'folder' ? i.pages.flat() : []))
 
@@ -49,6 +57,10 @@ export function Organize({ device }: { device: Device }) {
     () => new Map(apps.data?.apps.map((a) => [a.bundleId, a.category])),
     [apps.data]
   )
+  const developers = useMemo(
+    () => new Map(apps.data?.apps.map((a) => [a.bundleId, a.developer])),
+    [apps.data]
+  )
   const colors = useMemo(
     () => new Map(apps.data?.apps.map((a) => [a.bundleId, a.iconColor])),
     [apps.data]
@@ -62,8 +74,9 @@ export function Organize({ device }: { device: Device }) {
         by,
         widgetMode: choice.widgetMode,
         pins,
-        folders: choice.folders,
+        folders: choice.folders ?? undefined,
         categoryOf,
+        developerOf: (id) => developers.get(id) ?? null,
         colorOf: (id) => colors.get(id) ?? null,
         colorOrder: choice.colorOrder
       })
@@ -89,7 +102,7 @@ export function Organize({ device }: { device: Device }) {
         PRESETS.map((p) => [p.by, appsOf(sorted(p.by).pages.flat()).slice(0, 5)])
       ) as Record<SortOptions['by'], AppItem[]>
     }
-  }, [before, categories, colors, choice, pins])
+  }, [before, categories, developers, colors, choice, pins])
 
   if (layout.isError) {
     return (
@@ -102,7 +115,11 @@ export function Organize({ device }: { device: Device }) {
       </div>
     )
   }
-  const waitingForCategories = choice.by !== 'name' && apps.isPending
+  const needsAppInfo =
+    choice.by !== 'name' || choice.folders === 'category' || choice.folders === 'developer'
+  const needsLookup =
+    choice.by === 'category' || choice.folders === 'category' || choice.folders === 'developer'
+  const waitingForCategories = needsAppInfo && apps.isPending
   if (!before || !preview || waitingForCategories) {
     return (
       <p className={s.status} role="status">
@@ -176,15 +193,22 @@ export function Organize({ device }: { device: Device }) {
           />
           Pin page 1
         </label>
-        <label className="sw">
-          <input
-            type="checkbox"
-            checked={choice.folders && choice.by === 'category'}
-            disabled={choice.by !== 'category'}
-            onChange={(e) => setChoice({ folders: e.target.checked })}
-          />
-          Create folders by category
-        </label>
+      </div>
+
+      <div className={s.options}>
+        <span>Folders</span>
+        <div className="seg" role="radiogroup" aria-label="Folders">
+          {FOLDER_RULES.map(({ rule, label }) => (
+            <button
+              key={label}
+              role="radio"
+              aria-checked={choice.folders === rule}
+              onClick={() => setChoice({ folders: rule })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {choice.by === 'color' && (
@@ -201,10 +225,10 @@ export function Organize({ device }: { device: Device }) {
           This layout can’t be applied: {preview.issues.map(describeIssue).join('; ')}.
         </Banner>
       )}
-      {choice.by === 'category' && lookup && lookup !== 'idle' && (
+      {needsLookup && lookup && lookup !== 'idle' && (
         <Banner severity="warning">
           {lookup === 'offline'
-            ? 'Can’t reach the App Store, so some apps are grouped as Unknown.'
+            ? 'Can’t reach the App Store, so some apps are grouped as Unknown or left out of folders.'
             : 'Still looking up categories: the preview may change.'}
         </Banner>
       )}

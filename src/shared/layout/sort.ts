@@ -1,6 +1,6 @@
 import type { AppItem, FolderItem, IconColor, Layout, LayoutItem, Pins } from '../types'
 import { compareColors, type ColorFamily } from './color.ts'
-import { foldByCategory } from './folders.ts'
+import { foldBy, type FolderRule } from './folders.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
 
@@ -19,8 +19,10 @@ export interface SortOptions {
   colorOrder?: readonly ColorFamily[]
   // Pinned apps and page 1 stay exactly where they are (see sortInPlace).
   pins?: Pins
-  // With by: 'category': loose apps gather into one folder per category (2 or more apps).
-  folders?: boolean
+  // Loose apps gather into one folder per category, developer or first letter (2 or more apps each).
+  // Needs categoryOf or developerOf to match; an app without a developer (null) stays loose.
+  folders?: FolderRule
+  developerOf?: (bundleId: string) => string | null
 }
 
 type Movable = AppItem | FolderItem
@@ -59,9 +61,7 @@ function compare(a: Movable, b: Movable, opts: SortOptions): number {
 }
 
 const withFolders = (movable: Movable[], opts: SortOptions): Movable[] =>
-  opts.folders && opts.by === 'category' && opts.categoryOf
-    ? foldByCategory(movable, opts.categoryOf)
-    : movable
+  opts.folders ? foldBy(movable, opts.folders, opts) : movable
 
 // The dock is never touched. Home screen pages are re-sorted and packed from the top left:
 // pages that must stay as they are come first, then the sorted pages, full ones first.

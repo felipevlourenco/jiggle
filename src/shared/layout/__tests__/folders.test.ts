@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AppItem, FolderItem, Layout, LayoutItem } from '../../types'
+import { letterOf } from '../folders'
 import { serialize } from '../serialize'
 import { sortLayout } from '../sort'
 import { validateLayout } from '../validate'
@@ -23,7 +24,7 @@ const opts = {
   by: 'category',
   widgetMode: 'keep-pages',
   categoryOf: category,
-  folders: true
+  folders: 'category'
 } as const
 const label = (i: LayoutItem): string => ('name' in i ? i.name : '?')
 
@@ -74,17 +75,15 @@ describe('auto-folders', () => {
     expect((out.pages[0]![0] as FolderItem).pages.map((p) => p.length)).toEqual([9, 3])
   })
 
-  it('does nothing unless sorting by category with the option on', () => {
+  it('does nothing with folders off, and works with any sort order', () => {
     expect(
-      sortLayout(before, { ...opts, folders: false })
+      sortLayout(before, { ...opts, folders: undefined })
         .pages.flat()
         .every((i) => i.kind === 'app')
     ).toBe(true)
-    expect(
-      sortLayout(before, { ...opts, by: 'name' })
-        .pages.flat()
-        .every((i) => i.kind === 'app')
-    ).toBe(true)
+    const byName = sortLayout(before, { ...opts, by: 'name' }).pages.flat()
+    expect(byName.map(label)).toEqual(['S1', 'Social', 'U1', 'U2'])
+    expect(byName.filter((i) => i.kind === 'folder').map(label)).toEqual(['Social'])
   })
 
   it('does not fold a pinned app, and pinned pages stay as they are', () => {
@@ -103,5 +102,43 @@ describe('auto-folders', () => {
       pins: { apps: ['U1'], page1: false }
     })
     expect(out.pages.map((p) => p.map(label))).toEqual([['Social', 'S1'], ['U1']])
+  })
+})
+
+describe('folders by developer and first letter', () => {
+  const developer = (id: string): string | null =>
+    ({ A1: 'Acme', A2: 'Acme', S1: 'Acme', B1: 'Solo', U1: null, U2: null })[id] ?? null
+  const before = layout([
+    [app('A1'), app('B1'), app('S1'), app('U1')],
+    [app('A2'), app('U2')]
+  ])
+  const run = (folders: 'developer' | 'letter') =>
+    sortLayout(before, { by: 'name', widgetMode: 'keep-pages', developerOf: developer, folders })
+
+  it('developer: apps of one developer share a folder named after it; a lone developer and unknown ones stay loose', () => {
+    const out = run('developer')
+    expect(out.pages.flat().map(label)).toEqual(['Acme', 'B1', 'U1', 'U2'])
+    expect((out.pages[0]![0] as FolderItem).pages.flat().map(label)).toEqual(['A1', 'S1', 'A2'])
+    expect(validateLayout(before, out)).toEqual([])
+  })
+
+  it('letter: apps sharing a first letter share a folder named after it', () => {
+    const out = run('letter')
+    expect(out.pages.flat().map(label)).toEqual(['A', 'B1', 'S1', 'U'])
+    expect(
+      out.pages
+        .flat()
+        .filter((i) => i.kind === 'folder')
+        .map(label)
+    ).toEqual(['A', 'U'])
+    expect(validateLayout(before, out)).toEqual([])
+  })
+
+  it('letterOf ignores case, accents and invisible marks; digits and symbols share #', () => {
+    expect(letterOf('ábaco')).toBe('A')
+    expect(letterOf('\u200eWhatsApp')).toBe('W')
+    expect(letterOf('1Password')).toBe('#')
+    expect(letterOf('!x')).toBe('#')
+    expect(letterOf('')).toBe('#')
   })
 })

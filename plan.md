@@ -936,10 +936,10 @@ M27–M29 above are built (M29 is in PR #7). These are ideas that are not built 
 
 **Bigger bets**
 
-**M38. Smart folders**
+**M38. Smart folders** (built)
 
 - **Goal:** auto‑folders by more than category.
-- **Tasks:** let the folder rule be category (as now), developer, or first letter. Apps in a group of fewer than 2 stay loose. Show the rule in the Organize options.
+- **Tasks:** let the folder rule be category (as now), developer, or first letter. Apps in a group of fewer than 2 stay loose. Show the rule in the Organize options. Built as a **Folders** control (Off, Category, Developer, First letter) that works with every sort order; apps the App Store has no developer for stay loose, and developers match by their exact App Store name.
 - **Files touched:** `src/shared/layout/folders.ts`, `src/renderer/src/screens/Organize.tsx`
 - **Done when:** unit tests cover each rule, and the preview shows the folders.
 - **Manual check:** choose Folders by developer. Apps from the same developer end up in one folder named after it.
