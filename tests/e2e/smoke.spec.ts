@@ -420,6 +420,35 @@ test.describe('Edit mode (drag and drop)', () => {
     await app.close()
   })
 
+  test('the icons make room while you hold one over another, and snap back if you let go elsewhere', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await titles(win)
+    await win.getByRole('button', { name: 'Edit' }).click()
+    const from = await centre(cell(win, original[0]!))
+    const to = await centre(cell(win, original[2]!))
+    await win.mouse.move(from.x, from.y)
+    await win.mouse.down()
+    await win.mouse.move(from.x + 12, from.y + 12, { steps: 3 })
+
+    // passing over icons moves nothing...
+    await win.mouse.move(to.x, to.y, { steps: 10 })
+    // ...resting on one makes room, live: the first icon is now the third and the two between moved up
+    await expect
+      .poll(async () => (await titles(win)).slice(0, 3))
+      .toEqual([original[1], original[2], original[0]])
+    // the others have slid into place, so the dragged icon's gap is under the pointer
+    await expect
+      .poll(async () => Math.abs(Math.round((await centre(cell(win, original[0]!))).x - to.x)))
+      .toBeLessThan(3)
+    // dropping it there keeps it
+    await win.mouse.up()
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+    expect((await titles(win)).slice(0, 3)).toEqual([original[1], original[2], original[0]])
+    await app.close()
+  })
+
   test('moves an icon with the keyboard: Space picks it up, arrows move it, Space drops it', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
     const win = await app.firstWindow()

@@ -5,6 +5,7 @@ import {
   KeyboardSensor,
   PointerSensor,
   pointerWithin,
+  useDndContext,
   useSensor,
   useSensors,
   type CollisionDetection,
@@ -13,7 +14,15 @@ import {
   type DragStartEvent,
   type KeyboardCoordinateGetter
 } from '@dnd-kit/core'
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode
+} from 'react'
 import { findItem, locate, moveItem, type DropTarget } from '@shared/layout/edit'
 import type { FolderItem, Layout } from '@shared/types'
 import { DragCell, DropZone } from './DragCell'
@@ -22,6 +31,7 @@ import e from './editor.module.css'
 import t from './tiles.module.css'
 
 const FLIP_MS = 700 // hover a page edge this long to turn the page
+const MAKE_ROOM_MS = 250 // rest on an icon this long and the others make room (passing over one does nothing)
 
 const ActiveContext = createContext<string | null>(null)
 
@@ -87,6 +97,7 @@ export function EditorDnd({
   zoom,
   udid,
   onChange,
+  onPreview,
   onFlip,
   onDone,
   children
@@ -95,6 +106,8 @@ export function EditorDnd({
   zoom: number
   udid: string
   onChange: (next: Layout) => void
+  // The layout as it would be if the dragged item were dropped here, or null. The page shows it live.
+  onPreview: (next: Layout | null) => void
   onFlip: (direction: -1 | 1) => void
   onDone: () => void // a drag ended: close the folder panel
   children: ReactNode
@@ -107,6 +120,14 @@ export function EditorDnd({
   const [width, setWidth] = useState(64)
   const [flip, setFlip] = useState<-1 | 1 | null>(null)
   const [notice, setNotice] = useState<string>()
+  const preview = useRef<Layout | null>(null)
+  const [previewed, setPreviewed] = useState<Layout | null>(null) // the same, to re-measure when it changes
+  const room = useRef<number>(undefined)
+  const setPreview = (next: Layout | null): void => {
+    preview.current = next
+    setPreviewed(next)
+    onPreview(next)
+  }
   const latest = useRef(onFlip)
   useEffect(() => {
     latest.current = onFlip
@@ -124,6 +145,8 @@ export function EditorDnd({
   }, [notice])
 
   const end = (): void => {
+    window.clearTimeout(room.current)
+    setPreview(null)
     setActiveId(null)
     setFlip(null)
     onDone()
@@ -132,18 +155,35 @@ export function EditorDnd({
     setActiveId(String(ev.active.id).slice('drag:'.length))
     setWidth(ev.active.rect.current.initial?.width ?? 64)
   }
+  // Everything below works on what is on screen: the preview once the dragged icon has moved, else the layout.
+  const shown = (): Layout => preview.current ?? layout
   const onOver = (ev: DragOverEvent): void => {
     const over = ev.over ? String(ev.over.id) : ''
     setFlip(over === 'flip:-1' ? -1 : over === 'flip:1' ? 1 : null)
+    // Resting on another icon, or on the end of a page or the dock: the others make room. A folder, or a full
+    // place, moves nothing. Its own gap (it has already moved there) keeps things as they are.
+    window.clearTimeout(room.current)
+    const id = String(ev.active.id).slice('drag:'.length)
+    const target = over ? resolve(shown(), id, over) : null
+    if (target && target.zone !== 'folder') {
+      room.current = window.setTimeout(() => {
+        const next = moveItem(shown(), id, target)
+        if (next) setPreview(next)
+      }, MAKE_ROOM_MS)
+    }
   }
   const onEnd = (ev: DragEndEvent): void => {
     const id = String(ev.active.id).slice('drag:'.length)
     const over = ev.over ? String(ev.over.id) : ''
-    const target = over ? resolve(layout, id, over) : null
-    if (target) {
-      const next = moveItem(layout, id, target)
-      if (next === null) setNotice('Can’t move it there: that page, dock or folder is full.')
-      else onChange(next)
+    if (over === `cell:${id}`) {
+      if (preview.current) onChange(preview.current) // dropped in the gap it opened
+    } else {
+      const target = over ? resolve(shown(), id, over) : null
+      if (target) {
+        const next = moveItem(shown(), id, target)
+        if (next === null) setNotice('Can’t move it there: that page, dock or folder is full.')
+        else onChange(next)
+      }
     }
     end()
   }
@@ -159,6 +199,7 @@ export function EditorDnd({
       onDragCancel={end}
     >
       <ActiveContext.Provider value={activeId}>{children}</ActiveContext.Provider>
+      <Remeasure watch={previewed} />
       <DragOverlay dropAnimation={null}>
         {active && (
           <div
@@ -178,6 +219,16 @@ export function EditorDnd({
       </p>
     </DndContext>
   )
+}
+
+// Icons move while dragging, and dnd-kit only measures the drop spots when the drag starts: measure them again
+// whenever the preview changes, so the next hover hits the icon that is now under the pointer.
+function Remeasure({ watch }: { watch: unknown }) {
+  const { measureDroppableContainers, droppableContainers } = useDndContext()
+  useLayoutEffect(() => {
+    if (watch) measureDroppableContainers([...droppableContainers.keys()])
+  }, [watch, measureDroppableContainers, droppableContainers])
+  return null
 }
 
 // Strips along the phone's left and right edge: hold an icon over one to turn the page.
