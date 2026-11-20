@@ -23,6 +23,7 @@ export function DragCell({
   onClick?: () => void
   children: ReactNode
   'data-moved'?: true
+  'data-found'?: true
 }) {
   const drag = useDraggable({ id: `drag:${id}`, disabled: !draggable })
   const drop = useDroppable({ id: `cell:${id}`, disabled: !dropTarget })
