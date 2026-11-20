@@ -1,5 +1,5 @@
 import type { AppItem, FolderItem, IconColor, Layout, LayoutItem, Pins } from '../types'
-import { compareColors } from './color.ts'
+import { compareColors, type ColorFamily } from './color.ts'
 import { foldByCategory } from './folders.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
@@ -15,6 +15,8 @@ export interface SortOptions {
   categoryOf?: (bundleId: string) => string
   // Needed for by: 'color'. null: the icon hasn't been read; it sorts with the neutrals.
   colorOf?: (bundleId: string) => IconColor | null
+  // With by: 'color': the order of the color families (default: the rainbow, then white, grey, black).
+  colorOrder?: readonly ColorFamily[]
   // Pinned apps and page 1 stay exactly where they are (see sortInPlace).
   pins?: Pins
   // With by: 'category': loose apps gather into one folder per category (2 or more apps).
@@ -48,7 +50,8 @@ function compare(a: Movable, b: Movable, opts: SortOptions): number {
     if (b.kind !== 'app') return 1
     const byColor = compareColors(
       opts.colorOf?.(a.bundleId) ?? null,
-      opts.colorOf?.(b.bundleId) ?? null
+      opts.colorOf?.(b.bundleId) ?? null,
+      opts.colorOrder
     )
     if (byColor) return byColor
   }

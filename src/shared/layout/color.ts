@@ -51,14 +51,59 @@ export function dominantColor(img: {
   return { h: best === NEUTRAL ? 0 : (g.h / g.n - 15 + 360) % 360, s: g.s / g.n, l: g.l / g.n }
 }
 
-// Rainbow order: by hue band (red, orange, yellow, green, blue, purple, pink), light to dark inside a band;
-// then the neutrals, light to dark. No color at all counts as neutral and a mid grey.
-export function compareColors(a: IconColor | null, b: IconColor | null): number {
-  const key = (c: IconColor | null): [number, number] => {
-    if (!c || c.s < NEUTRAL_SATURATION) return [HUE_BANDS, -(c?.l ?? 0.5)]
-    return [bandOf(c.h), -c.l]
+export const COLOR_FAMILIES = [
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'teal',
+  'blue',
+  'purple',
+  'pink',
+  'white',
+  'grey',
+  'black'
+] as const
+export type ColorFamily = (typeof COLOR_FAMILIES)[number]
+// The rainbow, then white, grey, black.
+export const DEFAULT_COLOR_ORDER: readonly ColorFamily[] = COLOR_FAMILIES
+
+const BAND_FAMILY: ColorFamily[] = [
+  'red', // 0: the 12 hue bands, 30° each
+  'orange',
+  'yellow',
+  'yellow',
+  'green',
+  'green',
+  'teal',
+  'blue',
+  'blue',
+  'purple',
+  'purple',
+  'pink'
+]
+// ponytail: white and black are cut at fixed lightness (0.85, 0.25); tune if icons land on the wrong side.
+export function familyOf(c: IconColor | null): ColorFamily {
+  if (!c) return 'grey' // no color known: a mid grey
+  if (c.s < NEUTRAL_SATURATION) return c.l >= 0.85 ? 'white' : c.l <= 0.25 ? 'black' : 'grey'
+  return BAND_FAMILY[bandOf(c.h)]!
+}
+
+// Order by family (the person's order, or the rainbow), then by hue band, light to dark inside a band.
+// The neutrals are light to dark inside their family. A family missing from `order` goes after the listed ones, in the default order.
+export function compareColors(
+  a: IconColor | null,
+  b: IconColor | null,
+  order: readonly ColorFamily[] = DEFAULT_COLOR_ORDER
+): number {
+  const key = (c: IconColor | null): [number, number, number] => {
+    const f = familyOf(c)
+    const rank = order.indexOf(f)
+    const family = rank < 0 ? order.length + COLOR_FAMILIES.indexOf(f) : rank
+    if (!c || c.s < NEUTRAL_SATURATION) return [family, 0, -(c?.l ?? 0.5)]
+    return [family, bandOf(c.h), -c.l]
   }
-  const [ka, la] = key(a)
-  const [kb, lb] = key(b)
-  return ka - kb || la - lb
+  const [fa, ba, la] = key(a)
+  const [fb, bb, lb] = key(b)
+  return fa - fb || ba - bb || la - lb
 }

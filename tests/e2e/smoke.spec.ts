@@ -278,6 +278,35 @@ test.describe('Organize', () => {
     await app.close()
   })
 
+  test('Color: drag a color to the front, move one with the keyboard, and Reset restores the rainbow', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await expect(win.getByRole('list', { name: 'Color order' })).toHaveCount(0) // only with Color
+    await win.getByRole('radio', { name: /Color/ }).click()
+    const chips = win.getByRole('list', { name: 'Color order' }).getByRole('listitem')
+    const order = async () =>
+      (
+        await chips.evaluateAll((els) =>
+          els.map((e) => e.getAttribute('aria-label')!.split(',')[0])
+        )
+      )
+        .slice(0, 3)
+        .join(' ')
+    expect(await order()).toBe('red orange yellow')
+
+    await chips.nth(5).dragTo(chips.nth(0)) // blue to the front
+    expect(await order()).toBe('blue red orange')
+
+    await chips.nth(0).focus()
+    await win.keyboard.press('Alt+ArrowRight')
+    expect(await order()).toBe('red blue orange')
+
+    await win.getByRole('button', { name: 'Reset' }).click()
+    expect(await order()).toBe('red orange yellow')
+    await app.close()
+  })
+
   test('read-only mode turns Apply off', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-ios16' })
     const win = await app.firstWindow()

@@ -1,0 +1,38 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+}
+.list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+  text-transform: capitalize;
+  cursor: grab;
+  user-select: none;
+}
+.chip i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+.chip[data-dragging] {
+  opacity: 0.4;
+}
+.chip:focus-visible {
+  outline: 2px solid var(--ring);
+}
