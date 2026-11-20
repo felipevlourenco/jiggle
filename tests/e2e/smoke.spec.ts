@@ -464,8 +464,11 @@ test.describe('Edit mode (drag and drop)', () => {
     await expect.poll(async () => await titles(win)).toEqual(original)
     await expect(win.getByText('Editing · 2 changes')).toBeVisible()
 
-    await win.getByRole('button', { name: 'Discard' }).click()
-    await expect(win.getByText(/change/)).toHaveCount(0)
+    // The click right after a drag can be swallowed (dnd-kit eats the click that follows a drop), so retry it.
+    await expect(async () => {
+      await win.getByRole('button', { name: 'Discard' }).click({ timeout: 1000 })
+      await expect(win.getByText(/change/)).toHaveCount(0, { timeout: 1000 })
+    }).toPass()
     await app.close()
   })
 
