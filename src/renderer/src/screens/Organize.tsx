@@ -29,7 +29,8 @@ const PRESETS: { by: SortOptions['by']; title: string; blurb: string; sorted: st
 ]
 const WIDGET_MODES: { mode: SortOptions['widgetMode']; label: string }[] = [
   { mode: 'keep-pages', label: 'Keep widget pages' },
-  { mode: 'sort-around', label: 'Sort around widgets' }
+  { mode: 'sort-around', label: 'Sort around widgets' },
+  { mode: 'fill', label: 'Sort widget pages too' }
 ]
 
 const appsOf = (items: LayoutItem[]): AppItem[] =>

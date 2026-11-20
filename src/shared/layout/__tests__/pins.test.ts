@@ -80,6 +80,18 @@ describe('sort with pins', () => {
     expect(names(out.pages[0])).toEqual(['<w>', 'A', 'B', 'C'])
   })
 
+  it('fill sorts widget pages too: widgets keep their slots and page numbers, pins still hold', () => {
+    const input = layout([
+      [app('D'), app('C')],
+      [widget, app('Z'), app('B'), app('A')]
+    ])
+    const out = sortLayout(input, { by: 'name', widgetMode: 'fill' })
+    expect(names(out.pages[0])).toEqual(['A', 'B'])
+    expect(names(out.pages[1])).toEqual(['<w>', 'C', 'D', 'Z'])
+    const pinned = sortLayout(input, opts({ apps: ['Z'], page1: false }, 'fill'))
+    expect(names(pinned.pages[1])).toEqual(['<w>', 'Z', 'C', 'D']) // Z stays in its slot
+  })
+
   it('without pins, uses the normal packing', () => {
     const input = layout([[app('B')], [app('A')]])
     expect(sortLayout(input, opts(NO_PINS)).pages.map((p) => p.length)).toEqual([2])
