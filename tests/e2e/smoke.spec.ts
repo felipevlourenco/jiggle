@@ -501,6 +501,59 @@ test.describe('Edit mode (drag and drop)', () => {
     await app.close()
   })
 
+  test('renames a folder, reorders its apps, and makes a folder by dropping an app on another with ⌥', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await win.getByRole('button', { name: 'Edit' }).click()
+
+    // rename: double-click the name, type, Enter
+    const folder = win.getByTestId('page').locator('[data-kind="folder"]').first()
+    await folder.click()
+    const panel = win.getByRole('dialog', { name: 'Folder Utilities' })
+    await panel.getByText('Utilities').dblclick()
+    await panel.getByRole('textbox', { name: 'Folder name' }).fill('Tools')
+    await win.keyboard.press('Enter')
+    await expect(win.getByRole('dialog', { name: 'Folder Tools' })).toBeVisible()
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+
+    // reorder: drag the first app onto the third, inside the open folder
+    const tools = win.getByRole('dialog', { name: 'Folder Tools' })
+    const names = () =>
+      tools.locator('[data-kind]').evaluateAll((els) => els.map((e) => e.getAttribute('title')))
+    const before = await names()
+    const cellIn = (title: string) => tools.locator(`[data-kind][title="${title}"]`)
+    await dragTo(win, await centre(cellIn(before[0]!)), await centre(cellIn(before[2]!)))
+    await expect.poll(names).toEqual([before[1], before[2], before[0], ...before.slice(3)])
+    await expect(win.getByText('Editing · 2 changes')).toBeVisible()
+    // (the click right after a drop can be swallowed, so retry it)
+    await expect(async () => {
+      await tools.getByRole('button', { name: 'Close folder' }).click({ timeout: 1000 })
+      await expect(tools).toHaveCount(0, { timeout: 1000 })
+    }).toPass()
+
+    // make a folder: hold ⌥ while dropping the first app on the second
+    const page = await titles(win)
+    const [a, b] = [page[0]!, page[1]!]
+    await win.keyboard.down('Alt')
+    await dragTo(win, await centre(cell(win, a)), await centre(cell(win, b)))
+    await win.keyboard.up('Alt')
+    await expect(win.getByText('Editing · 3 changes')).toBeVisible()
+    const made = win.getByTestId('page').locator('[data-kind="folder"][title="New Folder"]')
+    await expect(made).toHaveCount(1)
+    const inside = win.getByRole('dialog', { name: 'Folder New Folder' })
+    await expect(async () => {
+      await made.click({ timeout: 1000 })
+      await expect(inside).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    expect(
+      await inside
+        .locator('[data-kind]')
+        .evaluateAll((els) => els.map((e) => e.getAttribute('title')))
+    ).toEqual([b, a])
+    await app.close()
+  })
+
   test('refuses a drop into a full folder', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
     const win = await app.firstWindow()
