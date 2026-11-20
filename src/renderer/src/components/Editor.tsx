@@ -23,7 +23,7 @@ import {
   useState,
   type ReactNode
 } from 'react'
-import { findItem, locate, moveItem, type DropTarget } from '@shared/layout/edit'
+import { findItem, locate, moveItems, type DropTarget } from '@shared/layout/edit'
 import type { FolderItem, Layout } from '@shared/types'
 import { DragCell, DropZone } from './DragCell'
 import { ItemTile } from './ItemTile'
@@ -71,7 +71,7 @@ const stepByCell: KeyboardCoordinateGetter = (event, { currentCoordinates, conte
 }
 
 // Where a drop lands: an icon's slot, a folder, the end of a page or the dock. Null: nowhere.
-function resolve(layout: Layout, activeId: string, overId: string): DropTarget | null {
+function resolve(layout: Layout, group: string[], overId: string): DropTarget | null {
   if (overId.startsWith('page:')) {
     const page = Number(overId.slice(5))
     return { zone: 'page', page, index: layout.pages[page]?.length ?? 0 }
@@ -79,11 +79,11 @@ function resolve(layout: Layout, activeId: string, overId: string): DropTarget |
   if (overId === 'dock') return { zone: 'dock', index: layout.dock.length }
   if (!overId.startsWith('cell:')) return null
   const id = overId.slice(5)
-  if (id === activeId) return null
+  if (group.includes(id)) return null
   const at = locate(layout, id)
   if (!at || at.zone === 'folder') return null
   const over = findItem(layout, id)
-  if (over?.kind === 'folder' && findItem(layout, activeId)?.kind === 'app') {
+  if (over?.kind === 'folder' && group.every((g) => findItem(layout, g)?.kind === 'app')) {
     return { zone: 'folder', folderId: id }
   }
   return at.zone === 'dock'
@@ -96,6 +96,8 @@ export function EditorDnd({
   layout,
   zoom,
   udid,
+  selected,
+  onSelect,
   onChange,
   onPreview,
   onFlip,
@@ -105,6 +107,9 @@ export function EditorDnd({
   layout: Layout
   zoom: number
   udid: string
+  // The icons picked with ⌘-click or shift-click: dragging one of them moves all of them.
+  selected: ReadonlySet<string>
+  onSelect: (next: ReadonlySet<string>) => void
   onChange: (next: Layout) => void
   // The layout as it would be if the dragged item were dropped here, or null. The page shows it live.
   onPreview: (next: Layout | null) => void
@@ -157,34 +162,38 @@ export function EditorDnd({
   }
   // Everything below works on what is on screen: the preview once the dragged icon has moved, else the layout.
   const shown = (): Layout => preview.current ?? layout
+  // What a drag moves: the whole selection when the dragged icon is part of it, else just that icon.
+  const groupOf = (id: string): string[] =>
+    selected.has(id) && selected.size > 1 ? [...selected] : [id]
   const onOver = (ev: DragOverEvent): void => {
     const over = ev.over ? String(ev.over.id) : ''
     setFlip(over === 'flip:-1' ? -1 : over === 'flip:1' ? 1 : null)
     // Resting on another icon, or on the end of a page or the dock: the others make room. A folder, or a full
     // place, moves nothing. Its own gap (it has already moved there) keeps things as they are.
     window.clearTimeout(room.current)
-    const id = String(ev.active.id).slice('drag:'.length)
-    const target = over ? resolve(shown(), id, over) : null
+    const group = groupOf(String(ev.active.id).slice('drag:'.length))
+    const target = over ? resolve(shown(), group, over) : null
     if (target && target.zone !== 'folder') {
       room.current = window.setTimeout(() => {
-        const next = moveItem(shown(), id, target)
+        const next = moveItems(shown(), group, target)
         if (next) setPreview(next)
       }, MAKE_ROOM_MS)
     }
   }
   const onEnd = (ev: DragEndEvent): void => {
-    const id = String(ev.active.id).slice('drag:'.length)
+    const group = groupOf(String(ev.active.id).slice('drag:'.length))
     const over = ev.over ? String(ev.over.id) : ''
-    if (over === `cell:${id}`) {
+    if (group.some((g) => over === `cell:${g}`)) {
       if (preview.current) onChange(preview.current) // dropped in the gap it opened
     } else {
-      const target = over ? resolve(shown(), id, over) : null
+      const target = over ? resolve(shown(), group, over) : null
       if (target) {
-        const next = moveItem(shown(), id, target)
+        const next = moveItems(shown(), group, target)
         if (next === null) setNotice('Can’t move it there: that page, dock or folder is full.')
         else onChange(next)
       }
     }
+    if (selected.size > 0) onSelect(new Set())
     end()
   }
 
@@ -211,6 +220,9 @@ export function EditorDnd({
             }}
           >
             <ItemTile item={active} udid={udid} />
+            {groupOf(active.id).length > 1 && (
+              <span className={e.count}>{groupOf(active.id).length}</span>
+            )}
           </div>
         )}
       </DragOverlay>

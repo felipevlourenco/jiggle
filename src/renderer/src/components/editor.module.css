@@ -1,4 +1,5 @@
 .overlay {
+  position: relative;
   pointer-events: none;
   filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
 }
@@ -68,4 +69,19 @@
 .flip.flipIdle {
   background: none;
   pointer-events: none;
+}
+.count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
 }

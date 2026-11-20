@@ -158,3 +158,11 @@
     animation: none;
   }
 }
+
+/* Picked for a group move. */
+.cell[data-selected] > * {
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 6px var(--primary);
+}

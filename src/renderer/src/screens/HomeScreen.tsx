@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type WheelEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type WheelEvent
+} from 'react'
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { compact } from '@shared/layout/edit'
@@ -7,7 +15,7 @@ import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import { summarize } from '@shared/layout/summarize'
 import { describeIssue, validateLayout } from '@shared/layout/validate'
-import type { Device, FolderItem, Layout } from '@shared/types'
+import type { Device, FolderItem, Layout, LayoutItem } from '@shared/types'
 import { Dock } from '../components/Dock'
 import { EditorDnd, FlipZones, FolderPanel } from '../components/Editor'
 import { PageDots } from '../components/PageDots'
@@ -37,6 +45,8 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   const [chosenZoom, setChosenZoom] = useState<number>()
   const [stage, setStage] = useState({ width: 0, height: 0 })
   const [preview, setPreview] = useState<Layout | null>(null) // see EditorDnd
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set()) // ⌘-click / shift-click in Edit mode
+  const anchor = useRef<string | null>(null) // where a shift-click range starts
 
   const qc = useQueryClient()
   const editor = useDraft()
@@ -87,6 +97,51 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
     else if (baseSignature && phoneSignature && baseSignature !== phoneSignature)
       draftActions.reset()
   }, [editor.draft, editor.udid, device.udid, baseSignature, phoneSignature])
+
+  // The picked icons that are still on the phone (an undo can remove one) and only while editing.
+  const selected = useMemo<ReadonlySet<string>>(() => {
+    if (!editing || !shown) return new Set()
+    const there = new Set([...shown.dock, ...shown.pages.flat()].map((i) => i.id))
+    return new Set([...picked].filter((id) => there.has(id)))
+  }, [editing, shown, picked])
+  const clearPicked = (): void => {
+    setPicked(new Set())
+    anchor.current = null
+  }
+  // A click on an icon in Edit mode: ⌘ toggles it, shift picks everything from the last one, a plain click
+  // drops the picks, or opens a folder.
+  const pick = (item: LayoutItem, ev: MouseEvent): void => {
+    if (ev.metaKey || ev.ctrlKey) {
+      const next = new Set(selected)
+      if (!next.delete(item.id)) next.add(item.id)
+      setPicked(next)
+      anchor.current = item.id
+    } else if (ev.shiftKey && anchor.current && shown) {
+      const list = [shown.dock, ...shown.pages].find((l) => l.some((i) => i.id === item.id)) ?? []
+      const [a, b] = [anchor.current, item.id].map((id) => list.findIndex((i) => i.id === id))
+      const range =
+        a === undefined || a < 0 ? [item] : list.slice(Math.min(a, b!), Math.max(a, b!) + 1)
+      setPicked(
+        new Set([
+          ...selected,
+          ...range.filter((i) => i.kind === 'app' || i.kind === 'folder').map((i) => i.id)
+        ])
+      )
+    } else if (selected.size > 0) {
+      clearPicked()
+    } else if (item.kind === 'folder') {
+      setOpenFolder(item.id)
+    }
+  }
+  // Esc drops the picks.
+  useEffect(() => {
+    if (selected.size === 0) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') clearPicked()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selected])
 
   // ⌘Z / ⇧⌘Z
   useEffect(() => {
@@ -201,6 +256,18 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   return (
     <div className={s.root}>
       <ToolbarActions>
+        {selected.size > 0 && (
+          <>
+            <span className="pill" role="status">
+              <i />
+              {selected.size} selected
+            </span>
+            <button className="tbtn" onClick={clearPicked}>
+              Clear
+            </button>
+            <span className="vsep" />
+          </>
+        )}
         {mine && changes > 0 && (
           <>
             <span className="pill" role="status">
@@ -216,7 +283,9 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
           disabled={!canEdit}
           title={canEdit ? undefined : 'Editing is turned off for this iOS version'}
           onClick={() =>
-            editing ? draftActions.done() : draftActions.edit(device.udid, data!.layout)
+            editing
+              ? (draftActions.done(), clearPicked())
+              : draftActions.edit(device.udid, data!.layout)
           }
         >
           <PencilIcon size={15} />
@@ -298,6 +367,8 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
         layout={layout}
         zoom={zoom}
         udid={device.udid}
+        selected={selected}
+        onSelect={(next) => setPicked(next)}
         onChange={draftActions.change}
         onPreview={setPreview}
         onFlip={(dir) => goTo(current + dir)}
@@ -310,9 +381,13 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
               items={view.pages[current] ?? []}
               grid={layout.grid}
               udid={device.udid}
-              edit={editing ? { page: current, onOpenFolder: setOpenFolder } : undefined}
+              edit={editing ? { page: current, selected, onPick: pick } : undefined}
             />
-            <Dock items={view.dock} udid={device.udid} edit={editing} />
+            <Dock
+              items={view.dock}
+              udid={device.udid}
+              edit={editing ? { selected, onPick: pick } : undefined}
+            />
             {editing && <FlipZones />}
             {editing && folder && (
               <FolderPanel folder={folder} udid={device.udid} onClose={() => setOpenFolder(null)} />

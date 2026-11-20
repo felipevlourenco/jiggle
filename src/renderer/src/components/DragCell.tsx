@@ -1,5 +1,5 @@
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
-import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 
 const SLIDE_MS = 220
 
@@ -12,6 +12,7 @@ export function DragCell({
   dropTarget = true,
   draggable = true,
   onClick,
+  selected,
   children,
   ...rest
 }: {
@@ -20,7 +21,8 @@ export function DragCell({
   style?: CSSProperties
   dropTarget?: boolean // false: can be picked up but nothing is dropped on it (apps in the folder panel)
   draggable?: boolean // false: widgets and the like stay put but still take a drop next to them
-  onClick?: () => void
+  onClick?: (ev: MouseEvent) => void
+  selected?: boolean // picked for a group move (⌘-click, shift-click)
   children: ReactNode
   'data-moved'?: true
 }) {
@@ -58,7 +60,8 @@ export function DragCell({
         drop.setNodeRef(el)
       }}
       className={className}
-      style={{ ...style, opacity: drag.isDragging ? 0.25 : undefined }}
+      style={{ ...style, opacity: drag.isDragging || (selected && active) ? 0.25 : undefined }}
+      data-selected={selected || undefined}
       onClick={onClick}
       {...(draggable ? drag.attributes : {})}
       {...(draggable ? drag.listeners : {})}
