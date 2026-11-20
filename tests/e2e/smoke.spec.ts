@@ -155,12 +155,24 @@ test.describe('Home Screen preview', () => {
     const dots = win.getByRole('group', { name: 'Pages' })
     await expect(dots).toBeVisible()
 
-    await win.mouse.move(640, 400)
-    await win.mouse.wheel(80, 0)
-    await win.mouse.wheel(60, 0) // same swipe: must not skip a page
+    // Dispatched from inside the page, 50 ms apart (inside the app's 120 ms pause): separate mouse.wheel() calls can
+    // land more than the app's pause window apart on a busy CI runner, and the app would see two swipes.
+    // Page timers fire in due-time order, so the app's pause timer can't beat the next event.
+    const swipe = (...deltas: number[]): Promise<unknown> =>
+      win.evaluate(`(async () => {
+        for (const deltaX of ${JSON.stringify(deltas)}) {
+          // looked up per event: the page's tiles are replaced when the page turns
+          const el = document.elementFromPoint(640, 400)
+          el.dispatchEvent(new WheelEvent('wheel', { deltaX, bubbles: true, cancelable: true }))
+          await new Promise((resolve) => setTimeout(resolve, 50))
+        }
+      })()`)
+
+    await swipe(80, 60) // same swipe: must not skip a page
     await pageIs(win, 2)
     await win.waitForTimeout(300) // wheel events stopped: the next swipe counts
-    await win.mouse.wheel(-80, 0)
+    await pageIs(win, 2) // still page 2: the inertia events did not turn another page
+    await swipe(-80)
     await pageIs(win, 1)
     await app.close()
   })
