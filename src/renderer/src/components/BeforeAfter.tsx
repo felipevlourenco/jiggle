@@ -67,25 +67,30 @@ export function BeforeAfter({
     frameKind: FrameKind,
     icons: string,
     marked?: ReadonlySet<string>
-  ) => (
-    <figure className={s.side} aria-label={label}>
-      <figcaption>{label}</figcaption>
-      <PhoneFrame zoom={zoom} kind={frameKind}>
-        <PageGrid
-          key={current}
-          items={layout.pages[current] ?? []}
-          grid={layout.grid}
-          udid={icons}
-          marked={marked}
-          onFolder={(folder) => setOpen({ label, folder })}
-        />
-        <Dock items={layout.dock} udid={icons} />
-        {open?.label === label && (
-          <FolderPopover folder={open.folder} udid={icons} onClose={() => setOpen(null)} />
-        )}
-      </PhoneFrame>
-    </figure>
-  )
+  ) => {
+    // After has fewer pages than Before on the same device: this page is dropped.
+    const removed = marked !== undefined && beforeUdid === udid && !layout.pages[current]
+    return (
+      <figure className={s.side} aria-label={label}>
+        <figcaption>{label}</figcaption>
+        <PhoneFrame zoom={zoom} kind={frameKind}>
+          <PageGrid
+            key={current}
+            items={layout.pages[current] ?? []}
+            grid={layout.grid}
+            udid={icons}
+            marked={marked}
+            onFolder={(folder) => setOpen({ label, folder })}
+          />
+          <Dock items={layout.dock} udid={icons} />
+          {removed && <span className={s.removed}>Page removed</span>}
+          {open?.label === label && (
+            <FolderPopover folder={open.folder} udid={icons} onClose={() => setOpen(null)} />
+          )}
+        </PhoneFrame>
+      </figure>
+    )
+  }
 
   return (
     <div className={s.root}>
