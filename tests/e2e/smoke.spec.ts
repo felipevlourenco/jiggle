@@ -228,6 +228,46 @@ test.describe('Apps', () => {
   })
 })
 
+test.describe('App size', () => {
+  test('the Size column shows sizes, sorts biggest first, and puts unknown sizes last with a dash', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    const size = win.getByRole('columnheader', { name: /Size/ })
+    await expect(size).toBeVisible()
+
+    // the mock gives every app a size except about one in seven
+    const sizes = () =>
+      win
+        .getByRole('row')
+        .evaluateAll((rows) => rows.slice(1).map((r) => r.lastElementChild!.textContent!.trim()))
+    const toBytes = (t: string): number | null => {
+      const m = /^([\d.]+) (B|KB|MB|GB|TB)$/.exec(t)
+      return m ? Number(m[1]) * 1000 ** ['B', 'KB', 'MB', 'GB', 'TB'].indexOf(m[2]!) : null
+    }
+    const first = await sizes()
+    expect(first.some((t) => t === '–')).toBe(true)
+    expect(first.some((t) => toBytes(t) !== null)).toBe(true)
+
+    await size.getByRole('button').click()
+    await expect(size).toHaveAttribute('aria-sort', 'ascending')
+    const asc = (await sizes()).map(toBytes)
+    const knownAsc = asc.filter((n): n is number => n !== null)
+    expect(knownAsc).toEqual([...knownAsc].sort((a, b) => a - b))
+    expect(asc.slice(-1)[0]).toBeNull() // unknown last
+
+    await size.getByRole('button').click()
+    await expect(size).toHaveAttribute('aria-sort', 'descending')
+    const desc = (await sizes()).map(toBytes)
+    const knownDesc = desc.filter((n): n is number => n !== null)
+    expect(knownDesc[0]).toBe(Math.max(...knownDesc))
+    // rounded to the shown precision, so only check the order loosely: never a smaller one before a bigger one
+    expect(knownDesc).toEqual([...knownDesc].sort((a, b) => b - a))
+    expect(desc.slice(-1)[0]).toBeNull() // still last
+    await app.close()
+  })
+})
+
 test.describe('Organize', () => {
   test('previews A–Z before/after without applying, and the pager moves both frames', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })

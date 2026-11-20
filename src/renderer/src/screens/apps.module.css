@@ -147,3 +147,11 @@
   background: var(--secondary);
   vertical-align: middle;
 }
+.size {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.table th:last-child {
+  text-align: right;
+}
