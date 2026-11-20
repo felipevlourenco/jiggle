@@ -8,6 +8,7 @@ import { describeIssue, validateLayout } from '@shared/layout/validate'
 import type { AppItem, Device, Layout, LayoutItem } from '@shared/types'
 import { BeforeAfter } from '../components/BeforeAfter'
 import { CheckIcon } from '../components/icons'
+import { ColorOrder } from '../components/ColorOrder'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { Banner } from '../components/Banner'
 import { Thumb } from '../components/Thumb'
@@ -63,7 +64,8 @@ export function Organize({ device }: { device: Device }) {
         pins,
         folders: choice.folders,
         categoryOf,
-        colorOf: (id) => colors.get(id) ?? null
+        colorOf: (id) => colors.get(id) ?? null,
+        colorOrder: choice.colorOrder
       })
     const after = sorted(choice.by)
     const moved = movedIds(before, after)
@@ -184,6 +186,15 @@ export function Organize({ device }: { device: Device }) {
           Create folders by category
         </label>
       </div>
+
+      {choice.by === 'color' && (
+        <div className={s.options}>
+          <ColorOrder
+            order={choice.colorOrder}
+            onChange={(colorOrder) => setChoice({ colorOrder })}
+          />
+        </div>
+      )}
 
       {blocked && (
         <Banner severity="error">

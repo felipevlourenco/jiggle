@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { COLOR_FAMILIES, DEFAULT_COLOR_ORDER, type ColorFamily } from '@shared/layout/color'
 import type { SortOptions } from '@shared/layout/sort'
 
 // What the Organize screen has chosen. Lives outside the screen so it survives switching tabs.
@@ -7,9 +8,33 @@ export interface OrganizeChoice {
   by: SortOptions['by']
   widgetMode: SortOptions['widgetMode']
   folders: boolean // with by: 'category': one folder per category
+  colorOrder: readonly ColorFamily[] // with by: 'color'; kept across launches
 }
 
-let choice: OrganizeChoice = { by: 'name', widgetMode: 'keep-pages', folders: false }
+const COLOR_KEY = 'jiggle.colorOrder'
+function savedColorOrder(): readonly ColorFamily[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLOR_KEY) ?? 'null') as unknown
+    // Only a complete list of known families counts; anything else is the default.
+    if (
+      Array.isArray(saved) &&
+      saved.length === COLOR_FAMILIES.length &&
+      COLOR_FAMILIES.every((f) => saved.includes(f))
+    ) {
+      return saved as ColorFamily[]
+    }
+  } catch {
+    // no storage: the default
+  }
+  return DEFAULT_COLOR_ORDER
+}
+
+let choice: OrganizeChoice = {
+  by: 'name',
+  widgetMode: 'keep-pages',
+  folders: false,
+  colorOrder: savedColorOrder()
+}
 const listeners = new Set<() => void>()
 
 export function useOrganizeChoice(): [OrganizeChoice, (patch: Partial<OrganizeChoice>) => void] {
@@ -24,6 +49,13 @@ export function useOrganizeChoice(): [OrganizeChoice, (patch: Partial<OrganizeCh
     current,
     (patch) => {
       choice = { ...choice, ...patch }
+      if (patch.colorOrder) {
+        try {
+          localStorage.setItem(COLOR_KEY, JSON.stringify(patch.colorOrder))
+        } catch {
+          // not saved: it lasts until the app closes
+        }
+      }
       listeners.forEach((l) => l())
     }
   ]

@@ -84,3 +84,33 @@ describe('dominantColor', () => {
     expect(dominantColor(image(Array(4).fill(null), 2))).toBeNull()
   })
 })
+
+describe('compareColors with a custom order', () => {
+  const colors: Record<string, IconColor | null> = {
+    black: hsl(0, 0, 0.05),
+    blue: hsl(220),
+    blue2: hsl(240), // another blue band: still blue, after the first
+    green: hsl(120),
+    red: hsl(0),
+    white: hsl(0, 0, 0.97),
+    unknown: null
+  }
+  const sort = (order: Parameters<typeof compareColors>[2]) =>
+    Object.keys(colors).sort((a, b) => compareColors(colors[a]!, colors[b]!, order))
+
+  it('puts the families in the person’s order, then anything left out last', () => {
+    expect(sort(['blue', 'green', 'black'])).toEqual([
+      'blue',
+      'blue2',
+      'green',
+      'black',
+      'red', // not in the list: after the listed ones, in the default order
+      'white',
+      'unknown'
+    ])
+  })
+
+  it('the default order is the rainbow, then white, grey, black', () => {
+    expect(sort(undefined)).toEqual(['red', 'green', 'blue', 'blue2', 'white', 'unknown', 'black'])
+  })
+})
