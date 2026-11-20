@@ -159,8 +159,14 @@
   }
 }
 
-/* Picked for a group move. */
-.cell[data-selected] > * {
+/* The app a search points at. */
+.found {
+  display: contents;
+}
+/* Picked for a group move, or pointed at by a search. */
+.cell[data-selected] > *,
+.cell[data-found] > *,
+.found[data-found] > * {
   border-radius: 16px;
   box-shadow:
     0 0 0 3px #fff,

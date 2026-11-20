@@ -89,3 +89,31 @@
   text-align: center;
   color: var(--text-secondary);
 }
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 200px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+.search:focus-within {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+.search input::placeholder {
+  color: var(--text-secondary);
+}

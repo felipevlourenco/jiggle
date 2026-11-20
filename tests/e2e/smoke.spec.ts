@@ -228,6 +228,53 @@ test.describe('Apps', () => {
   })
 })
 
+test.describe('Home Screen search', () => {
+  test('⌘F finds an app: the page turns, the match is ringed, Enter goes to the next, Esc clears', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const box = win.getByRole('searchbox', { name: 'Find an app' })
+    await win.keyboard.press('Meta+f')
+    await expect(box).toBeFocused()
+
+    // an app on a later page: the pager moves to it and it carries the ring
+    await box.fill('Bank Three')
+    await expect(win.getByText('1 of 1')).toBeVisible()
+    await expect(win.getByTestId('page').locator('[data-found]')).toHaveCount(1)
+    await expect(
+      win.getByRole('group', { name: 'Pages' }).locator('[aria-current="page"]')
+    ).not.toHaveAttribute('aria-label', 'Page 1')
+
+    // several matches: Enter steps through them
+    await box.fill('Bank')
+    const count = Number((await win.getByText(/^1 of \d+$/).textContent())!.split(' ')[2])
+    expect(count).toBeGreaterThan(1)
+    await box.press('Enter')
+    await expect(win.getByText(`2 of ${count}`)).toBeVisible()
+    await box.press('Shift+Enter')
+    await expect(win.getByText(`1 of ${count}`)).toBeVisible()
+
+    await box.fill('zzzz')
+    await expect(win.getByText('No match')).toBeVisible()
+    await box.press('Escape')
+    await expect(box).toHaveValue('')
+    await app.close()
+  })
+
+  test('an app inside a folder opens the folder with the app ringed', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await win.getByRole('searchbox', { name: 'Find an app' }).fill('Calculator')
+    const folder = win.getByRole('dialog', { name: 'Folder Utilities' })
+    await expect(folder).toBeVisible()
+    await expect(folder.locator('[data-found]')).toHaveCount(1)
+    await folder.getByRole('button', { name: 'Close folder' }).click()
+    await expect(folder).toHaveCount(0)
+    await app.close()
+  })
+})
+
 test.describe('Organize', () => {
   test('previews A–Z before/after without applying, and the pager moves both frames', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
@@ -591,6 +638,50 @@ test.describe('Apply and restore', () => {
     await expect(rows).toHaveCount(2) // the undo took a backup of its own
     await win.getByRole('link', { name: 'Home Screen' }).click()
     await expect.poll(() => firstIcon(win)).toBe(original)
+    await app.close()
+  })
+
+  test('after an apply a toast offers Undo, which puts the layout back', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const original = await firstIcon(win)
+
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    const sheet = win.getByRole('dialog', { name: /Apply A–Z to Sam/ })
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done!/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+
+    const toast = win.locator('div[role="status"]', { hasText: 'Applied.' })
+    await expect(toast).toBeVisible()
+    await toast.getByRole('button', { name: 'Undo' }).click()
+    await expect(win.getByText('Undone. Your layout is back as it was.')).toBeVisible()
+    await win.getByRole('link', { name: 'Home Screen' }).click()
+    await expect.poll(() => firstIcon(win)).toBe(original)
+    await app.close()
+  })
+
+  test('a newer change replaces the Undo offer, so Undo only ever undoes the last one', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    const sheet = win.getByRole('dialog', { name: /Apply A–Z to Sam/ })
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+    const undo = win.getByRole('button', { name: 'Undo' })
+    await expect(undo).toBeVisible()
+    // a second change (a restore from History)
+    await win.getByRole('link', { name: 'History' }).click()
+    await win.getByRole('listitem').first().getByRole('button', { name: 'Restore' }).click()
+    const restore = win.getByRole('dialog', { name: /Restore/ })
+    await restore.getByRole('button', { name: 'Restore', exact: true }).click()
+    await expect(restore.getByText(/Restored/)).toBeVisible()
+    await restore.getByRole('button', { name: 'Close' }).click()
+    // the toast now offers to undo the restore, not the sort: one offer at a time
+    await expect(win.getByRole('button', { name: 'Undo' })).toHaveCount(1)
     await app.close()
   })
 

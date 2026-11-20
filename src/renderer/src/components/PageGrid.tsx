@@ -13,6 +13,7 @@ export function PageGrid({
   grid,
   udid,
   marked,
+  found,
   edit,
   onFolder
 }: {
@@ -20,6 +21,7 @@ export function PageGrid({
   grid: Grid
   udid: string
   marked?: ReadonlySet<string> // item ids that get a coral dot (moved by a sort)
+  found?: string // the item a search is pointing at: a ring around it
   edit?: {
     page: number
     selected: ReadonlySet<string>
@@ -36,7 +38,8 @@ export function PageGrid({
     const common = {
       className: `${t.cell} ${item.kind === 'widget' ? t.cellWide : ''}`,
       style: { gridColumn: `${col + 1} / span ${w}`, gridRow: `${row + 1} / span ${h}` },
-      'data-moved': marked?.has(item.id) || undefined
+      'data-moved': marked?.has(item.id) || undefined,
+      'data-found': found === item.id || undefined
     }
     if (!edit) {
       if (item.kind === 'folder' && onFolder) {

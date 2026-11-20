@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyEvent,
   type MouseEvent,
   type WheelEvent
 } from 'react'
@@ -11,6 +12,7 @@ import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { compact } from '@shared/layout/edit'
 import { gridFor, pageCapacity } from '@shared/layout/grid'
+import { findApps, type AppMatch } from '@shared/layout/search'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import { summarize } from '@shared/layout/summarize'
@@ -18,10 +20,11 @@ import { describeIssue, validateLayout } from '@shared/layout/validate'
 import type { Device, FolderItem, Layout, LayoutItem } from '@shared/types'
 import { Dock } from '../components/Dock'
 import { EditorDnd, FlipZones, FolderPanel } from '../components/Editor'
+import { FolderPopover } from '../components/FolderPopover'
 import { PageDots } from '../components/PageDots'
 import { PageGrid } from '../components/PageGrid'
 import { ToolbarActions } from '../components/ToolbarSlot'
-import { RedoIcon, UndoIcon, PencilIcon } from '../components/icons'
+import { RedoIcon, UndoIcon, PencilIcon, SearchIcon } from '../components/icons'
 import { frameSize, PhoneFrame } from '../components/PhoneFrame'
 import t from '../components/tiles.module.css'
 import p from '../components/phone.module.css'
@@ -47,6 +50,9 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   const [preview, setPreview] = useState<Layout | null>(null) // see EditorDnd
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set()) // ⌘-click / shift-click in Edit mode
   const anchor = useRef<string | null>(null) // where a shift-click range starts
+  const [query, setQuery] = useState('')
+  const [hit, setHit] = useState(0) // which match of the search is shown
+  const searchBox = useRef<HTMLInputElement>(null)
 
   const qc = useQueryClient()
   const editor = useDraft()
@@ -142,6 +148,39 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [selected])
+
+  // Search: the page with the match turns up, and a folder that holds it opens.
+  const matches = useMemo(() => (shown ? findApps(shown, query) : []), [shown, query])
+  const jumpTo = (match: AppMatch | undefined): void => {
+    if (!match) return setOpenFolder(null)
+    if (match.page !== null) setPage(match.page)
+    setOpenFolder(match.folderId)
+  }
+  const search = (text: string): void => {
+    setQuery(text)
+    setHit(0)
+    jumpTo(shown ? findApps(shown, text)[0] : undefined)
+  }
+  const onSearchKey = (e: ReactKeyEvent<HTMLInputElement>): void => {
+    if (e.key === 'Escape') return search('')
+    if (e.key !== 'Enter' || matches.length === 0) return
+    const next = (hit + (e.shiftKey ? -1 : 1) + matches.length) % matches.length
+    setHit(next)
+    jumpTo(matches[next])
+  }
+  const found = matches[hit]
+
+  // ⌘F
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (!e.metaKey || e.key.toLowerCase() !== 'f') return
+      e.preventDefault()
+      searchBox.current?.focus()
+      searchBox.current?.select()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // ⌘Z / ⇧⌘Z
   useEffect(() => {
@@ -268,6 +307,23 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
             <span className="vsep" />
           </>
         )}
+        <label className={s.search}>
+          <SearchIcon size={14} />
+          <input
+            ref={searchBox}
+            type="search"
+            placeholder="Find an app"
+            aria-label="Find an app"
+            value={query}
+            onChange={(e) => search(e.target.value)}
+            onKeyDown={onSearchKey}
+          />
+          {query && (
+            <span className="meta" aria-live="polite">
+              {matches.length ? `${hit + 1} of ${matches.length}` : 'No match'}
+            </span>
+          )}
+        </label>
         {mine && changes > 0 && (
           <>
             <span className="pill" role="status">
@@ -381,16 +437,26 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
               items={view.pages[current] ?? []}
               grid={layout.grid}
               udid={device.udid}
+              found={found?.id}
               edit={editing ? { page: current, selected, onPick: pick } : undefined}
             />
             <Dock
               items={view.dock}
               udid={device.udid}
               edit={editing ? { selected, onPick: pick } : undefined}
+              found={found?.id}
             />
             {editing && <FlipZones />}
             {editing && folder && (
               <FolderPanel folder={folder} udid={device.udid} onClose={() => setOpenFolder(null)} />
+            )}
+            {!editing && folder && (
+              <FolderPopover
+                folder={folder}
+                udid={device.udid}
+                found={found?.id}
+                onClose={() => setOpenFolder(null)}
+              />
             )}
           </PhoneFrame>
         </div>

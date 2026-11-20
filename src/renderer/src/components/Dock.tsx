@@ -9,7 +9,8 @@ import t from './tiles.module.css'
 export function Dock({
   items,
   udid,
-  edit
+  edit,
+  found
 }: {
   items: LayoutItem[]
   udid: string
@@ -17,12 +18,15 @@ export function Dock({
     selected: ReadonlySet<string>
     onPick: (item: LayoutItem, ev: MouseEvent) => void
   }
+  found?: string // the item a search is pointing at
 }) {
   if (!edit) {
     return (
       <div className={s.dock} data-testid="dock">
         {items.map((item) => (
-          <ItemTile key={item.id} item={item} udid={udid} label={false} />
+          <div key={item.id} data-found={found === item.id || undefined} className={t.found}>
+            <ItemTile item={item} udid={udid} label={false} />
+          </div>
         ))}
       </div>
     )
@@ -41,6 +45,7 @@ export function Dock({
               ? (ev) => edit.onPick(item, ev)
               : undefined
           }
+          data-found={found === item.id || undefined}
         >
           <ItemTile item={item} udid={udid} label={false} />
         </DragCell>

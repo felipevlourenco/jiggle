@@ -25,6 +25,7 @@ export function DragCell({
   selected?: boolean // picked for a group move (⌘-click, shift-click)
   children: ReactNode
   'data-moved'?: true
+  'data-found'?: true
 }) {
   const drag = useDraggable({ id: `drag:${id}`, disabled: !draggable })
   const drop = useDroppable({ id: `cell:${id}`, disabled: !dropTarget })
