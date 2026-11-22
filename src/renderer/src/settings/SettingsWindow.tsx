@@ -116,6 +116,20 @@ function General({ settings, save }: { settings: Settings; save: (p: Partial<Set
         </select>
         <span className="meta">per device</span>
       </div>
+      <span className={s.fl} />
+      <div>
+        <label className="sw">
+          <input
+            type="checkbox"
+            checked={settings.backupOnConnect}
+            onChange={(e) => save({ backupOnConnect: e.target.checked })}
+          />
+          Back up when a device connects
+        </label>
+        <span className="meta">
+          Only if its layout changed since the last backup. Checked once each time you plug it in.
+        </span>
+      </div>
     </div>
   )
 }

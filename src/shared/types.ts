@@ -190,5 +190,6 @@ export interface Settings {
   backupRetention: number // automatic backups kept per device
   categoryLookupEnabled: boolean // off (with updateCheckEnabled): the app makes no network requests at all
   updateCheckEnabled: boolean // look for a new Jiggle on GitHub at launch
+  backupOnConnect: boolean // back a phone up when it connects, if its layout changed since the last backup
   wifiEnabled: boolean // also list devices reachable over Wi‑Fi (needs Wi‑Fi sync turned on in Finder)
 }

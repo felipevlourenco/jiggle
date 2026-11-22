@@ -140,6 +140,7 @@ describe('IPC validation', () => {
       backupRetention: 50,
       categoryLookupEnabled: true,
       updateCheckEnabled: true,
+      backupOnConnect: false,
       wifiEnabled: false
     })
     expect(await call('settings:set', { theme: 'dark', backupRetention: 10 })).toMatchObject({

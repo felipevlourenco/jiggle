@@ -14,6 +14,7 @@ import type { Broadcast } from '@shared/ipc-contract'
 import { dominantColor } from '@shared/layout/color'
 import { registerIpc } from './ipc'
 import { restoreLastBackup } from './ipc/apply'
+import { ConnectBackups } from './services/ConnectBackups'
 import { backUpActiveDevice, requestSaveLayout, requestSheet } from './ipc/snapshots'
 import { enforceNetworkAllowlist } from './network'
 import { handleAssetProtocol, registerAssetScheme } from './protocol'
@@ -127,7 +128,10 @@ if (!app.requestSingleInstanceLock()) {
         broadcast('settings:changed', s)
       }
     )
-    nativeTheme.themeSource = settings.get().theme
+    // JIGGLE_THEME=dark|light (tests, dev; ignored in packaged builds) starts the app in that theme without saving it.
+    const themeOverride = app.isPackaged ? undefined : process.env['JIGGLE_THEME']
+    nativeTheme.themeSource =
+      themeOverride === 'dark' || themeOverride === 'light' ? themeOverride : settings.get().theme
     sidecar?.setWifi(settings.get().wifiEnabled) // before the engine starts: it is told with its first `watch`
     const icons = new IconService(bridge, userData, log.scope('icons'), (png) => {
       const image = nativeImage.createFromBuffer(png)
@@ -147,6 +151,13 @@ if (!app.requestSingleInstanceLock()) {
     const snapshots = new SnapshotService(userData, log.scope('snapshots'), {
       keepAutoBackups: () => settings.get().backupRetention
     })
+    void new ConnectBackups({
+      bridge,
+      snapshots,
+      enabled: () => settings.get().backupOnConnect,
+      broadcast,
+      log: log.scope('backups')
+    }).start()
     const pins = new PinsService(userData, log.scope('pins'))
     const exporter = new ExportService({
       bridge,

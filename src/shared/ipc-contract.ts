@@ -83,6 +83,7 @@ const Settings_ = z.object({
   backupRetention: z.number().int().min(5).max(200),
   categoryLookupEnabled: z.boolean(),
   updateCheckEnabled: z.boolean(),
+  backupOnConnect: z.boolean(),
   wifiEnabled: z.boolean()
 }) satisfies z.ZodType<Settings>
 

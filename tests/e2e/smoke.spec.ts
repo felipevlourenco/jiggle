@@ -9,8 +9,10 @@ declare function getComputedStyle(el: unknown): { getPropertyValue(name: string)
 const launch = (env: Record<string, string> = {}) =>
   electron.launch({
     args: ['.'],
+    colorScheme: 'dark', // dark, so a window opening in a test never flashes white
     env: {
       ...process.env,
+      JIGGLE_THEME: 'dark',
       JIGGLE_MOCK_DEVICE: 'none',
       JIGGLE_NO_LOOKUP: '1',
       JIGGLE_USER_DATA: mkdtempSync(join(tmpdir(), 'jiggle-e2e-')), // never the real caches
@@ -1171,6 +1173,19 @@ test.describe('Saved layouts', () => {
     await win.getByRole('button', { name: 'Import Layout…' }).click()
     await expect(win.getByRole('alert')).toContainText('newer Jiggle')
     await app.close()
+  })
+
+  test('with “Back up when a device connects” on, a phone gets one backup on connect, and none when nothing changed', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-'))
+    writeFileSync(join(userData, 'settings.json'), '{"backupOnConnect":true}')
+    const env = { JIGGLE_MOCK_DEVICE: 'iphone-messy', JIGGLE_USER_DATA: userData }
+    for (let launches = 0; launches < 2; launches++) {
+      const app = await launch(env)
+      const win = await app.firstWindow()
+      await win.getByRole('link', { name: 'History' }).click()
+      await expect(win.getByText('Phone connected')).toHaveCount(1) // the second launch changed nothing
+      await app.close()
+    }
   })
 
   test('File > Save Layout… with no phone says so instead of opening a sheet', async () => {

@@ -960,10 +960,10 @@ M27–M29 above are built (M29 is in PR #7). These are ideas that are not built 
 - **Done when:** a layout exported on one Mac imports on another, and a broken or newer file is refused with a clear message.
 - **Manual check:** export a saved layout, delete it, import the file, and apply it.
 
-**M41. Automatic backups on connect**
+**M41. Automatic backups on connect** (built)
 
 - **Goal:** always have a recent backup, without doing anything.
-- **Tasks:** add a setting (off by default). When a known phone connects and its layout differs from the newest backup, take one. Keep the latest 50 as now.
+- **Tasks:** add a setting (off by default). When a known phone connects and its layout differs from the newest backup, take one. Keep the latest 50 as now. Built as Settings > General > "Back up when a device connects" and `ConnectBackups`: when a phone becomes ready it is compared (by layout signature, so app versions and dates don't count) with its newest snapshot, once per connection; any ready phone counts, not only ones seen before.
 - **Files touched:** `src/main/services/SnapshotService.ts`, `src/main/index.ts`, `src/renderer/src/settings/SettingsWindow.tsx`
 - **Done when:** a test connects a mock phone with a changed layout and gets a new backup, and none when nothing changed.
 - **Manual check:** turn it on, rearrange an icon on the phone, unplug and plug in again. History shows a new automatic backup.
