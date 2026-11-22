@@ -65,6 +65,22 @@ async function chooseExportFile(defaultName: string, ext: string): Promise<strin
   return canceled ? undefined : filePath
 }
 
+// Layout files (.jiggle). Tests (not packaged builds): JIGGLE_EXPORT_DIR saves there without asking ("cancel" cancels),
+// and JIGGLE_IMPORT_FILE opens that file without asking ("cancel" cancels).
+const layoutFiles = {
+  save: (defaultName: string) => chooseExportFile(defaultName, 'jiggle'),
+  async open(): Promise<string | undefined> {
+    const file = app.isPackaged ? undefined : process.env['JIGGLE_IMPORT_FILE']
+    if (file) return file === 'cancel' ? undefined : file
+    const options = { filters: [{ name: 'Jiggle layout', extensions: ['jiggle'] }] }
+    const win = BrowserWindow.getFocusedWindow()
+    const { canceled, filePaths } = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    return canceled ? undefined : filePaths[0]
+  }
+}
+
 // Packaged: the frozen engine in Resources. Dev: the sidecar's own venv.
 function createSidecar(): SidecarBridge {
   const sidecarLog = log.scope('sidecar')
@@ -149,6 +165,7 @@ if (!app.requestSingleInstanceLock()) {
       snapshots,
       apply,
       exporter,
+      layoutFiles,
       uninstaller: new UninstallService({
         bridge,
         snapshots,

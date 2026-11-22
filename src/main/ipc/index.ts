@@ -14,7 +14,7 @@ import { registerDeviceIpc } from './device'
 import { registerExportIpc } from './export'
 import { registerLayoutIpc } from './layout'
 import { registerSettingsIpc } from './settings'
-import { registerSnapshotsIpc } from './snapshots'
+import { registerSnapshotsIpc, type LayoutFileDialogs } from './snapshots'
 import type { IpcLike } from './handle'
 
 export interface IpcDeps {
@@ -25,6 +25,7 @@ export interface IpcDeps {
   snapshots: SnapshotService
   apply: ApplyService
   exporter: ExportService
+  layoutFiles: LayoutFileDialogs
   uninstaller: UninstallService
   settings: SettingsService
   pins: PinsService
@@ -35,7 +36,12 @@ export function registerIpc(ipc: IpcLike, d: IpcDeps): void {
   registerDeviceIpc(ipc, d.bridge, d.broadcast)
   registerLayoutIpc(ipc, d.bridge, d.icons)
   registerAppsIpc(ipc, d.bridge, d.icons, d.categories, d.uninstaller)
-  registerSnapshotsIpc(ipc, { bridge: d.bridge, snapshots: d.snapshots, broadcast: d.broadcast })
+  registerSnapshotsIpc(ipc, {
+    bridge: d.bridge,
+    snapshots: d.snapshots,
+    broadcast: d.broadcast,
+    dialogs: d.layoutFiles
+  })
   registerApplyIpc(ipc, d.apply)
   registerExportIpc(ipc, d.exporter)
   registerSettingsIpc(ipc, d)

@@ -2,9 +2,10 @@ import { randomBytes } from 'node:crypto'
 import { mkdir, readdir, readFile, stat, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import writeFileAtomic from 'write-file-atomic'
+import { z } from 'zod'
 import { schemas } from '@shared/ipc-contract'
 import { gridFor } from '@shared/layout/grid'
-import { checkLayoutName } from '@shared/layout/names'
+import { checkLayoutName, NAME_MAX } from '@shared/layout/names'
 import { normalize } from '@shared/layout/normalize'
 import { summarize } from '@shared/layout/summarize'
 import type { Snapshot, SnapshotEntry, SnapshotSummary, Udid } from '@shared/types'
@@ -13,6 +14,19 @@ import { isSafeUdid, snapshotsDir } from './storage/paths'
 
 const AUTO_BACKUPS_KEPT = 50
 const FILE = /^[0-9A-HJKMNP-TV-Z]{26}\.json$/ // <ULID>.json
+
+// A saved layout as a file to share (.jiggle). Never holds the device's id.
+// Bump FILE_VERSION when the shape changes; older Jiggles refuse a newer file instead of guessing.
+export const FILE_VERSION = 1
+const MAX_FILE_BYTES = 5_000_000
+const LayoutFile = z.object({
+  format: z.literal('jiggle-layout'),
+  version: z.literal(FILE_VERSION),
+  name: z.string(),
+  osVersion: z.string(),
+  deviceClass: z.enum(['iPhone', 'iPad']).optional(),
+  rawState: schemas.RawIconState
+})
 
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
 // 26 characters that sort by time: 10 of timestamp, 16 random.
@@ -80,6 +94,57 @@ export class SnapshotService {
     await unlink(join(this.dir(udid), `${id}.json`))
     this.log.info(`snapshot ${id} deleted (saved layout “${saved.name}”)`)
     return summarizeSnapshot(saved)
+  }
+
+  // The text of a .jiggle file for one saved layout, and a file name for it.
+  async exportLayout(udid: Udid, id: string): Promise<{ text: string; fileName: string }> {
+    const { name, osVersion, deviceClass, rawState } = await this.getSaved(udid, id)
+    const file = {
+      format: 'jiggle-layout',
+      version: FILE_VERSION,
+      name,
+      osVersion,
+      deviceClass,
+      rawState
+    }
+    const base = (name ?? 'Layout').replace(/[\\/:*?"<>|]/g, '-')
+    return { text: JSON.stringify(file, null, 2), fileName: `${base}.jiggle` }
+  }
+
+  // Adds a .jiggle file to this device's saved layouts, renamed "Work (2)" if the name is taken.
+  // Throws a message for the person when the file is no good.
+  async importLayout(udid: Udid, text: string): Promise<SnapshotSummary> {
+    if (text.length > MAX_FILE_BYTES) throw new Error('This file is too big to be a Jiggle layout.')
+    let json: unknown
+    try {
+      json = JSON.parse(text)
+    } catch {
+      throw new Error('This isn’t a Jiggle layout file.')
+    }
+    const head = z
+      .object({ format: z.literal('jiggle-layout'), version: z.number() })
+      .safeParse(json)
+    if (!head.success) throw new Error('This isn’t a Jiggle layout file.')
+    if (head.data.version > FILE_VERSION)
+      throw new Error('This layout was made by a newer Jiggle. Update Jiggle to open it.')
+    const file = LayoutFile.safeParse(json)
+    if (!file.success) throw new Error('This layout file is damaged.')
+    const { name, osVersion, deviceClass, rawState } = file.data
+    const taken = (await this.readAll(udid))
+      .filter((e): e is SnapshotSummary => !e.damaged && e.kind === 'saved-layout')
+      .map((e) => e.name ?? '')
+    const base = name.trim().slice(0, NAME_MAX - 4) || 'Imported layout'
+    let unique = base
+    for (let n = 2; checkLayoutName(unique, taken); n++) unique = `${base} (${n})`
+    return this.create({
+      udid,
+      kind: 'saved-layout',
+      name: unique,
+      reason: null,
+      osVersion,
+      deviceClass,
+      rawState
+    })
   }
 
   // Newest first. A device's snapshots, or every device's when no udid is given.

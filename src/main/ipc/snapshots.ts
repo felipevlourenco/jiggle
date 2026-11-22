@@ -1,15 +1,26 @@
+import { readFile } from 'node:fs/promises'
+import writeFileAtomic from 'write-file-atomic'
 import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import type { Broadcast } from '@shared/ipc-contract'
-import type { SavedLayoutResult, SnapshotSummary, Udid } from '@shared/types'
+import type { LayoutFileResult, SavedLayoutResult, SnapshotSummary, Udid } from '@shared/types'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
 import type { SnapshotService } from '../services/SnapshotService'
 import { handle, type IpcLike } from './handle'
+
+// The macOS file dialogs, which return a path, or undefined when the person cancels.
+export interface LayoutFileDialogs {
+  save(defaultName: string): Promise<string | undefined>
+  open(): Promise<string | undefined>
+}
 
 interface Deps {
   bridge: DeviceBridge
   snapshots: SnapshotService
   broadcast: Broadcast
+}
+interface FileDeps extends Deps {
+  dialogs: LayoutFileDialogs
 }
 
 // Reads the phone's icon state as it is right now and saves it. Shows a toast either way.
@@ -78,6 +89,40 @@ export async function saveLayout(
   }
 }
 
+// Both always resolve: a closed dialog or a bad file is a result with a message, not an error.
+async function exportLayout(
+  { snapshots, broadcast, dialogs }: FileDeps,
+  udid: Udid,
+  id: string
+): Promise<LayoutFileResult> {
+  try {
+    const { text, fileName } = await snapshots.exportLayout(udid, id)
+    const path = await dialogs.save(fileName)
+    if (!path) return { ok: false, canceled: true, message: '' }
+    await writeFileAtomic(path, text)
+    broadcast('toast', `Exported ${fileName}`)
+    return { ok: true, message: `Exported ${fileName}` }
+  } catch (err) {
+    return { ok: false, canceled: false, message: (err as Error).message }
+  }
+}
+
+async function importLayout(
+  { snapshots, broadcast, dialogs }: FileDeps,
+  udid: Udid
+): Promise<LayoutFileResult> {
+  try {
+    const path = await dialogs.open()
+    if (!path) return { ok: false, canceled: true, message: '' }
+    const layout = await snapshots.importLayout(udid, await readFile(path, 'utf8'))
+    broadcast('snapshots:changed', undefined)
+    broadcast('toast', `Imported layout “${layout.name}”`)
+    return { ok: true, message: `Imported layout “${layout.name}”` }
+  } catch (err) {
+    return { ok: false, canceled: false, message: (err as Error).message }
+  }
+}
+
 // Rename and delete change a file, so they work with no phone plugged in.
 async function changeSaved(
   { broadcast }: Deps,
@@ -108,7 +153,7 @@ export async function requestSheet(
 export const requestSaveLayout = (deps: Pick<Deps, 'bridge' | 'broadcast'>): Promise<void> =>
   requestSheet(deps, 'menu:save-layout', 'save its layout')
 
-export function registerSnapshotsIpc(ipc: IpcLike, deps: Deps): void {
+export function registerSnapshotsIpc(ipc: IpcLike, deps: FileDeps): void {
   handle(ipc, 'snapshots:layout', async (udid, id) => {
     const saved = await deps.snapshots.get(udid, id)
     return normalize(saved.rawState, gridFor(saved.deviceClass ?? 'iPhone'))
@@ -120,6 +165,8 @@ export function registerSnapshotsIpc(ipc: IpcLike, deps: Deps): void {
   handle(ipc, 'snapshots:delete-layout', (udid, id) =>
     changeSaved(deps, () => deps.snapshots.deleteLayout(udid, id))
   )
+  handle(ipc, 'snapshots:export-layout', (udid, id) => exportLayout(deps, udid, id))
+  handle(ipc, 'snapshots:import-layout', (udid) => importLayout(deps, udid))
   handle(ipc, 'snapshots:list', (udid) => deps.snapshots.list(udid))
   handle(ipc, 'snapshots:backup', (udid) => backUpNow(deps, udid))
 }

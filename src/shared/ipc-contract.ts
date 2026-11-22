@@ -13,6 +13,7 @@ import type {
   Pins,
   SavedLayoutResult,
   Settings,
+  LayoutFileResult,
   SnapshotEntry,
   SnapshotSummary,
   UninstallResult
@@ -125,6 +126,12 @@ export const channels = {
     args: z.tuple([Udid, z.string().min(1)]),
     result: z.custom<SavedLayoutResult>()
   },
+  // A saved layout to a .jiggle file (asks where), and a .jiggle file (asks which) into this device's saved layouts.
+  'snapshots:export-layout': {
+    args: z.tuple([Udid, z.string().min(1)]),
+    result: z.custom<LayoutFileResult>()
+  },
+  'snapshots:import-layout': { args: z.tuple([Udid]), result: z.custom<LayoutFileResult>() },
   // Asks where to save (the macOS save dialog), then writes. Always resolves.
   'export:run': { args: z.tuple([ExportRequest_]), result: z.custom<ExportResult>() },
   // "Show in Finder": only for a file this export just wrote.
@@ -217,6 +224,8 @@ export interface JiggleApi {
     saveLayout(udid: string, name: string): Promise<SavedLayoutResult>
     renameLayout(udid: string, id: string, name: string): Promise<SavedLayoutResult>
     deleteLayout(udid: string, id: string): Promise<SavedLayoutResult>
+    exportLayout(udid: string, id: string): Promise<LayoutFileResult>
+    importLayout(udid: string): Promise<LayoutFileResult>
     onChanged(listener: () => void): () => void
     // File > Save Layout…
     onSaveRequested(listener: () => void): () => void

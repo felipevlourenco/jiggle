@@ -54,6 +54,7 @@ function setup() {
     settings,
     pins: new PinsService(root, silent),
     uninstaller: new UninstallService({ bridge, snapshots, apply, broadcast, log: silent }),
+    layoutFiles: { save: async () => undefined, open: async () => undefined },
     exporter: new ExportService({
       bridge,
       renderer: { png: async () => Buffer.alloc(0), pdf: async () => Buffer.alloc(0), close() {} },

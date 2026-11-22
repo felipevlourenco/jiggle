@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
@@ -1127,6 +1127,49 @@ test.describe('Saved layouts', () => {
     await win.getByRole('link', { name: 'History' }).click()
     await expect(win.getByRole('heading', { name: 'No backups yet' })).toBeVisible()
     await expect(win.getByRole('button', { name: /^Switch to/ })).toHaveCount(0)
+    await app.close()
+  })
+
+  test('exports a saved layout to a .jiggle file, and importing it brings it back; a bad file is refused', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'jiggle-layout-e2e-'))
+    const bad = join(dir, 'bad.jiggle')
+    writeFileSync(bad, '{"format":"jiggle-layout","version":99}')
+    const env = {
+      JIGGLE_MOCK_DEVICE: 'iphone-messy',
+      JIGGLE_USER_DATA: mkdtempSync(join(tmpdir(), 'jiggle-e2e-')),
+      JIGGLE_EXPORT_DIR: dir,
+      JIGGLE_IMPORT_FILE: join(dir, 'Work.jiggle')
+    }
+    let app = await launch(env)
+    let win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await clickMenu(app, 'save-layout')
+    const sheet = win.getByRole('dialog', { name: 'Save Current Layout' })
+    await sheet.getByLabel('Layout name').fill('Work')
+    await sheet.getByLabel('Layout name').press('Enter')
+    await expect(sheet).toHaveCount(0)
+    await win.getByRole('link', { name: 'History' }).click()
+
+    await win.getByRole('button', { name: 'Export Work' }).click()
+    await expect(win.getByText('Exported Work.jiggle')).toBeVisible()
+    expect(readdirSync(dir)).toContain('Work.jiggle')
+
+    await win.getByRole('button', { name: 'Delete Work' }).click()
+    await win
+      .getByRole('dialog', { name: 'Delete “Work”?' })
+      .getByRole('button', { name: 'Delete', exact: true })
+      .click()
+    await expect(win.getByRole('button', { name: 'Switch to Work' })).toHaveCount(0)
+
+    await win.getByRole('button', { name: 'Import Layout…' }).click()
+    await expect(win.getByRole('button', { name: 'Switch to Work' })).toBeVisible()
+    await app.close()
+
+    app = await launch({ ...env, JIGGLE_IMPORT_FILE: bad })
+    win = await app.firstWindow()
+    await win.getByRole('link', { name: 'History' }).click()
+    await win.getByRole('button', { name: 'Import Layout…' }).click()
+    await expect(win.getByRole('alert')).toContainText('newer Jiggle')
     await app.close()
   })
 

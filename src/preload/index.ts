@@ -49,6 +49,8 @@ const api: JiggleApi = {
     saveLayout: (udid, name) => invoke('snapshots:save-layout', udid, name),
     renameLayout: (udid, id, name) => invoke('snapshots:rename-layout', udid, id, name),
     deleteLayout: (udid, id) => invoke('snapshots:delete-layout', udid, id),
+    exportLayout: (udid, id) => invoke('snapshots:export-layout', udid, id),
+    importLayout: (udid) => invoke('snapshots:import-layout', udid),
     onChanged: (listener) => on('snapshots:changed', () => listener()),
     onSaveRequested: (listener) => on('menu:save-layout', () => listener()),
     onCopyRequested: (listener) => on('menu:copy-layout', () => listener()),
