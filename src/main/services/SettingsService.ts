@@ -26,6 +26,7 @@ export class SettingsService {
       backupRetention: 50,
       categoryLookupEnabled: true,
       updateCheckEnabled: true,
+      backupOnConnect: false,
       wifiEnabled: false
     }
     this.current = { ...defaults, ...this.readValid(defaults) }

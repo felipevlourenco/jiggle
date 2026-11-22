@@ -15,6 +15,7 @@ describe('SettingsService', () => {
       backupRetention: 50,
       categoryLookupEnabled: true,
       updateCheckEnabled: true,
+      backupOnConnect: false,
       wifiEnabled: false
     })
   })
