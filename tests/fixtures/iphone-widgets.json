@@ -54,7 +54,7 @@
         "allowsSuggestions": true,
         "bundleIdentifier": "com.google.GoogleMobile.WidgetKitExtension",
         "containerBundleIdentifier": "com.google.GoogleMobile",
-        "displayIdentifier": "937438F9-7E04-48C2-A9F4-89453EAD7EAB",
+        "displayIdentifier": "00000000-0000-4000-8000-000000000001",
         "elementType": "widget",
         "gridSize": "medium",
         "iconLists": [],
@@ -292,12 +292,12 @@
         "allowsSuggestions": true,
         "bundleIdentifier": "com.apple.weather.widget",
         "containerBundleIdentifier": "com.apple.weather",
-        "displayIdentifier": "1186DE67-1DB0-4995-BF70-EE5C16063BD3",
+        "displayIdentifier": "00000000-0000-4000-8000-000000000005",
         "elementType": "widget",
         "gridSize": "medium",
         "iconLists": [],
         "iconType": "custom",
-        "userSelectedElementIdentifier": "CCBBDCA8-A241-4738-A043-34C30BB413CF",
+        "userSelectedElementIdentifier": "00000000-0000-4000-8000-000000000006",
         "widgetIdentifier": "com.apple.weather"
       },
       {

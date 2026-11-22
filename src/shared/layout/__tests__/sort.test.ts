@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { AppItem, FolderItem, Layout, LayoutItem, WidgetItem } from '../../types'
+import type { AppItem, FolderItem, Layout, LayoutItem, RawIconState, WidgetItem } from '../../types'
 import { countMoved, movedIds } from '../diff'
+import { gridFor } from '../grid'
 import { normalize } from '../normalize'
+import { isStack } from '../place'
+import { serialize } from '../serialize'
 import { sortLayout } from '../sort'
 import { validateLayout } from '../validate'
 
@@ -289,6 +292,31 @@ describe('sortLayout on a real phone (iphone-widgets fixture)', () => {
           .filter((p) => !isSorted(p))
           .forEach((p) => expect(p.every((i) => i.kind === 'widget')).toBe(true))
       }
+    }
+  )
+})
+
+describe('widget stacks', () => {
+  const raw: RawIconState = JSON.parse(
+    readFileSync(join(__dirname, '../../../../tests/fixtures/iphone-stack.json'), 'utf8')
+  ).rawState
+  const before = normalize(raw, gridFor('iPhone'))
+  const stackPage = before.pages.findIndex((p) => p.some(isStack))
+  const stack = before.pages[stackPage]!.find(isStack)!
+
+  it('the fixture has one stack, found as a stack', () => {
+    expect(before.pages.flat().filter(isStack)).toHaveLength(1)
+    expect(stack.kind).toBe('widget')
+  })
+
+  it.each(['keep-pages', 'sort-around', 'fill'] as const)(
+    '%s: the stack keeps its slot on its page and the layout stays valid',
+    (widgetMode) => {
+      const after = sortLayout(before, { by: 'name', widgetMode })
+      const page = after.pages.find((p) => p.includes(stack))!
+      expect(page.indexOf(stack)).toBe(before.pages[stackPage]!.indexOf(stack))
+      expect(validateLayout(before, after)).toEqual([])
+      expect(serialize(after).flat()).toContain(stack.raw)
     }
   )
 })

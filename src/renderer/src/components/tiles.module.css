@@ -7,7 +7,7 @@
   min-width: 0;
 }
 .cellWide {
-  align-items: center;
+  align-items: flex-start; /* a widget's top lines up with the icons beside it */
 }
 .tile {
   display: flex;
