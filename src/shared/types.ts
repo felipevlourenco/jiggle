@@ -145,6 +145,10 @@ export type ExportResult =
 export type SavedLayoutResult =
   { ok: true; layout: SnapshotSummary } | { ok: false; message: string }
 
+// Exporting or importing a layout file: done (with a toast-sized message), or why not. `canceled`: the dialog was closed.
+export type LayoutFileResult =
+  { ok: true; message: string } | { ok: false; canceled: boolean; message: string }
+
 // A change to write to a device, built in the renderer and re-checked in main.
 export interface ApplyPlan {
   udid: Udid

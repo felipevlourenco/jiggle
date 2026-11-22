@@ -18,7 +18,7 @@ Jiggle connects to an iPhone or iPad over a cable, shows a realistic preview of 
 - **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, developer or first letter, from 2 apps) and pins. Pages with widgets are kept as they are, cleared of apps (sort around widgets), or sorted too with every widget staying in its spot and the other pages packed full (sort widget pages too).
 - **Edit by hand**: drag and drop (or Space and arrow keys), with undo and redo, then push to the phone.
 - **Send to App Library**: take apps off the Home Screen in bulk. They stay installed.
-- **Saved layouts**: name the current layout ("Work", "Weekend") and switch back to it in one click.
+- **Saved layouts**: name the current layout ("Work", "Weekend") and switch back to it in one click. Export one as a `.jiggle` file and import it on another Mac or device.
 - **Copy a layout between devices**: put the arrangement of an iPhone on an iPad, or the reverse, reflowed to the target's grid.
 - **Cleanup**: remove empty pages and one-app folders.
 - **Export**: PNG (one image per page), PDF (all pages) or CSV (name, bundle ID, category, developer, location).

@@ -952,10 +952,10 @@ M27–M29 above are built (M29 is in PR #7). These are ideas that are not built 
 - **Done when:** a fixture with a stack round‑trips and sorts with the stack where it was.
 - **Manual check:** sort a phone that has a widget stack in each of the three widget modes. The stack never moves.
 
-**M40. Layout files**
+**M40. Layout files** (built)
 
 - **Goal:** share a layout as a file, between your own Macs and devices.
-- **Tasks:** add Export layout and Import layout (a `.jiggle` JSON file with a schema version, validated with zod). Importing adds it to the saved layouts. This is files only: no accounts and no online service.
+- **Tasks:** add Export layout and Import layout (a `.jiggle` JSON file with a schema version, validated with zod). Importing adds it to the saved layouts. This is files only: no accounts and no online service. Built as Export on each saved layout and Import Layout… in History; a `.jiggle` file is JSON with `format`, `version` 1, name, OS version, device class and the icon state, and never the device id. Importing adds to the connected device's saved layouts, renaming "Work" to "Work (2)" if the name is taken.
 - **Files touched:** `src/main/services/SnapshotService.ts`, `src/main/ipc/snapshots.ts`, `src/renderer/src/screens/History.tsx`
 - **Done when:** a layout exported on one Mac imports on another, and a broken or newer file is refused with a clear message.
 - **Manual check:** export a saved layout, delete it, import the file, and apply it.

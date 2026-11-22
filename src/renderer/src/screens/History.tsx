@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { SnapshotEntry, SnapshotSummary } from '@shared/types'
+import type { LayoutFileResult, SnapshotEntry, SnapshotSummary } from '@shared/types'
 import { BackUpIcon, HistoryIcon, WarnIcon } from '../components/icons'
 import { SnapshotThumb } from '../components/LayoutThumb'
 import { Banner } from '../components/Banner'
@@ -70,11 +70,13 @@ function SavedCard({
   layout,
   onSwitch,
   onRename,
+  onExport,
   onDelete
 }: {
   layout: SnapshotSummary
   onSwitch?: () => void // undefined: no phone to switch
   onRename: () => void
+  onExport: () => void
   onDelete: () => void
 }) {
   const name = layout.name ?? 'Layout'
@@ -97,6 +99,9 @@ function SavedCard({
           </button>
           <button className="btn btn-sm" aria-label={`Rename ${name}`} onClick={onRename}>
             Rename
+          </button>
+          <button className="btn btn-sm" aria-label={`Export ${name}`} onClick={onExport}>
+            Export
           </button>
           <button className="btn btn-sm" aria-label={`Delete ${name}`} onClick={onDelete}>
             Delete
@@ -126,6 +131,10 @@ export function History({
   const [switching, setSwitching] = useState<SnapshotSummary>()
   const [renaming, setRenaming] = useState<SnapshotSummary>()
   const [deleting, setDeleting] = useState<SnapshotSummary>()
+  const [fileError, setFileError] = useState<string>()
+  // A closed dialog is not an error; success is toasted by main.
+  const fileAction = (run: () => Promise<LayoutFileResult>) =>
+    void run().then((r) => setFileError(!r.ok && !r.canceled ? r.message : undefined))
   const button = (large: boolean) => (
     <button
       className={`btn btn-primary${large ? ' btn-lg' : ''}`}
@@ -159,10 +168,24 @@ export function History({
       Save Current Layout…
     </button>
   )
+  const importButton = (
+    <button
+      className="btn"
+      disabled={!udid}
+      onClick={() => udid && fileAction(() => window.jiggle.snapshots.importLayout(udid))}
+    >
+      Import Layout…
+    </button>
+  )
+  const fileBanner = fileError && <Banner severity="error">{fileError}</Banner>
   if (data.length === 0) {
     return (
       <div className={s.message}>
-        <ToolbarActions>{saveButton}</ToolbarActions>
+        <ToolbarActions>
+          {saveButton}
+          {importButton}
+        </ToolbarActions>
+        {fileBanner}
         <h2>No backups yet</h2>
         <p>Jiggle backs up automatically before every change.</p>
         {button(true)}
@@ -196,7 +219,9 @@ export function History({
       <ToolbarActions>
         {button(false)}
         {saveButton}
+        {importButton}
       </ToolbarActions>
+      {fileBanner}
       {!canBackUp && (
         <Banner>
           No iPhone or iPad connected. You can look at your backups, not change anything.
@@ -212,6 +237,9 @@ export function History({
                 layout={l}
                 onSwitch={canRestore ? () => setSwitching(l) : undefined}
                 onRename={() => setRenaming(l)}
+                onExport={() =>
+                  fileAction(() => window.jiggle.snapshots.exportLayout(l.udid, l.id))
+                }
                 onDelete={() => setDeleting(l)}
               />
             ))}

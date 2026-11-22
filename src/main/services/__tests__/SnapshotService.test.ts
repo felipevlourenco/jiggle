@@ -162,3 +162,68 @@ describe('saved layouts', () => {
     await expect(save(service, 'Work')).resolves.toBeTruthy() // the name is free again
   })
 })
+
+describe('layout files', () => {
+  const save = (service: SnapshotService, name = 'Work') =>
+    service.saveLayout({ udid: 'AB-12', name, osVersion: '26.1', deviceClass: 'iPad', rawState })
+  const file = (patch: object) =>
+    JSON.stringify({
+      format: 'jiggle-layout',
+      version: 1,
+      name: 'Trip',
+      osVersion: '26.1',
+      rawState,
+      ...patch
+    })
+
+  it('exports a saved layout to a file that imports on another device, state unchanged, without the device id', async () => {
+    const { service } = setup()
+    const made = await save(service)
+    const { text, fileName } = await service.exportLayout('AB-12', made.id)
+    expect(fileName).toBe('Work.jiggle')
+    expect(text).not.toContain('AB-12')
+    const other = setup().service // "another Mac"
+    const imported = await other.importLayout('CD-34', text)
+    expect(imported).toMatchObject({
+      kind: 'saved-layout',
+      name: 'Work',
+      deviceClass: 'iPad',
+      appCount: 4
+    })
+    expect((await other.get('CD-34', imported.id)).rawState).toEqual(rawState)
+  })
+
+  it('only exports saved layouts, and cleans the file name', async () => {
+    const { service } = setup()
+    const backup = await service.create(input)
+    await expect(service.exportLayout('AB-12', backup.id)).rejects.toThrow('Only saved layouts')
+    const odd = await save(service, 'a/b: c')
+    expect((await service.exportLayout('AB-12', odd.id)).fileName).toBe('a-b- c.jiggle')
+  })
+
+  it('renames an imported layout whose name is taken, within the name limit', async () => {
+    const { service } = setup()
+    await save(service, 'Trip')
+    expect((await service.importLayout('AB-12', file({}))).name).toBe('Trip (2)')
+    expect((await service.importLayout('AB-12', file({}))).name).toBe('Trip (3)')
+    const long = await service.importLayout('AB-12', file({ name: 'x'.repeat(100) }))
+    expect(long.name!.length).toBeLessThanOrEqual(40)
+    expect((await service.importLayout('AB-12', file({ name: '  ' }))).name).toBe('Imported layout')
+  })
+
+  it('refuses a file that is not JSON, not ours, newer, or damaged, and adds nothing', async () => {
+    const { service } = setup()
+    await expect(service.importLayout('AB-12', 'nope')).rejects.toThrow(
+      'isn’t a Jiggle layout file'
+    )
+    await expect(service.importLayout('AB-12', '{"a":1}')).rejects.toThrow(
+      'isn’t a Jiggle layout file'
+    )
+    await expect(service.importLayout('AB-12', file({ version: 2 }))).rejects.toThrow(
+      'newer Jiggle'
+    )
+    await expect(service.importLayout('AB-12', file({ rawState: 'x' }))).rejects.toThrow('damaged')
+    await expect(service.importLayout('AB-12', 'x'.repeat(5_000_001))).rejects.toThrow('too big')
+    expect(await service.list('AB-12')).toEqual([])
+  })
+})
