@@ -1,3 +1,4 @@
+import { isStack } from '@shared/layout/place'
 import type { LayoutItem } from '@shared/types'
 import { FolderTile } from './FolderTile'
 import { IconTile } from './IconTile'
@@ -19,7 +20,7 @@ export function ItemTile({
     case 'folder':
       return <FolderTile udid={udid} folder={item} label={label} />
     case 'widget':
-      return <WidgetTile />
+      return <WidgetTile stack={isStack(item)} />
     case 'other': {
       // web clips and anything unrecognised
       const name = typeof item.raw['displayName'] === 'string' ? item.raw['displayName'] : 'Item'

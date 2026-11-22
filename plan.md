@@ -944,10 +944,10 @@ M27–M29 above are built (M29 is in PR #7). These are ideas that are not built 
 - **Done when:** unit tests cover each rule, and the preview shows the folders.
 - **Manual check:** choose Folders by developer. Apps from the same developer end up in one folder named after it.
 
-**M39. Widget stacks**
+**M39. Widget stacks** (built)
 
 - **Goal:** treat widget stacks properly instead of as opaque items.
-- **Tasks:** check how stacks appear in the icon state on a real phone, keep them in their spot in every widget mode, and show them in the preview. Moving, resizing and adding widgets stay out of scope.
+- **Tasks:** check how stacks appear in the icon state on a real phone, keep them in their spot in every widget mode, and show them in the preview. Moving, resizing and adding widgets stay out of scope. Checked on a real phone: a stack is a widget with an `elements` list of the stacked widgets (fixture `iphone-stack.json`). It already stayed put because widgets are kept in every mode. The preview says "Widget stack".
 - **Files touched:** `src/shared/layout/place.ts`, `src/shared/layout/sort.ts`, `tests/fixtures/`
 - **Done when:** a fixture with a stack round‑trips and sorts with the stack where it was.
 - **Manual check:** sort a phone that has a widget stack in each of the three widget modes. The stack never moves.

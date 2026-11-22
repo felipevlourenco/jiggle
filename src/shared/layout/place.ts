@@ -8,6 +8,10 @@ export interface Placement {
   h: number
 }
 
+// A widget stack (seen on a real phone): a widget whose `elements` list the widgets stacked in it.
+export const isStack = (item: LayoutItem): boolean =>
+  item.kind === 'widget' && Array.isArray(item.raw['elements']) && item.raw['elements'].length > 0
+
 // How many grid cells an item covers. Apps, folders and web clips take one.
 // ponytail: widget sizes on an iPad (6 columns: medium 4 × 2, large 4 × 4, extra large 6 × 4) are from memory.
 export function itemSpan(item: LayoutItem, grid: Grid): { w: number; h: number } {
