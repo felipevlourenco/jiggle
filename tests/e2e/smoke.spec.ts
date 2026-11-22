@@ -330,15 +330,20 @@ test.describe('Organize', () => {
     expect(await before.locator('[data-moved]').count()).toBe(0)
     await expect(after.locator('[data-moved]').first()).toBeVisible()
 
-    await win.getByRole('radio', { name: /Category/ }).click()
-    await expect(win.getByRole('radio', { name: /Category/ })).toHaveAttribute(
-      'aria-checked',
-      'true'
-    )
+    await win
+      .getByRole('radiogroup', { name: 'Sort by' })
+      .getByRole('radio', { name: /Category/ })
+      .click()
+    await expect(
+      win.getByRole('radiogroup', { name: 'Sort by' }).getByRole('radio', { name: /Category/ })
+    ).toHaveAttribute('aria-checked', 'true')
     await win.getByRole('radio', { name: /Color/ }).click()
     await expect(win.getByRole('radio', { name: /Color/ })).toHaveAttribute('aria-checked', 'true')
     await expect(win.getByTestId('summary')).toHaveText(/^\d+ of \d+ apps will move/)
-    await win.getByRole('radio', { name: /Category/ }).click()
+    await win
+      .getByRole('radiogroup', { name: 'Sort by' })
+      .getByRole('radio', { name: /Category/ })
+      .click()
     await win.getByRole('radio', { name: 'Sort around widgets' }).click()
     await expect(win.getByRole('radio', { name: 'Sort around widgets' })).toHaveAttribute(
       'aria-checked',
@@ -933,30 +938,32 @@ test.describe('Pinning', () => {
 })
 
 test.describe('Auto-folders', () => {
-  test('the toggle waits for Category, then the After frame shows folders you can open', async () => {
+  test('the Folders rule is off by default; each rule makes folders you can open', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
     const win = await app.firstWindow()
     await win.getByRole('link', { name: 'Organize' }).click()
-    const toggle = win.getByRole('checkbox', { name: 'Create folders by category' })
-    await expect(toggle).toBeDisabled()
-    await win.getByRole('radio', { name: /Category/ }).click()
-    await expect(toggle).toBeEnabled()
-    await toggle.click()
-    await expect(win.getByTestId('summary')).toContainText(/\d+ folders? created/)
+    const rules = win.getByRole('radiogroup', { name: 'Folders' })
+    await expect(rules.getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true')
+    await expect(win.getByTestId('summary')).not.toContainText('created')
+
+    // Without a lookup the mock phone only knows Apple's apps: the category and developer rules both make "Apple".
+    for (const rule of ['Category', 'Developer', 'First letter']) {
+      await rules.getByRole('radio', { name: rule }).click()
+      await expect(win.getByTestId('summary')).toContainText(/\d+ folders? created/)
+    }
 
     const after = win.getByRole('figure', { name: 'After' })
+    await rules.getByRole('radio', { name: 'Developer' }).click()
     await after
-      .getByRole('button', { name: /^Open folder / })
+      .getByRole('button', { name: /^Open folder Apple/ })
       .first()
       .click()
-    const dialog = after.getByRole('dialog', { name: /^Folder / })
+    const dialog = after.getByRole('dialog', { name: /^Folder Apple/ })
     await expect(dialog.locator('[data-kind="app"]').first()).toBeVisible()
     await dialog.getByRole('button', { name: 'Close folder' }).click()
     await expect(dialog).toHaveCount(0)
 
-    // back to A–Z: the option is off again
-    await win.getByRole('radio', { name: /A–Z/ }).click()
-    await expect(toggle).toBeDisabled()
+    await rules.getByRole('radio', { name: 'Off' }).click()
     await expect(win.getByTestId('summary')).not.toContainText('created')
     await app.close()
   })
