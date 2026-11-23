@@ -30,7 +30,7 @@ Jiggle connects to an iPhone or iPad over a cable, shows a realistic preview of 
 
 Releases are on the [Releases page](https://github.com/felipevlourenco/jiggle/releases). Apple silicon (arm64) only for now. Intel is planned.
 
-Builds are signed with a free Apple Development certificate and **not notarized**, so macOS Gatekeeper blocks the first launch. Open the app once, then go to System Settings > Privacy & Security and choose **Open Anyway**. Auto-update does not install on a non-notarized build.
+Builds from 0.1.4 on are signed with a Developer ID certificate and notarized by Apple, so they open like any other Mac app. Jiggle checks for updates at launch and installs them itself (you can turn that off in Settings). Versions up to 0.1.3 were not notarized and need System Settings > Privacy & Security > **Open Anyway** on first launch.
 
 Requirements: macOS, and an iPhone or iPad on iOS or iPadOS 17 or later (tested on 17, 18 and 26). The phone must be unlocked and tap **Trust** the first time it is connected.
 
