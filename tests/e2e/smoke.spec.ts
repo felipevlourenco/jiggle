@@ -1188,6 +1188,39 @@ test.describe('Saved layouts', () => {
     }
   })
 
+  test('Compare lists what changed since a saved layout: nothing at first, then the moved apps after a sort', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    await clickMenu(app, 'save-layout')
+    const sheet = win.getByRole('dialog', { name: 'Save Current Layout' })
+    await sheet.getByLabel('Layout name').fill('Work')
+    await sheet.getByLabel('Layout name').press('Enter')
+    await expect(sheet).toHaveCount(0)
+    await win.getByRole('link', { name: 'History' }).click()
+
+    await win.getByRole('button', { name: 'Compare Work' }).click()
+    const compare = win.getByRole('dialog', { name: 'Compare “Work”' })
+    await expect(compare).toContainText('What changed from “Work” to your phone now')
+    await expect(compare).toContainText('No differences')
+    await compare.getByRole('button', { name: 'Close' }).click()
+    await expect(compare).toHaveCount(0)
+
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win.getByRole('radio', { name: /Color/ }).click()
+    await win.getByRole('button', { name: 'Apply to iPhone' }).click()
+    const apply = win.getByRole('dialog', { name: /Apply Color to Sam/ })
+    await apply.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(apply.getByText(/Done!/)).toBeVisible()
+    await apply.getByRole('button', { name: 'Close' }).click()
+
+    await win.getByRole('link', { name: 'History' }).click()
+    await win.getByRole('button', { name: 'Compare Work' }).click()
+    await expect(compare).toContainText(/\d+ apps? moved/)
+    await expect(compare).not.toContainText('No differences')
+    await app.close()
+  })
+
   test('File > Save Layout… with no phone says so instead of opening a sheet', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'none' })
     const win = await app.firstWindow()
