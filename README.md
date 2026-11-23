@@ -84,8 +84,6 @@ CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing
 - **Writes** go through `ApplyService`: validate, back up, write, read back and verify, under a per-device lock. Page capacity is checked against the grid the device reports, not a fixed table.
 - **Privacy:** everything stays on your Mac. The only network request is the App Store lookup for categories (`itunes.apple.com`, one app at a time, cached on disk). Any other request from the renderer is blocked. Data lives in Electron's user data folder; logs are in `~/Library/Logs/Jiggle/`.
 
-The full specification, with the milestones, data model and screens, is in [plan.md](plan.md).
-
 ## What is verified
 
 All of it passes typecheck, lint, 284 unit tests, 35 engine tests and 48 end-to-end tests, run against mock devices. Not yet confirmed on real hardware:

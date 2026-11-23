@@ -24,7 +24,7 @@ pnpm test:e2e
 
 - Keep pull requests small and focused, with a test when behaviour changes.
 - Formatting is Prettier and linting is ESLint. `pnpm format` fixes style.
-- All device access goes through the `DeviceBridge` interface, and the layout logic in `src/shared/layout` stays free of Electron and device code. See [plan.md](plan.md) for the design.
+- All device access goes through the `DeviceBridge` interface, and the layout logic in `src/shared/layout` stays free of Electron and device code.
 - No real device data in the repository. Test fixtures in `tests/fixtures` use a made-up "Sam's iPhone" and made-up apps. Do not commit a `backup.plist` or an icon cache from your own phone.
 - Never test writes on a phone you care about without a backup. The app makes one first, but the mock devices are the safer default.
 
