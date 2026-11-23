@@ -7,9 +7,30 @@
 
 <p align="center">Rearrange your iPhone or iPad home screen from your Mac.</p>
 
+<p align="center">
+  <a href="https://felipevlourenco.github.io/jiggle/">Website</a> ·
+  <a href="https://github.com/felipevlourenco/jiggle/releases/latest">Download</a>
+</p>
+
 Jiggle connects to an iPhone or iPad over a cable, shows a realistic preview of its home screen, and rearranges the apps in one click: alphabetically, by App Store category or by icon colour, with optional automatic folders. It is for people with hundreds of apps who find dragging icons around on the phone slow and error-prone. You always see a before/after preview, every change is backed up first, and restoring takes one click.
 
 > **Status: early (v0.1).** Everything is built and passes its tests against mock devices, but much of it has not yet been run against real hardware. See [What is verified](#what-is-verified) before pointing it at a phone you care about. Back the phone up first.
+
+## See it in action
+
+The demos use a mock phone, so the icons are placeholders.
+
+**Preview a sort before it touches the phone.** Switch between A–Z, category and colour, turn on folders, and see the before and after of every page.
+
+![Organize: choosing a sort and folders, with a before and after preview](docs/gifs/organize.gif)
+
+**Edit by hand.** Drag an icon and the others make room as you go, like on the phone. Undo with ⌘Z, then push to the phone when you are happy.
+
+![Edit mode: dragging an icon, the others slide to make room, then undo](docs/gifs/edit.gif)
+
+**Find an app.** Search the Home Screen and Jiggle jumps to the page and highlights the app.
+
+![Search: typing in the Find an app field highlights the matching icon](docs/gifs/search.gif)
 
 ## Features
 
