@@ -28,6 +28,12 @@ pnpm test:e2e
 - No real device data in the repository. Test fixtures in `tests/fixtures` use a made-up "Sam's iPhone" and made-up apps. Do not commit a `backup.plist` or an icon cache from your own phone.
 - Never test writes on a phone you care about without a backup. The app makes one first, but the mock devices are the safer default.
 
+## How pull requests are handled
+
+Fork the repository, branch from `main` and open a pull request against it. Describe what changed and how you tested it. The maintainer reviews every pull request and is the only one who merges; changes are squash-merged, so one pull request becomes one commit on `main`. A pull request that is quiet for a few weeks may be closed, and you are welcome to reopen it.
+
+Pull requests from first-time contributors need a maintainer's approval before the automatic checks run, so please run the checks above yourself first.
+
 ## Security
 
 Report vulnerabilities privately. See [SECURITY.md](SECURITY.md).
