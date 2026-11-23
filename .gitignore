@@ -12,6 +12,9 @@ sidecar/__pycache__
 __pycache__
 .pytest_cache
 
+# The working plan stays on this machine
+/plan.md
+
 # Real-device data from the proof of concept and fixture generator: never commit
 /backup.plist
 /icons/

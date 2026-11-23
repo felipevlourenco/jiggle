@@ -204,7 +204,7 @@ export class ApplyService {
 
   // TODO(iPad): never run against a real iPad (no device to test with). When one is available, check that
   // apply, restore and switch write and verify on it, that the reported grid (get_icon_metrics) matches the
-  // preview, and that widget spans in place.ts and the frame in PhoneFrame.tsx look right. See M20 in plan.md.
+  // preview, and that widget spans in place.ts and the frame in PhoneFrame.tsx look right.
   // The grid the device itself reports, or the default for its class: the one the preview was drawn with.
   private async gridOf(device: Device): Promise<Grid> {
     return gridFor(device.deviceClass, await this.deps.bridge.getIconMetrics(device.udid))
