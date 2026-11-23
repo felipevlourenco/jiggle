@@ -5,6 +5,7 @@ import { SnapshotThumb } from '../components/LayoutThumb'
 import { Banner } from '../components/Banner'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { ApplySheet } from '../sheets/Apply'
+import { CompareSheet } from '../sheets/Compare'
 import { DeleteLayoutSheet, RenameLayoutSheet, savedNames } from '../sheets/SaveLayout'
 import { useBackUp, useSnapshots } from '../state/queries'
 import s from './history.module.css'
@@ -25,11 +26,13 @@ const isToday = (iso: string): boolean => new Date(iso).toDateString() === new D
 function Row({
   entry,
   today,
-  onRestore
+  onRestore,
+  onCompare
 }: {
   entry: SnapshotEntry
   today: boolean
   onRestore?: () => void // undefined: no phone to restore to
+  onCompare?: () => void // undefined: nothing to compare with
 }) {
   if (entry.damaged) {
     return (
@@ -58,6 +61,14 @@ function Row({
           {plural(entry.pageCount, 'page')}
         </div>
       </div>
+      <button
+        className="btn"
+        aria-label={`Compare ${entry.name ?? entry.reason ?? 'backup'}`}
+        disabled={!onCompare}
+        onClick={onCompare}
+      >
+        Compare
+      </button>
       <button className="btn" disabled={!onRestore} onClick={onRestore}>
         Restore
       </button>
@@ -71,12 +82,14 @@ function SavedCard({
   onSwitch,
   onRename,
   onExport,
+  onCompare,
   onDelete
 }: {
   layout: SnapshotSummary
   onSwitch?: () => void // undefined: no phone to switch
   onRename: () => void
   onExport: () => void
+  onCompare?: () => void // undefined: nothing to compare with
   onDelete: () => void
 }) {
   const name = layout.name ?? 'Layout'
@@ -99,6 +112,14 @@ function SavedCard({
           </button>
           <button className="btn btn-sm" aria-label={`Rename ${name}`} onClick={onRename}>
             Rename
+          </button>
+          <button
+            className="btn btn-sm"
+            aria-label={`Compare ${name}`}
+            disabled={!onCompare}
+            onClick={onCompare}
+          >
+            Compare
           </button>
           <button className="btn btn-sm" aria-label={`Export ${name}`} onClick={onExport}>
             Export
@@ -131,6 +152,7 @@ export function History({
   const [switching, setSwitching] = useState<SnapshotSummary>()
   const [renaming, setRenaming] = useState<SnapshotSummary>()
   const [deleting, setDeleting] = useState<SnapshotSummary>()
+  const [comparing, setComparing] = useState<SnapshotSummary>()
   const [fileError, setFileError] = useState<string>()
   // A closed dialog is not an error; success is toasted by main.
   const fileAction = (run: () => Promise<LayoutFileResult>) =>
@@ -193,6 +215,25 @@ export function History({
     )
   }
 
+  // Compare with the phone as it is now; with no phone, with the newest other copy of the same device.
+  const againstFor = (e: SnapshotSummary) => {
+    if (canBackUp && udid === e.udid) {
+      return {
+        label: 'your phone now',
+        load: async () => (await window.jiggle.layout.get(e.udid)).layout
+      }
+    }
+    const other = data.find(
+      (x): x is SnapshotSummary => !x.damaged && x.udid === e.udid && x.id !== e.id
+    )
+    if (!other) return undefined
+    return {
+      label: `“${other.name ?? other.reason ?? 'backup'}” (${day(other.createdAt)})`,
+      load: () => window.jiggle.snapshots.layout(other.udid, other.id)
+    }
+  }
+  const compareFor = (e: SnapshotSummary) => (againstFor(e) ? () => setComparing(e) : undefined)
+
   const saved = data.filter(isSaved)
   const backups = data.filter((e) => !isSaved(e))
   const today = backups.filter((e) => isToday(e.createdAt))
@@ -208,6 +249,7 @@ export function History({
               entry={e}
               today={isTodayGroup}
               onRestore={canRestore && !e.damaged ? () => setRestoring(e) : undefined}
+              onCompare={e.damaged ? undefined : compareFor(e)}
             />
           ))}
         </ul>
@@ -237,6 +279,7 @@ export function History({
                 layout={l}
                 onSwitch={canRestore ? () => setSwitching(l) : undefined}
                 onRename={() => setRenaming(l)}
+                onCompare={compareFor(l)}
                 onExport={() =>
                   fileAction(() => window.jiggle.snapshots.exportLayout(l.udid, l.id))
                 }
@@ -270,6 +313,14 @@ export function History({
           layout={renaming}
           taken={savedNames(data, renaming.id)}
           onClose={() => setRenaming(undefined)}
+        />
+      )}
+      {comparing && againstFor(comparing) && (
+        <CompareSheet
+          name={comparing.name ?? comparing.reason ?? 'backup'}
+          loadBefore={() => window.jiggle.snapshots.layout(comparing.udid, comparing.id)}
+          against={againstFor(comparing)!}
+          onClose={() => setComparing(undefined)}
         />
       )}
       {deleting && <DeleteLayoutSheet layout={deleting} onClose={() => setDeleting(undefined)} />}

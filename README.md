@@ -43,7 +43,7 @@ The demos use a mock phone, so the icons are placeholders.
 - **Copy a layout between devices**: put the arrangement of an iPhone on an iPad, or the reverse, reflowed to the target's grid.
 - **Cleanup**: remove empty pages and one-app folders.
 - **Export**: PNG (one image per page), PDF (all pages) or CSV (name, bundle ID, category, developer, location).
-- **History**: automatic backups before every write (the latest 50 per device are kept) and one-click restore. Optionally a backup is also taken when a device connects, if its layout changed.
+- **History**: automatic backups before every write (the latest 50 per device are kept), one-click restore, and a **Compare** that lists what moved since a backup or saved layout. Optionally a backup is also taken when a device connects, if its layout changed.
 - **Wi-Fi**: works over Wi-Fi once "Show this iPhone when on Wi-Fi" is on in Finder.
 - **Safe by design**: validation before every write, a backup first, a read-back to verify afterwards, and read-only mode on iOS versions it does not recognise.
 
