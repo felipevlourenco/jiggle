@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { BrowserWindow, shell } from 'electron'
+import { OS } from '@shared/platform'
 
 export function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -8,10 +9,13 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 960,
     minHeight: 640,
     show: false,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 18 },
-    vibrancy: 'sidebar',
-    backgroundColor: '#00000000',
+    // A Mac draws its traffic lights over the sidebar. Elsewhere the window keeps the system's own frame.
+    ...(OS === 'mac' && {
+      titleBarStyle: 'hiddenInset' as const,
+      trafficLightPosition: { x: 16, y: 18 },
+      vibrancy: 'sidebar' as const,
+      backgroundColor: '#00000000'
+    }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -45,7 +49,7 @@ export function loadRenderer(win: BrowserWindow, route?: string): Promise<void> 
 
 // An invisible window that draws the export pages (see ExportService). Same preload as every window.
 export function createExportWindow(): BrowserWindow {
-  return new BrowserWindow({
+  const win = new BrowserWindow({
     show: false,
     width: 1400, // larger than the biggest page, which is captured by its rectangle
     height: 1000,
@@ -58,6 +62,8 @@ export function createExportWindow(): BrowserWindow {
       backgroundThrottling: false
     }
   })
+  win.removeMenu() // Windows and Linux draw a menu bar in every window; no effect on a Mac
+  return win
 }
 
 let settingsWindow: BrowserWindow | undefined
@@ -84,6 +90,7 @@ export function openSettingsWindow(): void {
       sandbox: true
     }
   })
+  settingsWindow.removeMenu() // the fixed height leaves no room for a menu bar
   settingsWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   settingsWindow.webContents.on('will-navigate', (e) => e.preventDefault())
   loadRenderer(settingsWindow, '/settings')

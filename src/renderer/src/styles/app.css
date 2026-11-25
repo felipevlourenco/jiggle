@@ -37,6 +37,10 @@ body {
   height: 52px;
   flex: none;
 }
+/* No traffic lights to leave room for. */
+:root:not([data-os='mac']) .sidebar .drag {
+  height: 10px;
+}
 .device-card {
   display: flex;
   align-items: center;

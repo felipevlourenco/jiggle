@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { osText } from '@shared/platform'
 import { useLayout } from '../state/queries'
 import { clearUndo, signatureOf, useUndoOffer } from '../state/undo'
 import { CheckIcon } from './icons'
@@ -10,7 +11,7 @@ const SHOW_WITH_ACTION_MS = 8000
 
 interface Shown {
   message: string
-  reveal?: string // a file just exported: offer to show it in Finder
+  reveal?: string // a file just exported: offer to show it in its folder
 }
 
 // Messages from main ("Backed up · 187 apps"), bottom centre, gone after a few seconds.
@@ -23,7 +24,7 @@ export function Toast() {
   useEffect(
     () =>
       window.jiggle.export.onSaved((path) =>
-        setShown({ message: `Exported to ${path.split('/').pop()}`, reveal: path })
+        setShown({ message: `Exported to ${path.split(/[\\/]/).pop()}`, reveal: path })
       ),
     []
   )
@@ -72,7 +73,7 @@ export function Toast() {
               className={s.action}
               onClick={() => void window.jiggle.export.reveal(shown.reveal!)}
             >
-              Show in Finder
+              {osText().reveal}
             </button>
           )}
         </div>

@@ -17,6 +17,7 @@ import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import { summarize } from '@shared/layout/summarize'
 import { describeIssue, validateLayout } from '@shared/layout/validate'
+import { isMod, osText } from '@shared/platform'
 import type { Device, FolderItem, Layout, LayoutItem } from '@shared/types'
 import { Dock } from '../components/Dock'
 import { EditorDnd, FlipZones, FolderPanel } from '../components/Editor'
@@ -173,7 +174,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   // ⌘F
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (!e.metaKey || e.key.toLowerCase() !== 'f') return
+      if (!isMod(e) || e.key.toLowerCase() !== 'f') return
       e.preventDefault()
       searchBox.current?.focus()
       searchBox.current?.select()
@@ -186,7 +187,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   useEffect(() => {
     if (!mine) return
     const onKey = (e: KeyboardEvent): void => {
-      if (!e.metaKey || e.key.toLowerCase() !== 'z') return
+      if (!isMod(e) || e.key.toLowerCase() !== 'z') return
       if ((e.target as HTMLElement).closest('input, textarea')) return
       e.preventDefault()
       if (e.shiftKey) draftActions.redo()
@@ -199,7 +200,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
   // ⌘← / ⌘→
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (!e.metaKey) return
+      if (!isMod(e)) return
       if (e.key === 'ArrowLeft') goTo(current - 1)
       else if (e.key === 'ArrowRight') goTo(current + 1)
       else return
@@ -417,7 +418,7 @@ export function HomeScreen({ device, onExport }: { device: Device; onExport: () 
       <p className={s.strip}>
         {plural(summary.apps, 'app')} · {plural(summary.pages, 'page')} ·{' '}
         {plural(summary.widgets, 'widget')}
-        {editing && ' · Hold ⌥ and drop an app on another to make a folder'}
+        {editing && ` · Hold ${osText().alt} and drop an app on another to make a folder`}
       </p>
 
       <EditorDnd

@@ -1,3 +1,4 @@
+import { OS, osText, type Os } from './platform'
 import type { ApplyErrorCode, Device } from './types'
 
 // What the Connect screen says for each situation. Wording only; the screen decides the layout.
@@ -18,14 +19,16 @@ export const connectSteps = (kind: Device['deviceClass'] = 'iPhone'): string[] =
 
 export function connectMessage(
   device: Device | undefined,
-  wifi = false // Wi‑Fi devices are being looked for too
+  wifi = false, // Wi‑Fi devices are being looked for too
+  os: Os = OS
 ): ConnectMessage {
   if (!device) {
+    const { computer } = osText(os)
     return {
       title: 'Connect your iPhone',
       body: wifi
-        ? 'Plug your iPhone or iPad into this Mac, or wake it up on the same Wi‑Fi network.'
-        : 'Plug your iPhone or iPad into this Mac with a cable.',
+        ? `Plug your iPhone or iPad into this ${computer}, or wake it up on the same Wi‑Fi network.`
+        : `Plug your iPhone or iPad into this ${computer} with a cable.`,
       severity: 'info',
       illustration: 'cable',
       steps: connectSteps()
@@ -96,6 +99,7 @@ export interface ErrorVars {
   detail?: string
   time?: string
   version?: string
+  os?: Os // this computer's, unless a test says otherwise
 }
 
 export function appError(code: ErrorCode, v: ErrorVars = {}): AppError {
@@ -148,8 +152,7 @@ export function appError(code: ErrorCode, v: ErrorVars = {}): AppError {
     case 'engine-failed':
       return {
         title: 'The device engine won’t start',
-        message:
-          'Quit and reopen Jiggle. If it keeps happening, the log in ~/Library/Logs/Jiggle has the details.'
+        message: `Quit and reopen Jiggle. If it keeps happening, the log in ${osText(v.os).logs} has the details.`
       }
     case 'lookup-offline':
       return {
