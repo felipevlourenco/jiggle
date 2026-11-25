@@ -153,6 +153,9 @@ export function EditorDnd({
   const preview = useRef<Layout | null>(null)
   const [previewed, setPreviewed] = useState<Layout | null>(null) // the same, to re-measure when it changes
   const room = useRef<number>(undefined)
+  // What the drag was last reported over. The drop uses this: the `over` on dnd-kit's drop event can be one
+  // render behind (right as the icons make room it still names the old target, and a drop would undo the move).
+  const lastOver = useRef('')
   const setPreview = (next: Layout | null): void => {
     preview.current = next
     setPreviewed(next)
@@ -196,6 +199,7 @@ export function EditorDnd({
   }
   const onStart = (ev: DragStartEvent): void => {
     alt.current = (ev.activatorEvent as { altKey?: boolean }).altKey ?? false
+    lastOver.current = ''
     setActiveId(String(ev.active.id).slice('drag:'.length))
     setWidth(ev.active.rect.current.initial?.width ?? 64)
   }
@@ -204,8 +208,14 @@ export function EditorDnd({
   // What a drag moves: the whole selection when the dragged icon is part of it, else just that icon.
   const groupOf = (id: string): string[] =>
     selected.has(id) && selected.size > 1 ? [...selected] : [id]
+  // ⌥ on a single app dropped on another app makes a folder: the layout that drop would give, else null
+  const folderFrom = (id: string, over: string): Layout | null =>
+    alt.current && over.startsWith('cell:') && groupOf(id).length === 1
+      ? makeFolder(shown(), id, over.slice(5))
+      : null
   const onOver = (ev: DragOverEvent): void => {
     const over = ev.over ? String(ev.over.id) : ''
+    lastOver.current = over
     setFlip(over === 'flip:-1' ? -1 : over === 'flip:1' ? 1 : null)
     // Resting on another icon, or on the end of a page or the dock: the others make room. A folder, or a full
     // place, moves nothing. Its own gap (it has already moved there) keeps things as they are.
@@ -217,8 +227,12 @@ export function EditorDnd({
     const target = over ? resolve(shown(), group, over) : null
     if (target && target.zone !== 'folder') {
       room.current = window.setTimeout(() => {
+        // Not an app a ⌥ drop would fold into: if it moved aside, the drop would only reorder.
+        if (folderFrom(id, over)) return
         const next = moveItems(shown(), group, target)
-        if (next) setPreview(next)
+        if (!next) return
+        lastOver.current = `cell:${id}` // the drag is over its own gap now, even before the screen shows it
+        setPreview(next)
       }, MAKE_ROOM_MS)
     }
   }
@@ -228,10 +242,8 @@ export function EditorDnd({
   const onEnd = (ev: DragEndEvent): void => {
     const id = String(ev.active.id).slice('drag:'.length)
     const group = groupOf(id)
-    const over = ev.over ? String(ev.over.id) : ''
-    const onto = over.startsWith('cell:') ? over.slice(5) : ''
-    // ⌥ on a single app dropped on another app makes a folder
-    const made = alt.current && onto && group.length === 1 ? makeFolder(shown(), id, onto) : null
+    const over = lastOver.current
+    const made = folderFrom(id, over)
     if (made) {
       onChange(made)
     } else if (group.some((g) => over === `cell:${g}`)) {

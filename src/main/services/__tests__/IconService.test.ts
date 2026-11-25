@@ -105,7 +105,7 @@ describe('resolveAssetUrl', () => {
   const root = '/data'
   it('maps icon URLs to cache files', () => {
     expect(resolveAssetUrl(root, 'jiggle-icon://icons/00008140-AB/com.spotify.client.png')).toBe(
-      '/data/devices/00008140-AB/icons/com.spotify.client.png'
+      join(root, 'devices', '00008140-AB', 'icons', 'com.spotify.client.png')
     )
   })
 

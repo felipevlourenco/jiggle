@@ -1,4 +1,5 @@
-# Every pull request (and push to main): typecheck, lint, unit tests, engine tests, end-to-end tests against mock devices.
+# Every pull request (and push to main): typecheck, lint, unit tests, engine tests and end-to-end tests against mock
+# devices, on macOS, Windows and Linux. Each system also freezes its own engine and checks that it starts.
 name: ci
 on:
   pull_request:
@@ -13,8 +14,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    runs-on: macos-latest
+  platform:
+    strategy:
+      fail-fast: false # one system failing must not hide what the others say
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash # Git Bash on Windows
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
@@ -29,17 +38,52 @@ jobs:
       - run: pnpm lint
       - run: pnpm exec prettier --check .
       - run: pnpm test
-      - run: .venv/bin/python -m pytest
+      # `uv run` finds the venv's Python wherever the system keeps it.
+      - run: uv run --no-sync python -m pytest
         working-directory: sidecar
-      - run: pnpm test:e2e
+      # PyInstaller can't build for another system, so each one freezes its own.
+      - run: bash sidecar/build.sh
+      - name: The frozen engine starts and answers
+        run: bash sidecar/check-engine.sh resources/sidecar/*/jiggle_engine/jiggle_engine*
+        timeout-minutes: 2
+      # The Windows runner's screen is smaller than the 1280x800 window the tests expect.
+      - name: Larger screen
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
+      # Ubuntu blocks the user namespaces Electron's sandbox needs. Allow them rather than test unsandboxed.
+      - name: Allow the sandbox
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # Linux runners have no screen: xvfb is a virtual one.
+      - name: End-to-end tests
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a -s '-screen 0 1920x1080x24' pnpm test:e2e
+          else
+            pnpm test:e2e
+          fi
+      # What was on screen when a test failed, readable straight from the log.
+      - name: Show failed test snapshots
+        if: failure()
+        run: find test-results -name error-context.md -exec cat {} + 2>/dev/null || true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.os }}
           path: |
             test-results
             playwright-report
           if-no-files-found: ignore
+
+  # The one check `main` requires: green only when all three systems are. `always()` matters, because GitHub
+  # treats a skipped required check as passed.
+  test:
+    needs: platform
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.platform.result }}" = success
 
   # Intel Macs get their own engine (PyInstaller can't cross-build), with an older cryptography (see
   # sidecar/pyproject.toml). Check that it still installs, passes its tests, and starts once frozen.
@@ -58,7 +102,5 @@ jobs:
         run: |
           engine=resources/sidecar/x64/jiggle_engine/jiggle_engine
           file "$engine" | grep x86_64
-          out=$(printf '%s\n' '{"id":1,"method":"ping"}' '{"id":2,"method":"list_devices"}' | "$engine")
-          echo "$out"
-          grep '"id": 1, "result"' <<<"$out"
-          grep '"id": 2, "result"' <<<"$out"
+          bash sidecar/check-engine.sh "$engine"
+        timeout-minutes: 2

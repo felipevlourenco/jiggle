@@ -12,11 +12,11 @@ cd sidecar && uv sync --python 3.12 --group dev && cd ..
 JIGGLE_MOCK_DEVICE=iphone-widgets pnpm dev   # no phone needed
 ```
 
-The README lists every command. Before opening a pull request, run what CI runs:
+The README lists every command. CI runs on macOS, Windows and Linux. Before opening a pull request, run its checks on your system:
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm exec prettier --check . && pnpm test
-(cd sidecar && .venv/bin/python -m pytest)
+(cd sidecar && uv run --no-sync python -m pytest)
 pnpm test:e2e
 ```
 

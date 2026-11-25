@@ -129,6 +129,9 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    # The app speaks UTF-8 both ways. Windows would read the pipe with its code page, and the frozen engine
+    # ignores PYTHONIOENCODING: folder names must not be garbled on their way to the phone.
+    sys.stdin.reconfigure(encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")
     try:
         asyncio.run(main())

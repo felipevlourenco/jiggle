@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
 import { formatBytes } from '../../src/shared/format'
+import { OS, osText } from '../../src/shared/platform'
 
 // Runs in the page, where the DOM's getComputedStyle exists (the tests themselves have no DOM types).
 declare function getComputedStyle(el: unknown): { getPropertyValue(name: string): string }
@@ -141,9 +142,9 @@ test.describe('Home Screen preview', () => {
 
     await win.getByRole('button', { name: 'Next page' }).click()
     await pageIs(win, 2)
-    await win.keyboard.press('Meta+ArrowRight')
+    await win.keyboard.press('ControlOrMeta+ArrowRight')
     await pageIs(win, 3)
-    await win.keyboard.press('Meta+ArrowLeft')
+    await win.keyboard.press('ControlOrMeta+ArrowLeft')
     await pageIs(win, 2)
     await dots.nth(5).click()
     await pageIs(win, 6)
@@ -374,7 +375,7 @@ test.describe('Home Screen search', () => {
     const win = await app.firstWindow()
     await expect(win.getByTestId('page')).toBeVisible()
     const box = win.getByRole('searchbox', { name: 'Find an app' })
-    await win.keyboard.press('Meta+f')
+    await win.keyboard.press('ControlOrMeta+f')
     await expect(box).toBeFocused()
 
     // an app on a later page: the pager moves to it and it carries the ring
@@ -558,12 +559,14 @@ test.describe('Edit mode (drag and drop)', () => {
   const dragTo = async (
     win: Page,
     from: { x: number; y: number },
-    to: { x: number; y: number }
+    to: { x: number; y: number },
+    restMs = 0 // hold still over the target this long before letting go
   ) => {
     await win.mouse.move(from.x, from.y)
     await win.mouse.down()
     await win.mouse.move(from.x + 12, from.y + 12, { steps: 3 })
     await win.mouse.move(to.x, to.y, { steps: 10 })
+    if (restMs) await win.waitForTimeout(restMs)
     await win.mouse.up()
   }
 
@@ -595,9 +598,9 @@ test.describe('Edit mode (drag and drop)', () => {
 
     expect((await titles(win))[0]).toBe(moving)
     await expect(win.getByText('Editing · 1 change')).toBeVisible()
-    await win.keyboard.press('Meta+z')
+    await win.keyboard.press('ControlOrMeta+z')
     expect(await titles(win)).toEqual(original)
-    await win.keyboard.press('Shift+Meta+z')
+    await win.keyboard.press('Shift+ControlOrMeta+z')
     expect((await titles(win))[0]).toBe(moving)
 
     await win.getByRole('button', { name: 'Push to iPhone' }).click()
@@ -648,18 +651,18 @@ test.describe('Edit mode (drag and drop)', () => {
     const original = await titles(win)
     await win.getByRole('button', { name: 'Edit' }).click()
 
-    await cell(win, original[0]!).click({ modifiers: ['Meta'] })
-    await cell(win, original[1]!).click({ modifiers: ['Meta'] })
+    await cell(win, original[0]!).click({ modifiers: ['ControlOrMeta'] })
+    await cell(win, original[1]!).click({ modifiers: ['ControlOrMeta'] })
     await expect(win.getByText('2 selected')).toBeVisible()
-    await cell(win, original[1]!).click({ modifiers: ['Meta'] }) // ⌘ again takes it off
+    await cell(win, original[1]!).click({ modifiers: ['ControlOrMeta'] }) // ⌘ again takes it off
     await expect(win.getByText('1 selected')).toBeVisible()
     await cell(win, original[3]!).click({ modifiers: ['Shift'] }) // 0 to 3
     await expect(win.getByText('4 selected')).toBeVisible()
     await win.keyboard.press('Escape')
     await expect(win.getByText(/selected/)).toHaveCount(0)
 
-    await cell(win, original[0]!).click({ modifiers: ['Meta'] })
-    await cell(win, original[1]!).click({ modifiers: ['Meta'] })
+    await cell(win, original[0]!).click({ modifiers: ['ControlOrMeta'] })
+    await cell(win, original[1]!).click({ modifiers: ['ControlOrMeta'] })
     await dragTo(win, await centre(cell(win, original[0]!)), await centre(cell(win, original[4]!)))
     // both left the front and landed together, in their old order, where the target was
     await expect
@@ -667,24 +670,55 @@ test.describe('Edit mode (drag and drop)', () => {
       .toEqual([original[0], original[1]])
     await expect(win.getByText('Editing · 1 change')).toBeVisible()
     await expect(win.getByText(/selected/)).toHaveCount(0)
-    await win.keyboard.press('Meta+z')
+    await win.keyboard.press('ControlOrMeta+z')
     expect(await titles(win)).toEqual(original)
     await app.close()
   })
+
+  // Space on an icon, then wait until the arrow keys count: dnd-kit has said what the drag is over, and it listens
+  // for keys from a zero-delay timer, so one of ours, set later, can only fire after that.
+  const pickUp = async (win: Page, title: string) => {
+    await win.getByTestId('page').getByRole('button', { name: title }).focus()
+    await win.keyboard.press('Space')
+    await expect(win.locator('[id^="DndLiveRegion"]')).toContainText('over droppable area')
+    await win.evaluate('new Promise((resolve) => setTimeout(resolve))')
+  }
 
   test('moves an icon with the keyboard: Space picks it up, arrows move it, Space drops it', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
     const win = await app.firstWindow()
     await expect(win.getByTestId('page')).toBeVisible()
     const [a, b] = await titles(win)
+    const front = async () => (await titles(win)).slice(0, 2)
     await win.getByRole('button', { name: 'Edit' }).click()
-    await win.getByTestId('page').getByRole('button', { name: a! }).focus()
-    // (a beat between keys: the move is applied after each render)
-    await win.keyboard.press('Space')
-    await win.waitForTimeout(150)
+    await pickUp(win, a!)
     await win.keyboard.press('ArrowRight')
-    await win.waitForTimeout(150)
+    await expect.poll(front).toEqual([b, a]) // the others made room
     await win.keyboard.press('Space')
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+    expect(await front()).toEqual([b, a])
+    await app.close()
+  })
+
+  test('a drop that lands just as the icons make room keeps the move', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const [a, b] = await titles(win)
+    await win.getByRole('button', { name: 'Edit' }).click()
+    await pickUp(win, a!)
+    // Space from inside the page, the moment the other icon is drawn first: no test runner can time that from outside.
+    await win.evaluate(`(() => {
+      const page = document.querySelector('[data-testid="page"]')
+      const seen = new MutationObserver(() => {
+        if (page.querySelector('[data-kind]')?.getAttribute('title') !== ${JSON.stringify(b)}) return
+        seen.disconnect()
+        document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true }))
+      })
+      seen.observe(page, { subtree: true, childList: true, attributes: true })
+    })()`)
+    await win.keyboard.press('ArrowRight')
+    await expect(win.locator('[id^="DndLiveRegion"]')).toContainText('was dropped')
     await expect.poll(async () => (await titles(win)).slice(0, 2)).toEqual([b, a])
     await expect(win.getByText('Editing · 1 change')).toBeVisible()
     await app.close()
@@ -759,7 +793,8 @@ test.describe('Edit mode (drag and drop)', () => {
     const page = await titles(win)
     const [a, b] = [page[0]!, page[1]!]
     await win.keyboard.down('Alt')
-    await dragTo(win, await centre(cell(win, a)), await centre(cell(win, b)))
+    // resting before letting go, longer than the 250 ms after which the others normally make room
+    await dragTo(win, await centre(cell(win, a)), await centre(cell(win, b)), 500)
     await win.keyboard.up('Alt')
     await expect(win.getByText('Editing · 3 changes')).toBeVisible()
     const made = win.getByTestId('page').locator('[data-kind="folder"][title="New Folder"]')
@@ -966,6 +1001,10 @@ test.describe('Hardening', () => {
 
     let { app, settings } = await open()
     await expect(settings.getByRole('tab', { name: 'General', selected: true })).toBeVisible()
+    // Wi‑Fi goes through Finder's sync, so only a Mac offers it
+    await expect(settings.getByRole('tab', { name: 'Connection' })).toHaveCount(
+      OS === 'mac' ? 1 : 0
+    )
     await settings.getByLabel('Appearance').selectOption('dark')
     await settings.getByLabel('Automatic backups to keep').selectOption('10')
     // (Playwright emulates the page as light, so ask Electron what the app is using)
@@ -1094,7 +1133,7 @@ test.describe('Send to App Library', () => {
         await row
           .getByRole('cell')
           .nth(1)
-          .click({ modifiers: ['Meta'] })
+          .click({ modifiers: ['ControlOrMeta'] })
       else await row.getByRole('checkbox').click()
     }
     await expect(send).toHaveText('Send to App Library (3)')
@@ -1403,8 +1442,11 @@ test.describe('Export', () => {
     app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('export')!.click())
 
   test('⌘E → PNG, all pages: one picture per page, the size of the screen, and Show in Finder', async () => {
+    test.slow() // a picture per page takes a while on a runner with no graphics card
     const dir = exportDir()
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-widgets', JIGGLE_EXPORT_DIR: dir })
+    // the main process logs why an export failed: keep that in the test output
+    app.process().stdout?.on('data', (line) => process.stdout.write(line))
     const win = await app.firstWindow()
     await expect(win.getByTestId('page')).toBeVisible()
     const pageCount = await win.getByRole('group', { name: 'Pages' }).getByRole('button').count()
@@ -1416,8 +1458,10 @@ test.describe('Export', () => {
       'true'
     )
     await expect(sheet.getByLabel('Pages')).toHaveValue('all')
+    const started = Date.now()
     await sheet.getByRole('button', { name: 'Export…' }).click()
-    await expect(sheet).toHaveCount(0)
+    await expect(sheet).toHaveCount(0, { timeout: 45_000 })
+    console.log(`PNG export of ${pageCount} pages: ${Date.now() - started} ms`)
     await expect(win.getByText(/^Exported to .* – page 1\.png/)).toBeVisible()
 
     const files = readdirSync(dir).sort()
@@ -1431,13 +1475,13 @@ test.describe('Export', () => {
       expect(w).toBeGreaterThanOrEqual(402)
     }
 
-    // Show in Finder reveals the first file (stubbed: the test can't look at Finder)
+    // Show in Finder (or the system's own wording) reveals the first file (stubbed: the test can't look)
     await app.evaluate(({ shell }) => {
       const seen: string[] = []
       ;(globalThis as unknown as { revealed: string[] }).revealed = seen
       shell.showItemInFolder = (p: string) => void seen.push(p)
     })
-    await win.getByRole('button', { name: 'Show in Finder' }).click()
+    await win.getByRole('button', { name: osText().reveal }).click()
     await expect
       .poll(() => app.evaluate(() => (globalThis as unknown as { revealed: string[] }).revealed))
       .toEqual([join(dir, files[0]!)])
@@ -1747,6 +1791,8 @@ test.describe('Uninstall apps', () => {
 })
 
 test.describe('Wi‑Fi', () => {
+  test.skip(OS !== 'mac', 'Settings > Connection is only offered on a Mac')
+
   const openSettings = async (app: Awaited<ReturnType<typeof launch>>) => {
     const opened = app.waitForEvent('window')
     await app.evaluate(({ Menu }) =>
