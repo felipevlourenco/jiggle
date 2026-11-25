@@ -44,7 +44,7 @@ The demos use a mock phone, so the icons are placeholders.
 - **Cleanup**: remove empty pages and one-app folders, and move newly installed apps into the folder named after their category or developer. New apps are found by comparing with an earlier automatic backup.
 - **Export**: PNG (one image per page), PDF (all pages) or CSV (name, bundle ID, category, developer, location).
 - **History**: automatic backups before every write (the latest 50 per device are kept), one-click restore, and a **Compare** that lists what moved since a backup or saved layout. Optionally a backup is also taken when a device connects, if its layout changed.
-- **Wi-Fi**: works over Wi-Fi once "Show this iPhone when on Wi-Fi" is on in Finder.
+- **Wi-Fi** (Mac only): works over Wi-Fi once "Show this iPhone when on Wi-Fi" is on in Finder.
 - **Safe by design**: validation before every write, a backup first, a read-back to verify afterwards, and read-only mode on iOS versions it does not recognise.
 
 ## Install
@@ -53,7 +53,17 @@ Releases are on the [Releases page](https://github.com/felipevlourenco/jiggle/re
 
 Builds from 0.1.4 on are signed with a Developer ID certificate and notarized by Apple, so they open like any other Mac app. Jiggle checks for updates at launch and installs them itself (you can turn that off in Settings). Versions up to 0.1.3 were not notarized and need System Settings > Privacy & Security > **Open Anyway** on first launch.
 
-Requirements: macOS, and an iPhone or iPad on iOS or iPadOS 17 or later (tested on 17, 18 and 26). The phone must be unlocked and tap **Trust** the first time it is connected.
+### Windows (beta)
+
+The Windows build is the `-setup.exe` file, on releases that have one. It is for 64-bit Intel and AMD PCs. **It has not been tried with a real iPhone yet**, so treat it as experimental and back the phone up first.
+
+1. Install the [Apple Devices](https://support.apple.com/118290) app from the Microsoft Store, or iTunes. Jiggle reaches the phone through Apple's driver, which comes with them.
+2. Run the installer. It isn't signed yet, so Windows SmartScreen may warn you: choose **More info**, then **Run anyway**. Only do this for a file downloaded from this repository's Releases page.
+3. Connect the iPhone with a cable, unlock it and tap **Trust**.
+
+Wi-Fi isn't offered on Windows. Logs are in `%APPDATA%\Jiggle\logs`.
+
+Requirements: macOS (or Windows, in beta), and an iPhone or iPad on iOS or iPadOS 17 or later (tested on 17, 18 and 26). The phone must be unlocked and tap **Trust** the first time it is connected.
 
 ## Develop
 
@@ -80,7 +90,7 @@ JIGGLE_MOCK_DEVICE=iphone-widgets pnpm dev
 | `cd sidecar && uv run --no-sync python -m pytest` | Tests for the engine's RPC handlers                                    |
 | `pnpm dist`                                       | Builds the app. Run `bash sidecar/build.sh` first to freeze the engine |
 
-CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing a `v*` tag that matches `package.json`'s version runs `release.yml`, which builds, signs and creates a **draft** GitHub release.
+CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing a `v*` tag that matches `package.json`'s version runs `release.yml`, which builds and signs the Mac apps, builds the unsigned Windows installer, and creates a **draft** GitHub release.
 
 ## How it works
 

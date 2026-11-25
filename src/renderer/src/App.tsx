@@ -144,6 +144,7 @@ function Shell() {
                     element={
                       <Connect
                         device={device}
+                        noUsbService={engine === 'no-usb-service'}
                         onContinueReadOnly={() => setReadOnlyUdid(device?.udid)}
                       />
                     }

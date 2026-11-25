@@ -4,6 +4,7 @@ from typing import Callable
 
 from pymobiledevice3 import usbmux
 from pymobiledevice3.exceptions import (
+    ConnectionFailedToUsbmuxdError,
     PairingDialogResponsePendingError,
     PasswordRequiredError,
     UserDeniedPairingError,
@@ -112,13 +113,20 @@ async def watch(emit: Emit, wifi: bool = False) -> None:
     usbmuxd replays already-connected devices as attached when we start listening.
     If usbmuxd goes away we reconnect, and diff against what we knew. When cancelled (the Wi-Fi switch
     changed) everything known is detached first, so the next watcher starts from nothing.
+
+    It also emits usbmux {available: false} when there is no usbmuxd to talk to (on Windows: Apple's driver is
+    missing or not running), and {available: true} once it answers again.
     """
     known: dict[str, str] = {}
+    available = True
     while True:
         try:
             mux = await usbmux.create_mux()
             try:
                 await mux.listen()
+                if not available:
+                    available = True
+                    emit("usbmux", {"available": True})
                 while True:
                     await mux.receive_device_state_update()
                     now = reachable(mux.devices, wifi)
@@ -132,7 +140,12 @@ async def watch(emit: Emit, wifi: bool = False) -> None:
                 emit(event, {"udid": udid})
             raise
         except Exception as e:
-            print(f"watch: {type(e).__name__}: {e}; retrying", file=sys.stderr, flush=True)
+            missing = isinstance(e, ConnectionFailedToUsbmuxdError)
+            if available or not missing:  # a missing service is logged once, not on every retry
+                print(f"watch: {type(e).__name__}: {e}; retrying", file=sys.stderr, flush=True)
+            if missing and available:
+                available = False
+                emit("usbmux", {"available": False})
             for event, udid in changes(known, {}):
                 emit(event, {"udid": udid})
             known = {}

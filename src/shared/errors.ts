@@ -20,8 +20,18 @@ export const connectSteps = (kind: Device['deviceClass'] = 'iPhone'): string[] =
 export function connectMessage(
   device: Device | undefined,
   wifi = false, // Wi‑Fi devices are being looked for too
-  os: Os = OS
+  os: Os = OS,
+  noUsbService = false // see SidecarStatus
 ): ConnectMessage {
+  // Windows reaches phones through Apple's driver. (Linux and its usbmuxd come with its own beta.)
+  if (!device && noUsbService && os === 'windows') {
+    return {
+      title: 'Apple’s iPhone driver isn’t running',
+      body: 'Install the Apple Devices app from the Microsoft Store, or iTunes from Apple. If you have one, open it once. Jiggle continues by itself.',
+      severity: 'warning',
+      illustration: 'warning'
+    }
+  }
   if (!device) {
     const { computer } = osText(os)
     return {

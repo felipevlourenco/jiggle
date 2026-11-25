@@ -142,7 +142,10 @@ describe('ExportService', () => {
   it('keeps a device name from making a path', async () => {
     const t = setup()
     const service = new ExportService({
-      bridge: new MockBridge({ ...fixture, device: { ...fixture.device, name: 'A/B: C' } }),
+      bridge: new MockBridge({
+        ...fixture,
+        device: { ...fixture.device, name: 'A/B: C? <"D|E*>' }
+      }),
       renderer: { png: async () => Buffer.alloc(1), pdf: async () => Buffer.alloc(1), close() {} },
       choose: async (name) => join(t.dir, name),
       reveal() {},
@@ -150,6 +153,6 @@ describe('ExportService', () => {
       log: silent
     })
     await service.run(png(1))
-    expect(t.files()).toEqual(['A-B- C – Home Screen.png'])
+    expect(t.files()).toEqual(['A-B- C- --D-E-- – Home Screen.png'])
   })
 })

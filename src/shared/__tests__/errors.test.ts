@@ -31,6 +31,13 @@ describe('connectMessage', () => {
     expect(m.action).toBe(action)
   })
 
+  it('names Apple’s driver on Windows when its USB service doesn’t answer', () => {
+    const m = connectMessage(undefined, false, 'windows', true)
+    expect(m.body).toContain('Apple Devices')
+    expect(connectMessage(undefined, false, 'mac', true).title).toBe('Connect your iPhone')
+    expect(connectMessage(device('locked'), false, 'windows', true).title).toContain('Unlock')
+  })
+
   it('mentions the Wi‑Fi network once Wi‑Fi devices are looked for', () => {
     expect(connectMessage(undefined).body).toContain('with a cable')
     expect(connectMessage(undefined, true).body).toContain('same Wi‑Fi network')

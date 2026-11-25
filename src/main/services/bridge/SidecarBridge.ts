@@ -42,6 +42,7 @@ const Message = z.object({
   data: z.unknown().optional()
 })
 const DeviceEvent = z.object({ udid: z.string() })
+const Usbmux = z.object({ available: z.boolean() })
 const Metrics = z.object({
   homeScreenIconColumns: z.number(),
   homeScreenIconRows: z.number(),
@@ -123,7 +124,9 @@ export class SidecarBridge implements DeviceBridge {
   setWifi(enabled: boolean): void {
     if (enabled === this.wifi) return
     this.wifi = enabled
-    if (this.status === 'ready') void this.request('watch', { wifi: enabled }).catch(() => {})
+    if (this.status === 'ready' || this.status === 'no-usb-service') {
+      void this.request('watch', { wifi: enabled }).catch(() => {})
+    }
   }
 
   getStatus(): SidecarStatus {
@@ -208,6 +211,7 @@ export class SidecarBridge implements DeviceBridge {
     const child = spawn(command, args, {
       cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true, // the engine is a console program: no black window beside the app
       env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }
     })
     this.child = child
@@ -276,6 +280,11 @@ export class SidecarBridge implements DeviceBridge {
 
   private onEvent(event: string, data: unknown): void {
     const { log } = this.opts
+    if (event === 'usbmux') {
+      const parsed = Usbmux.safeParse(data)
+      if (!parsed.success) return log.warn('bad payload for', event, data)
+      return this.setStatus(parsed.data.available ? 'ready' : 'no-usb-service')
+    }
     if (event !== 'device_attached' && event !== 'device_detached') {
       return log.debug('ignoring engine event', event)
     }

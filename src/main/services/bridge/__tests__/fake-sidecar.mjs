@@ -50,6 +50,9 @@ createInterface({ input: process.stdin }).on('line', (line) => {
   } else if (method === 'detach') {
     send({ id, result: {} })
     send({ event: 'device_detached', data: { udid: 'U1' } })
+  } else if (method === 'usbmux') {
+    send({ id, result: {} })
+    send({ event: 'usbmux', data: { available: params.available } })
   } else if (method === 'fail') send({ id, error: { code: 'nope', message: 'denied' } })
   else if (method === 'crash') process.exit(1)
   // any other method (e.g. "hang") is never answered
