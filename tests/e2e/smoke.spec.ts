@@ -559,12 +559,14 @@ test.describe('Edit mode (drag and drop)', () => {
   const dragTo = async (
     win: Page,
     from: { x: number; y: number },
-    to: { x: number; y: number }
+    to: { x: number; y: number },
+    restMs = 0 // hold still over the target this long before letting go
   ) => {
     await win.mouse.move(from.x, from.y)
     await win.mouse.down()
     await win.mouse.move(from.x + 12, from.y + 12, { steps: 3 })
     await win.mouse.move(to.x, to.y, { steps: 10 })
+    if (restMs) await win.waitForTimeout(restMs)
     await win.mouse.up()
   }
 
@@ -673,19 +675,50 @@ test.describe('Edit mode (drag and drop)', () => {
     await app.close()
   })
 
+  // Space on an icon, then wait until the arrow keys count: dnd-kit has said what the drag is over, and it listens
+  // for keys from a zero-delay timer, so one of ours, set later, can only fire after that.
+  const pickUp = async (win: Page, title: string) => {
+    await win.getByTestId('page').getByRole('button', { name: title }).focus()
+    await win.keyboard.press('Space')
+    await expect(win.locator('[id^="DndLiveRegion"]')).toContainText('over droppable area')
+    await win.evaluate('new Promise((resolve) => setTimeout(resolve))')
+  }
+
   test('moves an icon with the keyboard: Space picks it up, arrows move it, Space drops it', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
     const win = await app.firstWindow()
     await expect(win.getByTestId('page')).toBeVisible()
     const [a, b] = await titles(win)
+    const front = async () => (await titles(win)).slice(0, 2)
     await win.getByRole('button', { name: 'Edit' }).click()
-    await win.getByTestId('page').getByRole('button', { name: a! }).focus()
-    // (a beat between keys: the move is applied after each render)
-    await win.keyboard.press('Space')
-    await win.waitForTimeout(150)
+    await pickUp(win, a!)
     await win.keyboard.press('ArrowRight')
-    await win.waitForTimeout(150)
+    await expect.poll(front).toEqual([b, a]) // the others made room
     await win.keyboard.press('Space')
+    await expect(win.getByText('Editing · 1 change')).toBeVisible()
+    expect(await front()).toEqual([b, a])
+    await app.close()
+  })
+
+  test('a drop that lands just as the icons make room keeps the move', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    await expect(win.getByTestId('page')).toBeVisible()
+    const [a, b] = await titles(win)
+    await win.getByRole('button', { name: 'Edit' }).click()
+    await pickUp(win, a!)
+    // Space from inside the page, the moment the other icon is drawn first: no test runner can time that from outside.
+    await win.evaluate(`(() => {
+      const page = document.querySelector('[data-testid="page"]')
+      const seen = new MutationObserver(() => {
+        if (page.querySelector('[data-kind]')?.getAttribute('title') !== ${JSON.stringify(b)}) return
+        seen.disconnect()
+        document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true }))
+      })
+      seen.observe(page, { subtree: true, childList: true, attributes: true })
+    })()`)
+    await win.keyboard.press('ArrowRight')
+    await expect(win.locator('[id^="DndLiveRegion"]')).toContainText('was dropped')
     await expect.poll(async () => (await titles(win)).slice(0, 2)).toEqual([b, a])
     await expect(win.getByText('Editing · 1 change')).toBeVisible()
     await app.close()
@@ -760,7 +793,8 @@ test.describe('Edit mode (drag and drop)', () => {
     const page = await titles(win)
     const [a, b] = [page[0]!, page[1]!]
     await win.keyboard.down('Alt')
-    await dragTo(win, await centre(cell(win, a)), await centre(cell(win, b)))
+    // resting before letting go, longer than the 250 ms after which the others normally make room
+    await dragTo(win, await centre(cell(win, a)), await centre(cell(win, b)), 500)
     await win.keyboard.up('Alt')
     await expect(win.getByText('Editing · 3 changes')).toBeVisible()
     const made = win.getByTestId('page').locator('[data-kind="folder"][title="New Folder"]')
