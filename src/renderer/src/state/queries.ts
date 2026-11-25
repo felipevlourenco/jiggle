@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { SidecarStatus } from '@shared/ipc-contract'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { findCleanup } from '@shared/layout/cleanup'
+import { appLocations } from '@shared/layout/locations'
 
 export const useDevices = () =>
   useQuery({ queryKey: ['devices'], queryFn: () => window.jiggle.device.list() })
@@ -25,6 +27,33 @@ export const useSnapshots = (udid: string | undefined) =>
     queryKey: ['snapshots', udid ?? 'all'],
     queryFn: () => window.jiggle.snapshots.list(udid)
   })
+
+// What Cleanup lists, for the screen and its badge. App categories are only asked for when there are new apps.
+export function useCleanup(udid: string | undefined) {
+  const layout = useLayout(udid)
+  const before = layout.data?.layout
+  const ids = useMemo(() => (before ? [...appLocations(before).keys()] : []), [before])
+  // Under 'snapshots', so a new backup refreshes it.
+  const fresh = useQuery({
+    queryKey: ['snapshots', udid, 'new-apps', ids],
+    queryFn: () => window.jiggle.snapshots.newApps(udid!, ids),
+    enabled: !!udid && !!before
+  })
+  const hasNew = !!fresh.data?.length
+  const apps = useApps(hasNew ? udid : undefined)
+  const issues = useMemo(() => {
+    if (!before) return []
+    const info = new Map(apps.data?.apps.map((a) => [a.bundleId, a]))
+    return findCleanup(before, {
+      ids: new Set(fresh.data),
+      categoryOf: (id) => info.get(id)?.category ?? 'Unknown',
+      developerOf: (id) => info.get(id)?.developer ?? null
+    })
+  }, [before, fresh.data, apps.data])
+  // Still finding out: don't call the phone tidy yet. A failed check just leaves the new apps out.
+  const checking = !!before && (fresh.isLoading || (hasNew && apps.isLoading))
+  return { layout, issues, checking }
+}
 
 // The result comes back as a toast from main, so there is nothing to handle here.
 export const useBackUp = () =>

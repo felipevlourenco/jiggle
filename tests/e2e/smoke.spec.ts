@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
@@ -1515,6 +1515,71 @@ test.describe('Cleanup', () => {
     await expect(win.getByRole('heading', { name: 'Your home screen is tidy.' })).toBeVisible()
     await expect(link.locator('.nav-badge')).toHaveCount(0)
     await expect(win.getByRole('button', { name: 'Fix Selected' })).toBeDisabled()
+    await app.close()
+  })
+
+  test('files a new app into its category’s folder, even after the backup taken on connect', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-'))
+    const { device, rawState } = JSON.parse(
+      readFileSync('tests/fixtures/iphone-messy.json', 'utf8')
+    )
+    // An older backup from before two apps arrived. One has a folder waiting, the other has none.
+    const arrived = ['com.example.bankone', 'com.example.cinema']
+    const id = '01ARZ3NDEKTSV4RRFFQ69G5FAV'
+    const dir = join(userData, 'devices', device.udid, 'snapshots')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, `${id}.json`),
+      JSON.stringify({
+        id,
+        udid: device.udid,
+        kind: 'auto-backup',
+        name: null,
+        reason: 'Manual backup',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        osVersion: device.osVersion,
+        deviceClass: 'iPhone',
+        appCount: 0,
+        pageCount: 0,
+        rawState: rawState.map((page: { bundleIdentifier?: string }[]) =>
+          page.filter((item) => !arrived.includes(item.bundleIdentifier ?? ''))
+        )
+      })
+    )
+    writeFileSync(join(userData, 'settings.json'), '{"backupOnConnect":true}')
+    writeFileSync(
+      join(userData, 'overrides.json'),
+      JSON.stringify({
+        'com.example.bankone': { name: 'Bank One', category: 'banking' },
+        'com.example.cinema': { name: 'Cinema', category: 'Entertainment' }
+      })
+    )
+
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy', JIGGLE_USER_DATA: userData })
+    const win = await app.firstWindow()
+    // The connect backup holds both new apps: the case that must not hide them.
+    await win.getByRole('link', { name: 'History' }).click()
+    await expect(win.getByText('Phone connected')).toBeVisible()
+
+    await win.getByRole('link', { name: /Cleanup/ }).click()
+    const mine = win.getByRole('checkbox', { name: /^New app:/ })
+    await expect(mine).toHaveCount(1) // the other has no folder to go to
+    await expect(win.getByText('Move into the folder “Banking”')).toBeVisible()
+    // Banking is about to get a second app, so it is no longer a one-app folder.
+    await expect(win.getByRole('checkbox', { name: /has only 1 app/ })).toHaveCount(2)
+
+    for (const box of await win.getByRole('checkbox').all()) await box.uncheck()
+    await mine.check()
+    await win.getByRole('button', { name: 'Fix Selected' }).click()
+    const sheet = win.getByRole('dialog', { name: /Fix 1 thing/ })
+    await expect(sheet).toContainText('Move 1 new app into folders')
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done!/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+
+    // Filed, and Banking now has two apps: only the other four things are left.
+    await expect(win.getByRole('heading', { name: '4 things to tidy up' })).toBeVisible()
+    await expect(mine).toHaveCount(0)
     await app.close()
   })
 

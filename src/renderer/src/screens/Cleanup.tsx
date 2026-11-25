@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { applyCleanup, findCleanup, type CleanupIssue } from '@shared/layout/cleanup'
+import { applyCleanup, type CleanupIssue } from '@shared/layout/cleanup'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import type { Device } from '@shared/types'
@@ -9,24 +9,40 @@ import { CheckIcon } from '../components/icons'
 import { LayoutThumb } from '../components/LayoutThumb'
 import { ToolbarActions } from '../components/ToolbarSlot'
 import { ApplySheet } from '../sheets/Apply'
-import { useLayout } from '../state/queries'
+import { useCleanup } from '../state/queries'
 import s from './cleanup.module.css'
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
-const title = (i: CleanupIssue): string =>
-  i.kind === 'empty-page'
-    ? `Page ${i.page + 1} is empty`
-    : `Folder “${i.name}” has only 1 app (${i.app.name})`
-const fix = (i: CleanupIssue): string =>
-  i.kind === 'empty-page' ? 'Remove page' : 'Move the app out and remove the folder'
+const title = (i: CleanupIssue): string => {
+  if (i.kind === 'empty-page') return `Page ${i.page + 1} is empty`
+  if (i.kind === 'new-app') return `New app: ${i.app.name}`
+  return `Folder “${i.name}” has only 1 app (${i.app.name})`
+}
+const fix = (i: CleanupIssue): string => {
+  if (i.kind === 'empty-page') return 'Remove page'
+  if (i.kind === 'new-app') return `Move into the folder “${i.folderName}”`
+  return 'Move the app out and remove the folder'
+}
 
-// S7: empty pages and one-app folders, each with a checkbox. "Fix Selected" goes through the Apply sheet.
+// What the Apply sheet says will happen. `pagesGone` counts the pages the moves empty, too.
+function summary(chosen: CleanupIssue[], pagesGone: number): string[] {
+  const count = (kind: CleanupIssue['kind']): number => chosen.filter((i) => i.kind === kind).length
+  const filed = count('new-app')
+  const unwrapped = count('one-app-folder')
+  return [
+    ...(filed ? [`Move ${plural(filed, 'new app')} into folders`] : []),
+    ...(unwrapped ? [`Move ${plural(unwrapped, 'app')} out of one-app folders`] : []),
+    ...(pagesGone ? [`Remove ${plural(pagesGone, 'empty page')}`] : [])
+  ]
+}
+
+// S7: empty pages, one-app folders and new apps with a folder waiting, each with a checkbox. "Fix Selected"
+// goes through the Apply sheet.
 export function Cleanup({ device }: { device: Device }) {
-  const layout = useLayout(device.udid)
+  const { layout, issues, checking } = useCleanup(device.udid)
   const qc = useQueryClient()
   const before = layout.data?.layout
-  const issues = useMemo(() => (before ? findCleanup(before) : []), [before])
   // What was unticked, so an issue that shows up later starts ticked.
   const [off, setOff] = useState<ReadonlySet<string>>(new Set())
   const [applying, setApplying] = useState<{ chosen: CleanupIssue[]; beforeSig: string } | null>(
@@ -44,7 +60,7 @@ export function Cleanup({ device }: { device: Device }) {
         </button>
       </Banner>
     )
-  } else if (!before) {
+  } else if (!before || (checking && issues.length === 0)) {
     body = (
       <p className={s.status} role="status">
         <span className="spin" aria-hidden="true" /> Scanning your layout…
@@ -57,7 +73,7 @@ export function Cleanup({ device }: { device: Device }) {
           <CheckIcon size={28} />
         </span>
         <h2>Your home screen is tidy.</h2>
-        <p>No empty pages and no one-app folders.</p>
+        <p>No empty pages, no one-app folders and no new apps to file.</p>
       </div>
     )
   } else {
@@ -112,18 +128,10 @@ export function Cleanup({ device }: { device: Device }) {
       {applying && before && (
         <ApplySheet
           title={`Fix ${plural(applying.chosen.length, 'thing')} on ${device.name}?`}
-          lines={[
-            ...(applying.chosen.some((i) => i.kind === 'one-app-folder')
-              ? [
-                  `Move ${plural(applying.chosen.filter((i) => i.kind === 'one-app-folder').length, 'app')} out of one-app folders`
-                ]
-              : []),
-            ...(applying.chosen.some((i) => i.kind === 'empty-page')
-              ? [
-                  `Remove ${plural(applying.chosen.filter((i) => i.kind === 'empty-page').length, 'empty page')}`
-                ]
-              : [])
-          ]}
+          lines={summary(
+            applying.chosen,
+            before.pages.length - applyCleanup(before, applying.chosen).pages.length
+          )}
           doneMessage={`Done! ${device.name} is tidy.`}
           udid={device.udid}
           run={() =>

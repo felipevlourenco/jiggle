@@ -46,6 +46,7 @@ const api: JiggleApi = {
   snapshots: {
     list: (udid) => invoke('snapshots:list', udid),
     backup: (udid) => invoke('snapshots:backup', udid),
+    newApps: (udid, bundleIds) => invoke('snapshots:new-apps', udid, bundleIds),
     saveLayout: (udid, name) => invoke('snapshots:save-layout', udid, name),
     renameLayout: (udid, id, name) => invoke('snapshots:rename-layout', udid, id, name),
     deleteLayout: (udid, id) => invoke('snapshots:delete-layout', udid, id),
