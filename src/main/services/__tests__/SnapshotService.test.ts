@@ -46,6 +46,27 @@ describe('SnapshotService', () => {
     expect((await relaunched.list('AB-12')).map((e) => e.id)).toEqual([b.id, a.id])
   })
 
+  it('finds new apps against the newest automatic backup that lacks one, not just the newest', async () => {
+    const { service } = setup()
+    const now = ['dock.a', 'a.one', 'a.two', 'b.one', 'new.app']
+    expect(await service.newApps('AB-12', now)).toEqual([]) // nothing to compare with
+    await service.create({ ...input, rawState: [[app('dock.a')], [app('a.one')]] })
+    await service.create(input) // has everything but new.app
+    expect(await service.newApps('AB-12', now)).toEqual(['new.app'])
+    // A backup taken on connect, or before an apply, already has it: it stays new.
+    await service.create({ ...input, rawState: [...rawState, [app('new.app')]] })
+    expect(await service.newApps('AB-12', now)).toEqual(['new.app'])
+    // Then another app arrives, and only that one is new.
+    expect(await service.newApps('AB-12', [...now, 'newer.app'])).toEqual(['newer.app'])
+  })
+
+  it('never takes a saved layout as the baseline for new apps', async () => {
+    const { service } = setup()
+    await service.create(input)
+    await service.saveLayout({ ...input, name: 'From another phone', rawState: [[], []] })
+    expect(await service.newApps('AB-12', ['dock.a', 'a.one'])).toEqual([])
+  })
+
   it('the 51st automatic backup deletes the oldest', async () => {
     const { service, dir } = setup()
     const first = await service.create(input)

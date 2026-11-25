@@ -111,6 +111,11 @@ export const channels = {
   // No udid: every device's snapshots, so History still works with nothing plugged in.
   'snapshots:list': { args: z.tuple([Udid.optional()]), result: z.custom<SnapshotEntry[]>() },
   'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() },
+  // Which of the apps on the phone now are new since an earlier backup (for Cleanup).
+  'snapshots:new-apps': {
+    args: z.tuple([Udid, z.array(z.string()).max(5000)]),
+    result: z.array(z.string())
+  },
   // Both always resolve: a refusal or failure is an `ok: false` result, not a thrown error.
   // Saved layouts. Save reads the phone as it is now. Rename and delete never need a phone.
   // A saved layout as a Layout (grid of the device it came from), e.g. as the source of a Copy Layout.
@@ -222,6 +227,7 @@ export interface JiggleApi {
   snapshots: {
     list(udid?: string): Promise<SnapshotEntry[]>
     backup(udid: string): Promise<SnapshotSummary>
+    newApps(udid: string, bundleIds: string[]): Promise<string[]>
     saveLayout(udid: string, name: string): Promise<SavedLayoutResult>
     renameLayout(udid: string, id: string, name: string): Promise<SavedLayoutResult>
     deleteLayout(udid: string, id: string): Promise<SavedLayoutResult>

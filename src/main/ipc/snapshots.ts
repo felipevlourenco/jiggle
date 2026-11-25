@@ -169,4 +169,5 @@ export function registerSnapshotsIpc(ipc: IpcLike, deps: FileDeps): void {
   handle(ipc, 'snapshots:import-layout', (udid) => importLayout(deps, udid))
   handle(ipc, 'snapshots:list', (udid) => deps.snapshots.list(udid))
   handle(ipc, 'snapshots:backup', (udid) => backUpNow(deps, udid))
+  handle(ipc, 'snapshots:new-apps', (udid, ids) => deps.snapshots.newApps(udid, ids))
 }

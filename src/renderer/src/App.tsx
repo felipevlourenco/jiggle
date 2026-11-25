@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { NAV_ITEMS } from '@shared/nav'
-import { findCleanup } from '@shared/layout/cleanup'
 import { Cleanup } from './screens/Cleanup'
 import { Connect } from './screens/Connect'
 import { DeviceCard } from './components/DeviceCard'
@@ -20,7 +19,7 @@ import { CopyLayoutSheet } from './sheets/CopyLayout'
 import { ExportSheet } from './sheets/Export'
 import { SaveLayoutSheet } from './sheets/SaveLayout'
 import { PinsProvider } from './state/pins'
-import { useDevices, useDeviceEvents, useLayout, useSidecarStatus } from './state/queries'
+import { useCleanup, useDevices, useDeviceEvents, useSidecarStatus } from './state/queries'
 
 const NAV_ICONS: Record<string, typeof HomeIcon> = {
   '/home': HomeIcon,
@@ -61,8 +60,7 @@ function Shell() {
     device?.state === 'ready' ||
     (device?.state === 'unsupported-os' && device.udid === readOnlyUdid)
   // Load the layout (and cache its icons) as soon as a device is usable; screens share the result.
-  const phoneLayout = useLayout(usable ? device?.udid : undefined).data?.layout
-  const tidyCount = phoneLayout ? findCleanup(phoneLayout).length : 0
+  const tidyCount = useCleanup(usable ? device?.udid : undefined).issues.length
   const title = TITLES[pathname] ?? 'Jiggle'
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null)
   // File > Save Layout… and History's button both open the same sheet.

@@ -5,6 +5,7 @@ import writeFileAtomic from 'write-file-atomic'
 import { z } from 'zod'
 import { schemas } from '@shared/ipc-contract'
 import { gridFor } from '@shared/layout/grid'
+import { appLocations } from '@shared/layout/locations'
 import { checkLayoutName, NAME_MAX } from '@shared/layout/names'
 import { normalize } from '@shared/layout/normalize'
 import { summarize } from '@shared/layout/summarize'
@@ -171,6 +172,22 @@ export class SnapshotService {
   // The most recent readable snapshot of a device, or undefined.
   async latest(udid: Udid): Promise<SnapshotSummary | undefined> {
     return (await this.list(udid)).find((e): e is SnapshotSummary => !e.damaged)
+  }
+
+  // Which of these apps (the ones on the phone now) are new: those missing from the newest automatic backup that
+  // doesn't have them all. Not simply the newest one: a backup taken on connect or before an apply already has them.
+  // So they stay new until something newer arrives. Saved layouts don't count: an imported one can come from
+  // another phone.
+  // ponytail: reads backups one by one, all of them when nothing is new; keep their app ids if that gets slow.
+  async newApps(udid: Udid, current: readonly string[]): Promise<string[]> {
+    for (const entry of await this.list(udid)) {
+      if (entry.damaged || entry.kind !== 'auto-backup') continue
+      const { rawState, deviceClass } = await this.get(udid, entry.id)
+      const had = appLocations(normalize(rawState, gridFor(deviceClass ?? 'iPhone')))
+      const missing = current.filter((id) => !had.has(id))
+      if (missing.length) return missing
+    }
+    return []
   }
 
   private async getSaved(udid: Udid, id: string): Promise<Snapshot> {
