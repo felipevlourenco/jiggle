@@ -1408,8 +1408,11 @@ test.describe('Export', () => {
     app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('export')!.click())
 
   test('⌘E → PNG, all pages: one picture per page, the size of the screen, and Show in Finder', async () => {
+    test.slow() // a picture per page takes a while on a runner with no graphics card
     const dir = exportDir()
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-widgets', JIGGLE_EXPORT_DIR: dir })
+    // the main process logs why an export failed: keep that in the test output
+    app.process().stdout?.on('data', (line) => process.stdout.write(line))
     const win = await app.firstWindow()
     await expect(win.getByTestId('page')).toBeVisible()
     const pageCount = await win.getByRole('group', { name: 'Pages' }).getByRole('button').count()
@@ -1421,8 +1424,10 @@ test.describe('Export', () => {
       'true'
     )
     await expect(sheet.getByLabel('Pages')).toHaveValue('all')
+    const started = Date.now()
     await sheet.getByRole('button', { name: 'Export…' }).click()
-    await expect(sheet).toHaveCount(0)
+    await expect(sheet).toHaveCount(0, { timeout: 45_000 })
+    console.log(`PNG export of ${pageCount} pages: ${Date.now() - started} ms`)
     await expect(win.getByText(/^Exported to .* – page 1\.png/)).toBeVisible()
 
     const files = readdirSync(dir).sort()
