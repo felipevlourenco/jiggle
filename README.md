@@ -49,7 +49,7 @@ The demos use a mock phone, so the icons are placeholders.
 
 ## Install
 
-Releases are on the [Releases page](https://github.com/felipevlourenco/jiggle/releases). Apple silicon (arm64) only for now. Intel is planned.
+Releases are on the [Releases page](https://github.com/felipevlourenco/jiggle/releases). From 0.1.5 on there is a build for Apple silicon (the `arm64` file) and one for Intel (the `x64` file). The Intel build is new and hasn't been tested on Intel hardware with an iPhone yet.
 
 Builds from 0.1.4 on are signed with a Developer ID certificate and notarized by Apple, so they open like any other Mac app. Jiggle checks for updates at launch and installs them itself (you can turn that off in Settings). Versions up to 0.1.3 were not notarized and need System Settings > Privacy & Security > **Open Anyway** on first launch.
 
