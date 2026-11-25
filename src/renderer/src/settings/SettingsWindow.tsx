@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { OS, osText } from '@shared/platform'
 import type { Settings } from '@shared/types'
 import { useEffect } from 'react'
 import { AppsIcon, GearIcon, ShieldIcon, ShieldOutline, WifiIcon } from '../components/icons'
@@ -16,7 +17,7 @@ const TABS: { tab: Tab; label: string; icon: typeof GearIcon }[] = [
   { tab: 'privacy', label: 'Privacy', icon: ShieldOutline }
 ]
 
-// ⌘, : a separate window with General, Categories and Privacy.
+// ⌘, or Ctrl+, : a separate window. Connection (Wi‑Fi through Finder's sync) is only offered on a Mac.
 export function SettingsWindow() {
   const qc = useQueryClient()
   const { data } = useQuery({ queryKey: ['settings'], queryFn: () => window.jiggle.settings.get() })
@@ -34,18 +35,20 @@ export function SettingsWindow() {
   return (
     <div className={s.root}>
       <div className={s.tabs} role="tablist" aria-label="Settings">
-        {TABS.map(({ tab: t, label, icon: Icon }) => (
-          <button
-            key={t}
-            role="tab"
-            aria-selected={tab === t}
-            className={s.tab}
-            onClick={() => setTab(t)}
-          >
-            <Icon size={20} />
-            {label}
-          </button>
-        ))}
+        {TABS.filter((t) => OS === 'mac' || t.tab !== 'connection').map(
+          ({ tab: t, label, icon: Icon }) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              className={s.tab}
+              onClick={() => setTab(t)}
+            >
+              <Icon size={20} />
+              {label}
+            </button>
+          )
+        )}
       </div>
       {tab === 'general' && <General settings={data} save={(p) => save.mutate(p)} />}
       {tab === 'categories' && <Categories />}
@@ -249,7 +252,7 @@ function Privacy({ settings, save }: { settings: Settings; save: (p: Partial<Set
       <div className="assure">
         <ShieldIcon size={22} />
         <div className={s.stack}>
-          <strong>Everything stays on this Mac.</strong>
+          <strong>Everything stays on this {osText().computer}.</strong>
           <span>
             Jiggle only contacts Apple’s App Store for categories, and GitHub for updates.
           </span>

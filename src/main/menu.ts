@@ -24,7 +24,12 @@ export function buildMenu(handlers: {
         // Dev builds have no release feed to ask.
         { label: 'Check for Updates…', enabled: app.isPackaged, click: handlers.checkForUpdates },
         { type: 'separator' },
-        { id: 'settings', label: 'Settings…', accelerator: 'Cmd+,', click: handlers.openSettings },
+        {
+          id: 'settings',
+          label: 'Settings…',
+          accelerator: 'CmdOrCtrl+,',
+          click: handlers.openSettings
+        },
         { type: 'separator' },
         { role: 'quit' }
       ]
@@ -35,10 +40,15 @@ export function buildMenu(handlers: {
         {
           id: 'save-layout',
           label: 'Save Layout…',
-          accelerator: 'Cmd+S',
+          accelerator: 'CmdOrCtrl+S',
           click: handlers.saveLayout
         },
-        { id: 'export', label: 'Export…', accelerator: 'Cmd+E', click: handlers.exportLayout },
+        {
+          id: 'export',
+          label: 'Export…',
+          accelerator: 'CmdOrCtrl+E',
+          click: handlers.exportLayout
+        },
         {
           id: 'copy-layout',
           label: 'Copy Layout to Another Device…',
@@ -52,14 +62,14 @@ export function buildMenu(handlers: {
         todo('Undo'),
         todo('Redo'),
         { type: 'separator' },
-        todo('Select All', 'Cmd+A'),
-        todo('Find', 'Cmd+F')
+        todo('Select All', 'CmdOrCtrl+A'),
+        todo('Find', 'CmdOrCtrl+F')
       ]
     },
     {
       label: 'Device',
       submenu: [
-        todo('Refresh', 'Cmd+R'),
+        todo('Refresh', 'CmdOrCtrl+R'),
         { id: 'backup', label: 'Back Up Now', click: handlers.backUpNow },
         { id: 'restore-last', label: 'Restore Last Backup…', click: handlers.restoreLast }
       ]

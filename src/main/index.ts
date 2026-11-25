@@ -12,6 +12,7 @@ import {
 import log from 'electron-log/main'
 import type { Broadcast } from '@shared/ipc-contract'
 import { dominantColor } from '@shared/layout/color'
+import { packagedEngine, venvPython } from './enginePath'
 import { registerIpc } from './ipc'
 import { restoreLastBackup } from './ipc/apply'
 import { ConnectBackups } from './services/ConnectBackups'
@@ -50,7 +51,7 @@ function createMock(): MockBridge | null {
   return new MockBridge(name.split(',').map((one) => loadFixture(dir, one.trim())))
 }
 
-// The macOS save dialog, attached to the window. JIGGLE_EXPORT_DIR=<folder> (tests; ignored in packaged builds)
+// The system's save dialog, attached to the window. JIGGLE_EXPORT_DIR=<folder> (tests; ignored in packaged builds)
 // saves there without asking, and JIGGLE_EXPORT_DIR=cancel acts like a cancelled dialog.
 async function chooseExportFile(defaultName: string, ext: string): Promise<string | undefined> {
   const dir = app.isPackaged ? undefined : process.env['JIGGLE_EXPORT_DIR']
@@ -86,11 +87,11 @@ const layoutFiles = {
 function createSidecar(): SidecarBridge {
   const sidecarLog = log.scope('sidecar')
   if (app.isPackaged) {
-    const command = join(process.resourcesPath, 'sidecar/jiggle_engine/jiggle_engine')
+    const command = packagedEngine(process.resourcesPath, process.platform)
     return new SidecarBridge({ command, log: sidecarLog })
   }
   const dir = join(app.getAppPath(), 'sidecar')
-  const command = join(dir, '.venv/bin/python')
+  const command = venvPython(dir, process.platform)
   return new SidecarBridge({ command, args: ['-m', 'jiggle_engine'], cwd: dir, log: sidecarLog })
 }
 
