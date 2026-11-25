@@ -4,7 +4,14 @@ version = "0.1.0"
 description = "Device engine for Jiggle: JSON-RPC over stdio on top of pymobiledevice3"
 requires-python = ">=3.10"
 license = "GPL-3.0-or-later"
-dependencies = ["pymobiledevice3"]
+dependencies = [
+    "pymobiledevice3",
+    # Intel Macs only: cryptography 49 and later ship no Intel macOS wheel. Their advisories fixed since then
+    # (the X.509 verifier and PKCS#7 decryption) are in code pymobiledevice3 and pyiosbackup don't call.
+    "cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    # Everyone else stays on the patched line; without this the lock would settle on the old one everywhere.
+    "cryptography>=50.0.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+]
 
 [dependency-groups]
 dev = ["pytest", "pytest-asyncio", "pyinstaller"]

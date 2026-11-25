@@ -1,5 +1,6 @@
-# Push a tag like v0.1.1 (it must match package.json's version) to build, sign and notarize an
-# Apple silicon build and create a DRAFT GitHub release. Publishing the draft is what makes the update go live.
+# Push a tag like v0.1.1 (it must match package.json's version) to build, sign and notarize the Apple silicon
+# and Intel builds and create a DRAFT GitHub release. Publishing the draft is what makes the update go live.
+# "Run workflow" on the Actions tab does the same builds as a test: they are kept as artifacts, with no release.
 #
 # Secrets: CSC_LINK (base64 of the signing certificate .p12), CSC_KEY_PASSWORD.
 #   Until you have a Developer ID Application certificate, export your "Apple Development" one. The app is then
@@ -12,6 +13,7 @@ name: release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 # No token scopes by default; each job asks for what it needs.
 permissions: {}
@@ -24,13 +26,13 @@ jobs:
       matrix:
         include:
           - { arch: arm64, runner: macos-latest }
-          # Intel is off for now. To bring it back, add { arch: x64, runner: macos-15-intel } here and use
-          # scripts/merge-latest-mac.mjs in the release job (see below).
+          - { arch: x64, runner: macos-15-intel }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - name: Tag matches package.json
+        if: github.ref_type == 'tag'
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -80,6 +82,7 @@ jobs:
             dist/latest-mac.yml
 
   release:
+    if: github.ref_type == 'tag'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -93,11 +96,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with: { path: artifacts }
-      # With more than one arch, each runner writes its own latest-mac.yml and the updater needs one listing all:
-      #   node scripts/merge-latest-mac.mjs artifacts/jiggle-arm64/latest-mac.yml artifacts/jiggle-x64/latest-mac.yml > release/latest-mac.yml
+      # Each runner writes a latest-mac.yml listing only its own files, and the updater reads one: join them.
       - run: |
           mkdir release
-          cp artifacts/*/*.dmg artifacts/*/*.zip artifacts/*/*.blockmap artifacts/*/latest-mac.yml release/
+          cp artifacts/*/*.dmg artifacts/*/*.zip artifacts/*/*.blockmap release/
+          node scripts/merge-latest-mac.mjs artifacts/jiggle-arm64/latest-mac.yml artifacts/jiggle-x64/latest-mac.yml > release/latest-mac.yml
       - run: gh release create "$GITHUB_REF_NAME" release/* --draft --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
