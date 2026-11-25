@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Build, sign, notarize and publish a release from this Mac, for when GitHub Actions is off.
-# It does what .github/workflows/release.yml does, then makes a DRAFT GitHub release.
+# It does what .github/workflows/release.yml does, then makes a DRAFT GitHub release, but for Apple silicon ONLY:
+# the Intel engine can only be built on an Intel Mac (or under Rosetta). A release made here has nothing for
+# Intel Macs to install or update to, so use the workflow whenever you can.
 #
 #   1. Bump "version" in package.json, merge that to main, and pull main.
 #   2. Export the App Store Connect API key (the .p8 and its two IDs):
@@ -22,7 +24,7 @@ version=$(node -p "require('./package.json').version")
 tag="v$version"
 
 # Preconditions: fail before the slow part.
-[ "$(uname -m)" = "arm64" ] || die "build on an Apple silicon Mac (the release is arm64 only)"
+[ "$(uname -m)" = "arm64" ] || die "build on an Apple silicon Mac (this script makes the arm64 build only)"
 [ "$(git branch --show-current)" = "main" ] || die "switch to main"
 [ -z "$(git status --porcelain)" ] || die "the working tree has changes; commit or stash them"
 git fetch -q origin
@@ -36,6 +38,7 @@ done
 security find-identity -v -p codesigning | grep -q "Developer ID Application" ||
   die "no \"Developer ID Application\" certificate in the keychain"
 echo "Releasing $tag"
+echo "release: Apple silicon only. Intel Macs can't install or update to this release; the workflow builds both." >&2
 
 # The same checks the workflow runs.
 pnpm install --frozen-lockfile
