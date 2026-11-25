@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
+import { formatBytes } from '../../src/shared/format'
 
 // Runs in the page, where the DOM's getComputedStyle exists (the tests themselves have no DOM types).
 declare function getComputedStyle(el: unknown): { getPropertyValue(name: string): string }
@@ -266,6 +267,103 @@ test.describe('App size', () => {
     // rounded to the shown precision, so only check the order loosely: never a smaller one before a bigger one
     expect(knownDesc).toEqual([...knownDesc].sort((a, b) => b - a))
     expect(desc.slice(-1)[0]).toBeNull() // still last
+    await app.close()
+  })
+})
+
+test.describe('Largest apps', () => {
+  test('ranks by size, totals the selection without unknown sizes, and sends it to the App Library', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    const quick = win.getByRole('button', { name: 'Largest apps' })
+    await expect(quick).toHaveAttribute('aria-pressed', 'false')
+    await quick.click()
+    await expect(quick).toHaveAttribute('aria-pressed', 'true')
+    await expect(win.getByRole('columnheader', { name: /Size/ })).toHaveAttribute(
+      'aria-sort',
+      'descending'
+    )
+
+    // the exact bytes behind the rounded Size column
+    const { device } = JSON.parse(readFileSync('tests/fixtures/iphone-messy.json', 'utf8'))
+    const listed = (await win.evaluate(
+      `window.jiggle.apps.list(${JSON.stringify(device.udid)})`
+    )) as { apps: { bundleId: string; size: number | null }[] }
+    const bytes = new Map(listed.apps.map((a) => [a.bundleId, a.size]))
+    const onPages = win.getByRole('row', { name: /Page \d/ })
+    const ids: string[] = []
+    for (const i of [0, 1, 2]) {
+      ids.push((await onPages.nth(i).getAttribute('title'))!)
+      await onPages.nth(i).getByRole('checkbox').check()
+    }
+    // the first three rows are the three biggest of the apps on a page
+    const sizesOnPages: number[] = []
+    for (const row of await onPages.all()) {
+      const size = bytes.get((await row.getAttribute('title'))!)
+      if (size != null) sizesOnPages.push(size)
+    }
+    expect(ids.map((id) => bytes.get(id))).toEqual(sizesOnPages.sort((a, b) => b - a).slice(0, 3))
+    const total = formatBytes(ids.reduce((sum, id) => sum + bytes.get(id)!, 0))
+    await expect(win.getByText(`3 selected · ${total}`, { exact: true })).toBeVisible()
+
+    // an app with no size is counted, and adds nothing
+    const unknown = onPages.filter({ has: win.getByRole('cell', { name: '–', exact: true }) })
+    ids.push((await unknown.first().getAttribute('title'))!)
+    await unknown.first().getByRole('checkbox').check()
+    await expect(
+      win.getByText(`4 selected · ${total} (1 without a size)`, { exact: true })
+    ).toBeVisible()
+
+    const count = await win.getByText(/^\d+ apps$/).innerText()
+    await win.getByRole('button', { name: 'Send to App Library (4)' }).click()
+    const sheet = win.getByRole('dialog', { name: 'Send 4 apps to the App Library?' })
+    await sheet.getByRole('button', { name: 'Apply', exact: true }).click()
+    await expect(sheet.getByText(/Done! 4 apps are in the App Library/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).click()
+    for (const id of ids)
+      await expect(win.getByTitle(id, { exact: true })).toContainText('App Library')
+    await expect(win.getByText(count, { exact: true })).toBeVisible() // they stay installed
+    await expect(win.getByText(/selected ·/)).toHaveCount(0)
+
+    await quick.click() // off again: back to A–Z
+    await expect(quick).toHaveAttribute('aria-pressed', 'false')
+    await expect(win.getByRole('columnheader', { name: /Name/ })).toHaveAttribute(
+      'aria-sort',
+      'ascending'
+    )
+    await app.close()
+  })
+
+  test('says so when the phone gives no sizes', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+    const win = await app.firstWindow()
+    // the mock always has sizes, so answer for it
+    await app.evaluate(({ ipcMain }) => {
+      ipcMain.removeHandler('apps:list')
+      ipcMain.handle('apps:list', () => ({
+        lookup: 'idle',
+        apps: [
+          {
+            bundleId: 'com.example.alpha',
+            name: 'Alpha',
+            removable: true,
+            size: null,
+            iconColor: null,
+            developer: null,
+            category: 'Unknown',
+            categorySource: 'unknown'
+          }
+        ]
+      }))
+    })
+    await win.getByRole('link', { name: 'Apps' }).click()
+    const warning = win.getByText(/didn’t report any app sizes/)
+    await expect(warning).toHaveCount(0) // only in the Largest apps view
+    await win.getByRole('button', { name: 'Largest apps' }).click()
+    await expect(warning).toBeVisible()
+    await win.getByRole('checkbox', { name: 'Select Alpha' }).check()
+    await expect(win.getByText('1 selected · –', { exact: true })).toBeVisible()
     await app.close()
   })
 })

@@ -155,3 +155,13 @@
 .table th:last-child {
   text-align: right;
 }
+.quick[aria-pressed='true'],
+.quick[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--sel);
+  border-color: var(--primary);
+}
+.total {
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

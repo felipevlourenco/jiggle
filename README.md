@@ -35,7 +35,7 @@ The demos use a mock phone, so the icons are placeholders.
 ## Features
 
 - **Preview** the Home Screen as it is: wallpaper, pages, dock, folders and widget placeholders.
-- **Apps table**: searchable and sortable by name, category, developer and location. Change an app's category (kept per Mac) or remove apps in bulk.
+- **Apps table**: searchable and sortable by name, category, developer, location and size. **Largest apps** ranks them by size and totals the ones you tick, ready to send to the App Library or uninstall. Change an app's category (kept per Mac) or remove apps in bulk.
 - **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, developer or first letter, from 2 apps) and pins. Pages with widgets are kept as they are, cleared of apps (sort around widgets), or sorted too with every widget staying in its spot and the other pages packed full (sort widget pages too).
 - **Edit by hand**: drag and drop (or Space and arrow keys), with undo and redo, then push to the phone.
 - **Send to App Library**: take apps off the Home Screen in bulk. They stay installed.

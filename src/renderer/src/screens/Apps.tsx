@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { sendToAppLibrary } from '@shared/layout/appLibrary'
 import { APP_LIBRARY, appLocations } from '@shared/layout/locations'
-import { formatBytes } from '@shared/format'
+import { formatBytes, selectionSummary } from '@shared/format'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
 import type { AppInfo, Device, Layout } from '@shared/types'
@@ -89,7 +89,7 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
       if (!next.delete(bundleId)) next.add(bundleId)
       return next
     })
-  // Only what is still shown and still on a page counts, whatever the search or the phone did since.
+  // Every picked app the phone still has, even when a search hides it: the buttons and the total act on these.
   const chosen = rows.filter((r) => picked.has(r.bundleId))
   const allLeave = chosen.every(canLeave)
   const allRemovable = chosen.every((r) => r.removable)
@@ -116,6 +116,9 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
   }
 
   const lookup = apps.data.lookup
+  // "Largest apps" is the Size column sorted biggest first: pressed whenever the table is in that order.
+  const largest = sort.key === 'size' && sort.desc
+  const noSizes = rows.length > 0 && rows.every((r) => r.size == null)
   return (
     <div className={s.root}>
       <ToolbarActions>
@@ -158,12 +161,29 @@ export function Apps({ device, onExport }: { device: Device; onExport: () => voi
         </label>
       </ToolbarActions>
       <div className={s.bar}>
+        <button
+          className={`btn btn-sm ${s.quick}`}
+          aria-pressed={largest}
+          onClick={() =>
+            setSort(largest ? { key: 'name', desc: false } : { key: 'size', desc: true })
+          }
+        >
+          Largest apps
+        </button>
         <span className="meta">
           {shown.length === rows.length
             ? `${rows.length} apps`
             : `${shown.length} of ${rows.length} apps`}
         </span>
+        <span className={s.total} role="status">
+          {chosen.length > 0 && selectionSummary(chosen.map((r) => r.size))}
+        </span>
       </div>
+      {largest && noSizes && (
+        <Banner severity="warning">
+          Your {device.deviceClass} didn’t report any app sizes, so they can’t be ranked.
+        </Banner>
+      )}
       {lookup === 'offline' && (
         <Banner severity="warning" title={appError('lookup-offline').title}>
           {appError('lookup-offline').message}
