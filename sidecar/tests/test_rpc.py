@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -89,6 +90,18 @@ def test_engine_answers_ping_over_stdio():
         cwd=ROOT,
     )
     assert json.loads(p.stdout.splitlines()[0]) == {"id": 1, "result": {"version": __version__}}
+
+
+def test_engine_reads_utf8_whatever_the_system_encoding_is():
+    p = subprocess.run(
+        [sys.executable, "-m", "jiggle_engine"],
+        input='{"id":1,"method":"Música 🎵"}\n'.encode(),
+        capture_output=True,
+        timeout=20,
+        cwd=ROOT,
+        env={**os.environ, "PYTHONIOENCODING": "cp1252"},  # what a Windows pipe would default to
+    )
+    assert json.loads(p.stdout)["error"]["message"] == "Unknown method: Música 🎵"
 
 
 def test_engine_answers_every_request_before_exiting_on_eof():

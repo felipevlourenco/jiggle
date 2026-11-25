@@ -71,14 +71,14 @@ No phone at hand? Run against a mock device. The fixtures are in `tests/fixtures
 JIGGLE_MOCK_DEVICE=iphone-widgets pnpm dev
 ```
 
-| Command                                    | What it does                                                           |
-| ------------------------------------------ | ---------------------------------------------------------------------- |
-| `pnpm typecheck`                           | TypeScript, strict, main and renderer                                  |
-| `pnpm lint`                                | ESLint                                                                 |
-| `pnpm test`                                | Vitest unit and component tests                                        |
-| `pnpm test:e2e`                            | Builds, then Playwright drives the real Electron app against mocks     |
-| `cd sidecar && .venv/bin/python -m pytest` | Tests for the engine's RPC handlers                                    |
-| `pnpm dist`                                | Builds the app. Run `bash sidecar/build.sh` first to freeze the engine |
+| Command                                           | What it does                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------- |
+| `pnpm typecheck`                                  | TypeScript, strict, main and renderer                                  |
+| `pnpm lint`                                       | ESLint                                                                 |
+| `pnpm test`                                       | Vitest unit and component tests                                        |
+| `pnpm test:e2e`                                   | Builds, then Playwright drives the real Electron app against mocks     |
+| `cd sidecar && uv run --no-sync python -m pytest` | Tests for the engine's RPC handlers                                    |
+| `pnpm dist`                                       | Builds the app. Run `bash sidecar/build.sh` first to freeze the engine |
 
 CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing a `v*` tag that matches `package.json`'s version runs `release.yml`, which builds, signs and creates a **draft** GitHub release.
 
