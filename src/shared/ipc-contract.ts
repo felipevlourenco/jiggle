@@ -148,7 +148,7 @@ export const channels = {
   'settings:clear-cache': { args: z.tuple([]), result: z.void() },
   'sidecar:get': {
     args: z.tuple([]),
-    result: z.enum(['starting', 'ready', 'restarting', 'failed'])
+    result: z.custom<SidecarStatus>()
   },
   'pins:get': { args: z.tuple([Udid]), result: z.custom<Pins>() },
   'pins:set': { args: z.tuple([Udid, Pins_]), result: z.custom<Pins>() },
@@ -162,7 +162,8 @@ export type ChannelName = keyof typeof channels
 export type ChannelArgs<C extends ChannelName> = z.infer<(typeof channels)[C]['args']>
 export type ChannelResult<C extends ChannelName> = z.infer<(typeof channels)[C]['result']>
 
-const SidecarStatus = z.enum(['starting', 'ready', 'restarting', 'failed'])
+// 'no-usb-service': the engine runs, but the system service it reaches phones through doesn't answer.
+const SidecarStatus = z.enum(['starting', 'ready', 'restarting', 'failed', 'no-usb-service'])
 export type SidecarStatus = z.infer<typeof SidecarStatus>
 
 // Main → renderer events and their payloads. `device:changed` and `apps:changed` carry none: the renderer refetches.

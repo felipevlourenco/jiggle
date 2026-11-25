@@ -20,6 +20,10 @@ mac:
   # Reads APPLE_API_KEY (path to the .p8), APPLE_API_KEY_ID and APPLE_API_ISSUER.
   notarize: true
   artifactName: ${productName}-${version}-${arch}.${ext}
+# Windows beta, unsigned. The name has no spaces: GitHub would rewrite them and latest.yml would point at nothing.
+win:
+  target: [nsis]
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
 publish:
   provider: github
   owner: felipevlourenco

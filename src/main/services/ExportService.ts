@@ -32,7 +32,8 @@ const SAVE_FAILED = 'Couldn’t save the file. Check you have permission to writ
 const reason = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 
 // "Sam's iPhone – Home Screen.pdf": a device name can hold characters a file name can't.
-const safeName = (name: string): string => name.replace(/[/:\\]/g, '-').trim() || 'Device'
+// The set Windows refuses, which covers the Mac's.
+const safeName = (name: string): string => name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'Device'
 
 // `X – page 2.png`, or the first free `X – page 2 (2).png`: a page file is never overwritten.
 async function freePath(path: string): Promise<string> {

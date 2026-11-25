@@ -118,3 +118,39 @@ async def test_describe_says_wifi_when_usbmux_reached_the_phone_through_the_netw
     assert (await info(lockdown))["connection"] == "usb"
     lockdown.service = SimpleNamespace(mux_device=FakeMux("U", "Network"))
     assert (await info(lockdown))["connection"] == "wifi"
+
+
+async def test_watch_says_once_that_usbmuxd_is_missing_and_when_it_is_back(monkeypatch):
+    import asyncio
+
+    from pymobiledevice3.exceptions import ConnectionFailedToUsbmuxdError
+
+    from jiggle_engine import devices
+
+    class Mux:
+        async def listen(self):
+            pass
+
+        async def receive_device_state_update(self):
+            await asyncio.Event().wait()  # no phone ever shows up
+
+        async def close(self):
+            pass
+
+    attempts = iter([ConnectionFailedToUsbmuxdError(), ConnectionFailedToUsbmuxdError(), Mux()])
+
+    async def create_mux():
+        result = next(attempts)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr(devices.usbmux, "create_mux", create_mux)
+    monkeypatch.setattr(devices.asyncio, "sleep", lambda _s: real_sleep(0))
+    events = []
+    task = asyncio.create_task(devices.watch(lambda *e: events.append(e)))
+    for _ in range(20):
+        await real_sleep(0)
+    task.cancel()
+    assert events == [("usbmux", {"available": False}), ("usbmux", {"available": True})]

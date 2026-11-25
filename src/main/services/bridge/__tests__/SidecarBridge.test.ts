@@ -37,6 +37,16 @@ describe('SidecarBridge', () => {
     expect(await bridge.request('ping')).toEqual({ version: 'fake' })
   })
 
+  it('says when the USB service is missing, and when it is back', async () => {
+    const statuses = create()
+    bridge.start()
+    await until(statuses, 'ready')
+    await bridge.request('usbmux', { available: false })
+    await until(statuses, 'no-usb-service')
+    await bridge.request('usbmux', { available: true })
+    await until(statuses, 'ready', statuses.indexOf('no-usb-service'))
+  })
+
   it('rejects engine errors and times out unanswered requests', async () => {
     const statuses = create()
     bridge.start()
