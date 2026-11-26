@@ -3,17 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jiggle: rearrange your iPhone home screen from your Mac</title>
+    <title>Jiggle: rearrange your iPhone home screen from your computer</title>
     <meta
       name="description"
-      content="Jiggle connects to your iPhone or iPad, previews the home screen and sorts hundreds of apps in one click: by name, category or icon colour. Every change is backed up first."
+      content="Jiggle connects to your iPhone or iPad, previews the home screen and sorts hundreds of apps in one click: by name, category or icon colour. Every change is backed up first. For Mac, with Windows and Linux betas."
     />
     <link rel="canonical" href="https://felipevlourenco.github.io/jiggle/" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Jiggle: rearrange your iPhone home screen from your Mac" />
+    <meta
+      property="og:title"
+      content="Jiggle: rearrange your iPhone home screen from your computer"
+    />
     <meta
       property="og:description"
-      content="Preview your home screen on your Mac and sort hundreds of apps in one click. Backed up first, signed and notarized."
+      content="Preview your home screen on your computer and sort hundreds of apps in one click. Backed up first. For Mac, with Windows and Linux betas."
     />
     <meta property="og:url" content="https://felipevlourenco.github.io/jiggle/" />
     <meta
@@ -327,19 +330,22 @@
 
       <main>
         <div class="hero">
-          <h1>Sort your iPhone’s home screen <span>from your Mac</span></h1>
+          <h1>Sort your iPhone’s home screen <span>from your computer</span></h1>
           <p class="lede">
             Hundreds of apps and no patience for dragging icons? Jiggle shows your home screen on
-            your Mac and rearranges it in one click: by name, by App Store category or by icon
+            your computer and rearranges it in one click: by name, by App Store category or by icon
             colour.
           </p>
           <div class="cta">
             <a class="btn primary" href="https://github.com/felipevlourenco/jiggle/releases/latest"
-              >Download for Mac</a
+              >Download</a
             >
             <a class="btn" href="#how">See how it works</a>
           </div>
           <p class="fine">Free · macOS on Apple silicon or Intel · signed and notarized by Apple</p>
+          <p class="fine">
+            Windows and Linux versions are <a href="#windows-linux">still in beta</a>
+          </p>
           <div class="shot">
             <picture>
               <source media="(prefers-color-scheme: dark)" srcset="screens/organize-dark.png" />
@@ -416,7 +422,7 @@
               <strong>Saved layouts</strong>
               <p>
                 Name a layout, switch back in one click, or export it as a file and import it on
-                another Mac.
+                another computer.
               </p>
             </div>
             <div>
@@ -439,8 +445,8 @@
                 <li>The layout is checked before it is written, and read back after.</li>
                 <li>iOS versions Jiggle doesn’t recognise open in read-only mode.</li>
                 <li>
-                  Everything stays on your Mac. The only network request is the App Store lookup for
-                  categories.
+                  Everything stays on your computer. The only network request is the App Store
+                  lookup for categories.
                 </li>
               </ul>
             </div>
@@ -464,19 +470,39 @@
           <dl>
             <dt>What do I need?</dt>
             <dd>
-              A Mac with Apple silicon or Intel, and an iPhone or iPad on iOS or iPadOS 17 or later
-              (tested on 17, 18 and 26). On the download page, pick the arm64 file for Apple silicon
-              or x64 for Intel. The Intel build is new and hasn’t been tested on Intel hardware with
-              an iPhone yet. Unlock the phone and tap Trust the first time.
+              A Mac with Apple silicon or Intel (or a Windows or Linux PC, in beta), and an iPhone
+              or iPad on iOS or iPadOS 17 or later (tested on 17, 18 and 26). On the download page,
+              Mac users pick the .dmg file marked arm64 for Apple silicon or x64 for Intel. The
+              Intel build is new and hasn’t been tested on Intel hardware with an iPhone yet. Unlock
+              the phone and tap Trust the first time.
+            </dd>
+            <dt id="windows-linux">Does it work on Windows or Linux? (beta)</dt>
+            <dd>
+              Both versions are still in beta, for 64-bit Intel and AMD computers.
+              <strong>Neither has been tried with a real iPhone or iPad yet</strong>, so back your
+              phone up first. They are unsigned and connect over USB only. Download them only from
+              the
+              <a href="https://github.com/felipevlourenco/jiggle/releases/latest">releases page</a>.
+              <br />
+              <br />
+              <strong>Windows:</strong> get the file ending in -setup.exe. It needs Apple’s driver,
+              which comes with the Apple Devices app or iTunes. Windows SmartScreen may warn you.
+              <br />
+              <br />
+              <strong>Linux:</strong> get the .AppImage file. It needs usbmuxd, and is built on
+              Ubuntu 24.04, so older distributions may not run it. On Ubuntu 24.04, and on any
+              system that doesn’t let apps create user namespaces, it runs with Chromium’s sandbox
+              turned off, which removes one layer of protection.
+              <a href="https://github.com/felipevlourenco/jiggle#install">Install steps</a>.
             </dd>
             <dt>Is it on the Mac App Store?</dt>
             <dd>
               No. Talking to a phone over USB needs access that the App Store’s sandbox doesn’t
-              allow, so Jiggle is a direct download. It is signed and notarized by Apple, and
-              updates itself.
+              allow, so Jiggle is a direct download. The Mac version is signed and notarized by
+              Apple, and updates itself.
             </dd>
             <dt>Does it work over Wi-Fi?</dt>
-            <dd>Yes, once “Show this iPhone when on Wi-Fi” is turned on in Finder.</dd>
+            <dd>On a Mac, yes, once “Show this iPhone when on Wi-Fi” is turned on in Finder.</dd>
             <dt>Is it free? Is the code open?</dt>
             <dd>
               Yes to both. It is released under the GPL-3.0 licence, on
