@@ -15,6 +15,8 @@ const launch = (env: Record<string, string> = {}) =>
     env: {
       ...process.env,
       JIGGLE_THEME: 'dark',
+      // Windows stay hidden on a developer's computer. SHOW=1 to watch; CI always shows them.
+      JIGGLE_HIDDEN: process.env['CI'] || process.env['SHOW'] ? '' : '1',
       JIGGLE_MOCK_DEVICE: 'none',
       JIGGLE_NO_LOOKUP: '1',
       JIGGLE_USER_DATA: mkdtempSync(join(tmpdir(), 'jiggle-e2e-')), // never the real caches
