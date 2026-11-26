@@ -38,6 +38,14 @@ describe('connectMessage', () => {
     expect(connectMessage(device('locked'), false, 'windows', true).title).toContain('Unlock')
   })
 
+  it('names usbmuxd on Linux without calling it missing: it only runs while a phone is plugged in', () => {
+    const m = connectMessage(undefined, false, 'linux', true)
+    expect(m.title).toBe('Connect your iPhone')
+    expect(m.severity).toBe('info')
+    expect(m.body).toContain('usbmuxd')
+    expect(connectMessage(undefined, false, 'linux').body).not.toContain('usbmuxd')
+  })
+
   it('mentions the Wi‑Fi network once Wi‑Fi devices are looked for', () => {
     expect(connectMessage(undefined).body).toContain('with a cable')
     expect(connectMessage(undefined, true).body).toContain('same Wi‑Fi network')

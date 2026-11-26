@@ -24,6 +24,16 @@ mac:
 win:
   target: [nsis]
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
+# Linux beta. The icon is named so it can't fall back to Electron's own.
+linux:
+  target: [AppImage]
+  category: Utility
+  icon: build/icon.png
+  artifactName: ${productName}-${version}-${arch}.${ext}
+# The newer AppImage runtime (electron-builder still calls it beta): it needs no libfuse2, which current
+# distributions no longer install, and its menu entry doesn't switch Chromium's sandbox off.
+toolsets:
+  appimage: '1.0.3'
 publish:
   provider: github
   owner: felipevlourenco

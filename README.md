@@ -63,7 +63,23 @@ The Windows build is the `-setup.exe` file, on releases that have one. It is for
 
 Wi-Fi isn't offered on Windows. Logs are in `%APPDATA%\Jiggle\logs`.
 
-Requirements: macOS (or Windows, in beta), and an iPhone or iPad on iOS or iPadOS 17 or later (tested on 17, 18 and 26). The phone must be unlocked and tap **Trust** the first time it is connected.
+### Linux (beta)
+
+The Linux build is the `.AppImage` file, on releases that have one. It is for 64-bit Intel and AMD computers, and is built on Ubuntu 24.04, so older distributions may not run it. **It has not been tried with a real iPhone yet**, so treat it as experimental and back the phone up first.
+
+1. Install `usbmuxd`, the service Jiggle reaches the phone through. On Ubuntu and Debian: `sudo apt install usbmuxd`. It normally starts by itself when you plug the phone in.
+2. Make the file executable and run it:
+
+   ```bash
+   chmod +x Jiggle-*.AppImage
+   ./Jiggle-*.AppImage
+   ```
+
+3. Connect the iPhone with a cable, unlock it and tap **Trust**.
+
+The file isn't signed, so only run one downloaded from this repository's Releases page. If your system doesn't let apps create user namespaces, the AppImage starts with Chromium's sandbox turned off, which removes one layer of protection. Wi-Fi isn't offered on Linux. Logs are in `~/.config/Jiggle/logs`.
+
+Requirements: macOS (or Windows or Linux, in beta), and an iPhone or iPad on iOS or iPadOS 17 or later (tested on 17, 18 and 26). The phone must be unlocked and tap **Trust** the first time it is connected.
 
 ## Develop
 
@@ -90,7 +106,7 @@ JIGGLE_MOCK_DEVICE=iphone-widgets pnpm dev
 | `cd sidecar && uv run --no-sync python -m pytest` | Tests for the engine's RPC handlers                                    |
 | `pnpm dist`                                       | Builds the app. Run `bash sidecar/build.sh` first to freeze the engine |
 
-CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing a `v*` tag that matches `package.json`'s version runs `release.yml`, which builds and signs the Mac apps, builds the unsigned Windows installer, and creates a **draft** GitHub release.
+CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing a `v*` tag that matches `package.json`'s version runs `release.yml`, which builds and signs the Mac apps, builds the unsigned Windows installer and Linux AppImage, and creates a **draft** GitHub release.
 
 ## How it works
 
