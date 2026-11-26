@@ -77,7 +77,7 @@ The Linux build is the `.AppImage` file, on releases that have one. It is for 64
 
 3. Connect the iPhone with a cable, unlock it and tap **Trust**.
 
-The file isn't signed, so only run one downloaded from this repository's Releases page. If your system doesn't let apps create user namespaces, the AppImage starts with Chromium's sandbox turned off, which removes one layer of protection. Wi-Fi isn't offered on Linux. Logs are in `~/.config/Jiggle/logs`.
+The file isn't signed, so only run one downloaded from this repository's Releases page. **On Ubuntu 24.04 the AppImage runs with Chromium's sandbox turned off**, which removes one layer of protection. The same happens on any system that doesn't let apps create user namespaces. (We saw this on GitHub's Ubuntu 24.04 build machine, not yet on a desktop.) Wi-Fi isn't offered on Linux. Logs are in `~/.config/Jiggle/logs`.
 
 Requirements: macOS (or Windows or Linux, in beta), and an iPhone or iPad on iOS or iPadOS 17 or later (tested on 17, 18 and 26). The phone must be unlocked and tap **Trust** the first time it is connected.
 
