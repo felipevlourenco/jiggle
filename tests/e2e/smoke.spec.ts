@@ -1,4 +1,11 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
@@ -1078,6 +1085,14 @@ test.describe('Pinning', () => {
     const free = await moves()
     await win.getByRole('checkbox', { name: 'Pin page 1' }).click()
     await expect.poll(moves).toBeLessThan(free)
+    // The switch flips before the pins are on disk: closing right away can lose them (seen on Windows CI).
+    const savedPins = (): string =>
+      readdirSync(join(dir, 'devices'))
+        .map((udid) => join(dir, 'devices', udid, 'pins.json'))
+        .filter((file) => existsSync(file))
+        .map((file) => readFileSync(file, 'utf8'))
+        .join('')
+    await expect.poll(savedPins).toContain('"page1": true')
     await app.close()
 
     app = await launch(env)

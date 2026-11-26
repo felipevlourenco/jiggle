@@ -33,6 +33,22 @@ describe('SettingsService', () => {
     expect(JSON.parse(readFileSync(join(root, 'settings.json'), 'utf8')).backupRetention).toBe(10)
   })
 
+  it('never reports a change before it is on disk', async () => {
+    const root = dir()
+    const onChange = vi.fn((reported: unknown) => {
+      expect(reported).toEqual(JSON.parse(readFileSync(join(root, 'settings.json'), 'utf8')))
+    })
+    const service = new SettingsService(root, silent, 'nl', onChange)
+    // two changes in a row: the first is written while the second is still waiting
+    const [first] = await Promise.all([
+      service.set({ backupRetention: 10 }),
+      service.set({ categoryLookupEnabled: false })
+    ])
+    expect(onChange).toHaveBeenCalledTimes(2)
+    expect(first.categoryLookupEnabled).toBe(true)
+    expect(service.get()).toMatchObject({ backupRetention: 10, categoryLookupEnabled: false })
+  })
+
   it('rejects an invalid value and keeps the rest', async () => {
     const service = new SettingsService(dir(), silent, 'nl')
     await expect(service.set({ storefront: 'NLD' })).rejects.toThrow()
