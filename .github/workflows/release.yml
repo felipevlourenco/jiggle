@@ -1,5 +1,6 @@
 # Push a tag like v0.1.1 (it must match package.json's version) to build, sign and notarize the Apple silicon
-# and Intel builds and the unsigned Windows beta installer, and create a DRAFT GitHub release. Publishing the draft is what makes the update go live.
+# and Intel builds and the unsigned Windows and Linux betas, and create a DRAFT GitHub release. Publishing the
+# draft is what makes the update go live.
 # "Run workflow" on the Actions tab does the same builds as a test: they are kept as artifacts, with no release.
 #
 # Secrets: CSC_LINK (base64 of the signing certificate .p12), CSC_KEY_PASSWORD.
@@ -81,11 +82,17 @@ jobs:
             dist/*.blockmap
             dist/latest-mac.yml
 
-  # The Windows beta: an unsigned installer, so it gets none of the signing secrets.
-  windows:
+  # The Windows and Linux betas are unsigned, so they get none of the signing secrets.
+  beta:
     permissions:
       contents: read
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - { system: windows, runner: windows-latest, flag: --win, engine: jiggle_engine.exe }
+          # Pinned, not -latest: a frozen engine may not run on a Linux older than the one that built it.
+          - { system: linux, runner: ubuntu-24.04, flag: --linux, engine: jiggle_engine }
+    runs-on: ${{ matrix.runner }}
     defaults:
       run: { shell: bash }
     steps:
@@ -106,22 +113,28 @@ jobs:
       - run: uv run --no-sync python -m pytest
         working-directory: sidecar
       - run: bash sidecar/build.sh
-      - run: bash sidecar/check-engine.sh resources/sidecar/x64/jiggle_engine/jiggle_engine.exe
-      - name: Build the installer
+      - run: bash sidecar/check-engine.sh resources/sidecar/x64/jiggle_engine/${{ matrix.engine }}
+      - name: Build the package
         run: |
           pnpm exec electron-vite build
-          pnpm exec electron-builder --win --x64 --publish never
+          pnpm exec electron-builder ${{ matrix.flag }} --x64 --publish never
+      # As a person would run it: nothing about the system's sandbox settings is changed first.
+      - name: The AppImage starts, with its engine
+        if: matrix.system == 'linux'
+        run: bash scripts/check-appimage.sh dist/*.AppImage
+        timeout-minutes: 3
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: jiggle-windows
+          name: jiggle-${{ matrix.system }}
           path: |
             dist/*-setup.exe
+            dist/*.AppImage
             dist/*.blockmap
-            dist/latest.yml
+            dist/latest*.yml
 
   release:
     if: github.ref_type == 'tag'
-    needs: [build, windows]
+    needs: [build, beta]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -139,6 +152,7 @@ jobs:
           mkdir release
           cp artifacts/*/*.dmg artifacts/*/*.zip artifacts/*/*.blockmap release/
           cp artifacts/jiggle-windows/*-setup.exe artifacts/jiggle-windows/latest.yml release/
+          cp artifacts/jiggle-linux/*.AppImage artifacts/jiggle-linux/latest-linux.yml release/
           node scripts/merge-latest-mac.mjs artifacts/jiggle-arm64/latest-mac.yml artifacts/jiggle-x64/latest-mac.yml > release/latest-mac.yml
       - run: gh release create "$GITHUB_REF_NAME" release/* --draft --generate-notes
         env:

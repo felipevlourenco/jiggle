@@ -46,11 +46,12 @@ jobs:
       - name: The frozen engine starts and answers
         run: bash sidecar/check-engine.sh resources/sidecar/*/jiggle_engine/jiggle_engine*
         timeout-minutes: 2
-      # This runner has no Apple driver: the one real Windows without it that we can test on.
-      - name: Without Apple's driver, the engine says so
-        if: runner.os == 'Windows'
+      # These runners have no Apple driver (Windows) or no running usbmuxd (Linux): real systems without one.
+      - name: Without a USB service, the engine says so
+        if: runner.os != 'macOS'
         run: |
-          out=$( (echo '{"id":1,"method":"watch"}'; sleep 20) | resources/sidecar/x64/jiggle_engine/jiggle_engine.exe)
+          engine=(resources/sidecar/x64/jiggle_engine/jiggle_engine*)
+          out=$( (echo '{"id":1,"method":"watch"}'; sleep 20) | "${engine[0]}")
           echo "$out"
           grep -qF '"event": "usbmux", "data": {"available": false}' <<<"$out"
         timeout-minutes: 2

@@ -23,7 +23,7 @@ export function connectMessage(
   os: Os = OS,
   noUsbService = false // see SidecarStatus
 ): ConnectMessage {
-  // Windows reaches phones through Apple's driver. (Linux and its usbmuxd come with its own beta.)
+  // Windows reaches phones through Apple's driver.
   if (!device && noUsbService && os === 'windows') {
     return {
       title: 'Apple’s iPhone driver isn’t running',
@@ -34,11 +34,18 @@ export function connectMessage(
   }
   if (!device) {
     const { computer } = osText(os)
+    // Linux starts usbmuxd when a phone is plugged in and stops it after the last one leaves, so no answer is
+    // also what no phone looks like: not an error, only the thing to check if plugging in does nothing.
+    const hint =
+      noUsbService && os === 'linux'
+        ? ' If nothing happens, check that usbmuxd is installed: Jiggle reaches your phone through it.'
+        : ''
+    const body = wifi
+      ? `Plug your iPhone or iPad into this ${computer}, or wake it up on the same Wi‑Fi network.`
+      : `Plug your iPhone or iPad into this ${computer} with a cable.`
     return {
       title: 'Connect your iPhone',
-      body: wifi
-        ? `Plug your iPhone or iPad into this ${computer}, or wake it up on the same Wi‑Fi network.`
-        : `Plug your iPhone or iPad into this ${computer} with a cable.`,
+      body: body + hint,
       severity: 'info',
       illustration: 'cable',
       steps: connectSteps()
