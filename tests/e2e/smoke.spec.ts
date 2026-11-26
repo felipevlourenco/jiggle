@@ -1,4 +1,11 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, _electron as electron, type Page } from '@playwright/test'
@@ -499,6 +506,26 @@ test.describe('Organize', () => {
 
     await win.getByRole('button', { name: 'Reset' }).click()
     expect(await order()).toBe('red orange yellow')
+    await app.close()
+  })
+
+  test('One color per page uses more pages, and is off where it cannot work', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await expect(win.getByRole('checkbox', { name: /per page/ })).toHaveCount(0) // not for A–Z
+    await win.getByRole('radio', { name: /Color/ }).click()
+    // The summary counts the pages removed: spreading the colors out removes fewer.
+    const removed = async (): Promise<number> =>
+      Number(/(\d+) pages? removed/.exec(await win.getByTestId('summary').innerText())?.[1] ?? 0)
+    const packed = await removed()
+    await win.getByRole('checkbox', { name: 'One color per page' }).check()
+    await expect.poll(removed).toBeLessThan(packed)
+    // the color picker shows which colors share a page
+    await expect(win.getByRole('listitem', { name: /^teal, .*same page as green/ })).toBeVisible()
+    await expect(win.getByRole('button', { name: 'Apply to iPhone' })).toBeEnabled()
+    await win.getByRole('radio', { name: 'Sort widget pages too' }).click()
+    await expect(win.getByRole('checkbox', { name: 'One color per page' })).toBeDisabled()
     await app.close()
   })
 
@@ -1058,6 +1085,14 @@ test.describe('Pinning', () => {
     const free = await moves()
     await win.getByRole('checkbox', { name: 'Pin page 1' }).click()
     await expect.poll(moves).toBeLessThan(free)
+    // The switch flips before the pins are on disk: closing right away can lose them (seen on Windows CI).
+    const savedPins = (): string =>
+      readdirSync(join(dir, 'devices'))
+        .map((udid) => join(dir, 'devices', udid, 'pins.json'))
+        .filter((file) => existsSync(file))
+        .map((file) => readFileSync(file, 'utf8'))
+        .join('')
+    await expect.poll(savedPins).toContain('"page1": true')
     await app.close()
 
     app = await launch(env)

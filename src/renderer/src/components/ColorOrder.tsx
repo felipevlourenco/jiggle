@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { COLOR_FAMILIES, DEFAULT_COLOR_ORDER, type ColorFamily } from '@shared/layout/color'
+import {
+  COLOR_FAMILIES,
+  DEFAULT_COLOR_ORDER,
+  pageGroupOf,
+  type ColorFamily
+} from '@shared/layout/color'
 import s from './colorOrder.module.css'
 
 const SWATCH: Record<ColorFamily, string> = {
@@ -23,16 +28,20 @@ const move = (order: readonly ColorFamily[], from: number, to: number): ColorFam
 }
 
 // The color families in the order the sort will use. Drag a swatch to move it, or focus one and press
-// Alt + ← / →.
+// Alt + ← / →. With one color per page, swatches that will share a page are drawn joined.
 export function ColorOrder({
   order,
+  perPage = false,
   onChange
 }: {
   order: readonly ColorFamily[]
+  perPage?: boolean
   onChange: (order: readonly ColorFamily[]) => void
 }) {
   const [dragging, setDragging] = useState<number | null>(null)
   const isDefault = COLOR_FAMILIES.every((f, i) => order[i] === f)
+  const joined = (i: number): boolean =>
+    perPage && i > 0 && pageGroupOf(order[i - 1]!) === pageGroupOf(order[i]!)
   return (
     <div className={s.root}>
       <span>Color order</span>
@@ -44,7 +53,10 @@ export function ColorOrder({
             draggable
             tabIndex={0}
             data-dragging={dragging === i || undefined}
-            aria-label={`${family}, ${i + 1} of ${order.length}`}
+            data-joined={joined(i) || undefined}
+            aria-label={`${family}, ${i + 1} of ${order.length}${
+              joined(i) ? `, same page as ${order[i - 1]}` : ''
+            }`}
             onDragStart={() => setDragging(i)}
             onDragEnd={() => setDragging(null)}
             onDragOver={(e) => e.preventDefault()}
@@ -76,6 +88,11 @@ export function ColorOrder({
       >
         Reset
       </button>
+      {perPage && (
+        <span className={s.hint}>
+          Joined colors share a page. Drag them apart to separate them.
+        </span>
+      )}
     </div>
   )
 }

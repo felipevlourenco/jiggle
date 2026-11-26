@@ -36,3 +36,19 @@
 .chip:focus-visible {
   outline: 2px solid var(--ring);
 }
+/* Two swatches that share a page read as one pill. */
+.chip[data-joined] {
+  margin-left: -6px; /* the list's gap */
+  border-left: 1px solid var(--border);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.chip:has(+ .chip[data-joined]) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.hint {
+  flex-basis: 100%;
+  color: var(--text-secondary);
+  font-size: 12px;
+}

@@ -39,10 +39,12 @@ export class SettingsService {
   // Validates the patch like any other IPC argument; a bad value changes nothing.
   async set(patch: Partial<Settings>): Promise<Settings> {
     const parsed = channels['settings:set'].args.parse([patch])[0]
-    this.current = { ...this.current, ...parsed }
-    await writeFileAtomic(this.file, JSON.stringify(this.current, null, 2))
-    this.onChange(this.current)
-    return this.current
+    const next = { ...this.current, ...parsed }
+    this.current = next
+    await writeFileAtomic(this.file, JSON.stringify(next, null, 2))
+    // Report what was just written, not this.current: a later change may still be on its way to disk.
+    this.onChange(next)
+    return next
   }
 
   // Each saved key is kept if it is valid, so one bad value doesn't reset the others.

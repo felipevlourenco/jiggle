@@ -7,7 +7,7 @@ import { gridFor } from '../grid'
 import { normalize } from '../normalize'
 import { isStack } from '../place'
 import { serialize } from '../serialize'
-import { sortLayout } from '../sort'
+import { canSortPerPage, sortLayout, type SortOptions } from '../sort'
 import { validateLayout } from '../validate'
 
 const grid = { columns: 4, rows: 6, dockMax: 4 }
@@ -319,4 +319,146 @@ describe('widget stacks', () => {
       expect(serialize(after).flat()).toContain(stack.raw)
     }
   )
+})
+
+describe('sortLayout per page', () => {
+  const hues: Record<string, number> = { r: 0, g: 120, b: 220 }
+  const perColor: SortOptions = {
+    by: 'color',
+    widgetMode: 'keep-pages',
+    perPage: true,
+    colorOf: (id) => ({ h: hues[id[4]!]!, s: 1, l: 0.5 })
+  }
+  // r01, r02… : the first letter is the color
+  const many = (color: string, n: number): AppItem[] =>
+    Array.from({ length: n }, (_, i) => app(`${color}${String(i + 1).padStart(2, '0')}`))
+
+  it('starts each color on a new page, a big one carrying over, small ones alone', () => {
+    const before = layout([[...many('b', 2), ...many('r', 26), ...many('g', 1)]])
+    const out = sortLayout(before, perColor)
+    expect(out.pages.map((p) => [p.length, names(p)[0]![0]])).toEqual([
+      [24, 'r'],
+      [2, 'r'],
+      [1, 'g'],
+      [2, 'b']
+    ])
+    expect(validateLayout(before, out)).toEqual([])
+  })
+
+  describe('look-alike colors', () => {
+    const icons: Record<string, [number, number, number]> = {
+      orange: [30, 1, 0.5],
+      yellow: [50, 1, 0.5],
+      green: [150, 1, 0.5],
+      teal: [185, 1, 0.4],
+      blue: [210, 1, 0.5],
+      white: [0, 0, 0.97],
+      grey: [0, 0, 0.6],
+      black: [0, 0, 0.05]
+    }
+    const opts: SortOptions = {
+      ...perColor,
+      colorOf: (id) => {
+        const [h, s, l] = icons[id.slice(4)]!
+        return { h, s, l }
+      }
+    }
+    const all = layout([Object.keys(icons).map((n) => app(n))])
+
+    it('share a page: orange and yellow, green and teal, white and grey', () => {
+      expect(sortLayout(all, opts).pages.map(names)).toEqual([
+        ['orange', 'yellow'],
+        ['green', 'teal'],
+        ['blue'],
+        ['white', 'grey'],
+        ['black']
+      ])
+    })
+
+    it('get their own pages when the color order puts something between them', () => {
+      const colorOrder = ['orange', 'yellow', 'green', 'blue', 'teal', 'white'] as const
+      expect(
+        sortLayout(all, { ...opts, colorOrder })
+          .pages.map(names)
+          .slice(1, 4)
+      ).toEqual([['green'], ['blue'], ['teal']])
+    })
+  })
+
+  it('starts each category on a new page', () => {
+    const out = sortLayout(layout([[app('Chess'), app('Bank'), app('Go')]]), {
+      by: 'category',
+      widgetMode: 'keep-pages',
+      perPage: true,
+      categoryOf: (id) => (id === 'app.bank' ? 'Finance' : 'Games')
+    })
+    expect(out.pages.map(names)).toEqual([['Bank'], ['Chess', 'Go']])
+  })
+
+  it('gives folders their own pages, first', () => {
+    const out = sortLayout(
+      layout([[app('r01'), folder('Stuff', app('g01')), app('r02')]]),
+      perColor
+    )
+    expect(out.pages.map(names)).toEqual([['Stuff'], ['r01', 'r02']])
+  })
+
+  it('keeps widget pages in front, and sort-around leaves only the widgets there', () => {
+    const before = layout([[app('b01')], [widget(), app('r01')]])
+    expect(sortLayout(before, perColor).pages.map(names)).toEqual([['<widget>', 'r01'], ['b01']])
+    expect(sortLayout(before, { ...perColor, widgetMode: 'sort-around' }).pages.map(names)).toEqual(
+      [['<widget>'], ['r01'], ['b01']]
+    )
+  })
+
+  it('with page 1 pinned, grouping starts on page 2', () => {
+    const out = sortLayout(
+      layout([
+        [app('b01'), app('r01')],
+        [app('g01'), app('r02')]
+      ]),
+      {
+        ...perColor,
+        pins: { apps: [], page1: true }
+      }
+    )
+    expect(out.pages.map(names)).toEqual([['b01', 'r01'], ['r02'], ['g01']])
+  })
+
+  it('keeps a pinned app on its page and spot, and deals the groups around it', () => {
+    const before = layout([
+      [app('r01'), app('g01')],
+      [app('r02'), app('b01'), app('g02')]
+    ])
+    const out = sortLayout(before, { ...perColor, pins: { apps: ['app.b01'], page1: false } })
+    expect(out.pages.map(names)).toEqual([
+      ['r01', 'r02'],
+      ['g01', 'b01', 'g02']
+    ])
+    expect(validateLayout(before, out)).toEqual([])
+  })
+
+  it('keeps a pinned page number when the groups run out before it', () => {
+    const before = layout([[app('r01')], [app('r02')], [app('b01')]])
+    const out = sortLayout(before, { ...perColor, pins: { apps: ['app.b01'], page1: false } })
+    // page 2 has nothing left to hold, so it goes and the pinned page moves up
+    expect(out.pages.map(names)).toEqual([['r01', 'r02'], ['b01']])
+  })
+
+  it('does not overfill a page that has pinned apps', () => {
+    const before = layout([many('r', 24), many('g', 1)])
+    const out = sortLayout(before, { ...perColor, pins: { apps: ['app.g01'], page1: false } })
+    expect(out.pages.map((p) => p.length)).toEqual([24, 1])
+    expect(validateLayout(before, out)).toEqual([])
+  })
+
+  it('is not offered for A–Z, widget pages being sorted, or category folders by category', () => {
+    expect(canSortPerPage({ by: 'name', widgetMode: 'keep-pages' })).toBe(false)
+    expect(canSortPerPage({ by: 'color', widgetMode: 'fill' })).toBe(false)
+    expect(canSortPerPage({ by: 'category', widgetMode: 'keep-pages', folders: 'category' })).toBe(
+      false
+    )
+    const before = layout([[app('b01'), app('r01')]])
+    expect(sortLayout(before, { ...perColor, widgetMode: 'fill' }).pages).toHaveLength(1)
+  })
 })

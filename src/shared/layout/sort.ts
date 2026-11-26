@@ -1,5 +1,5 @@
 import type { AppItem, FolderItem, IconColor, Layout, LayoutItem, Pins } from '../types'
-import { compareColors, type ColorFamily } from './color.ts'
+import { compareColors, familyOf, pageGroupOf, type ColorFamily } from './color.ts'
 import { foldBy, type FolderRule } from './folders.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
@@ -23,7 +23,19 @@ export interface SortOptions {
   // Needs categoryOf or developerOf to match; an app without a developer (null) stays loose.
   folders?: FolderRule
   developerOf?: (bundleId: string) => string | null
+  // Each color family or category starts on a new page (see canSortPerPage). Folders share their own pages, first.
+  perPage?: boolean
 }
+
+// iOS documents no limit; 15 is what people report. ponytail: unverified on a real phone.
+export const MAX_PAGES = 15
+
+// A–Z would give a page per letter; 'fill' could move a widget when a group runs out; and with category
+// folders almost every category is already one folder.
+export const canSortPerPage = (opts: Pick<SortOptions, 'by' | 'widgetMode' | 'folders'>): boolean =>
+  opts.by !== 'name' &&
+  opts.widgetMode !== 'fill' &&
+  !(opts.by === 'category' && opts.folders === 'category')
 
 type Movable = AppItem | FolderItem
 const isMovable = (item: LayoutItem): item is Movable =>
@@ -67,6 +79,7 @@ const withFolders = (movable: Movable[], opts: SortOptions): Movable[] =>
 // pages that must stay as they are come first, then the sorted pages, full ones first.
 // ponytail: untouched pages move to the front, like the POC; keep their page numbers if that surprises people.
 export function sortLayout(layout: Layout, opts: SortOptions): Layout {
+  if (opts.perPage && canSortPerPage(opts)) return sortPerPage(layout, opts)
   if (opts.pins?.page1 || opts.pins?.apps.length) return sortInPlace(layout, opts)
   if (opts.widgetMode === 'fill') return sortFill(layout, opts)
   const frozen: LayoutItem[][] = []
@@ -126,5 +139,67 @@ function sortInPlace(layout: Layout, opts: SortOptions): Layout {
         : page.flatMap<LayoutItem>((item) => (free(item) ? queue.splice(0, 1) : [item]))
     )
     .filter((page, i) => page.length > 0 || layout.pages[i]!.length === 0)
+  return { ...layout, pages }
+}
+
+// What must share a page. The sort keeps each group's items next to each other.
+function groupOf(item: Movable, opts: SortOptions): string {
+  if (item.kind === 'folder') return '\0folders'
+  return opts.by === 'color'
+    ? pageGroupOf(familyOf(opts.colorOf?.(item.bundleId) ?? null))
+    : (opts.categoryOf?.(item.bundleId) ?? '').toLowerCase()
+}
+
+// One group per page, a big group carrying over. Without app pins, the pages that stay (a pinned page 1,
+// widget pages) come first. With app pins, those pages and every pinned app keep their page number,
+// and the groups are dealt around them.
+// ponytail: a pinned app moves up if too few apps come before it, or if earlier pages don't exist.
+function sortPerPage(layout: Layout, opts: SortOptions): Layout {
+  const pinned = new Set(opts.pins?.apps)
+  const isPinned = (item: LayoutItem): boolean => item.kind === 'app' && pinned.has(item.bundleId)
+  const keepNumbers = pinned.size > 0
+  const stays = new Map<number, LayoutItem[]>() // page number → a page that is already complete
+  const held = new Map<number, { item: LayoutItem; at: number }[]>() // page number → its pinned apps
+  const movable: Movable[] = []
+  const keep = (i: number, page: LayoutItem[]): void => {
+    stays.set(keepNumbers ? i : stays.size, page)
+  }
+  layout.pages.forEach((page, i) => {
+    const widgets = !page.every(isMovable)
+    if ((i === 0 && opts.pins?.page1) || (widgets && opts.widgetMode === 'keep-pages')) {
+      keep(i, page)
+      return
+    }
+    movable.push(...page.filter(isMovable).filter((item) => !isPinned(item)))
+    if (widgets)
+      keep(
+        i,
+        page.filter((item) => !isMovable(item) || isPinned(item))
+      )
+    else {
+      const here = page.flatMap((item, at) => (isPinned(item) ? [{ item, at }] : []))
+      if (here.length) held.set(i, here)
+    }
+  })
+  const queue = withFolders(movable, opts).sort((a, b) => compare(a, b, opts))
+
+  const size = pageCapacity(layout.grid)
+  const last = Math.max(-1, ...stays.keys(), ...held.keys())
+  const pages: LayoutItem[][] = []
+  for (let i = 0; queue.length > 0 || i <= last; i++) {
+    const fixed = stays.get(i)
+    if (fixed) {
+      pages.push(fixed)
+      continue
+    }
+    const here = held.get(i) ?? []
+    const page: LayoutItem[] = []
+    const group = queue[0] && groupOf(queue[0], opts)
+    while (queue[0] && page.length < size - here.length && groupOf(queue[0], opts) === group) {
+      page.push(queue.shift()!)
+    }
+    for (const { item, at } of here) page.splice(at, 0, item)
+    if (page.length) pages.push(page)
+  }
   return { ...layout, pages }
 }

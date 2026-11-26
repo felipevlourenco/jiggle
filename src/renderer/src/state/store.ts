@@ -10,6 +10,7 @@ export interface OrganizeChoice {
   widgetMode: SortOptions['widgetMode']
   folders: FolderRule | null // one folder per category, developer or first letter; null: no folders
   colorOrder: readonly ColorFamily[] // with by: 'color'; kept across launches
+  perPage: boolean // each color or category starts on a new page, where canSortPerPage allows it
 }
 
 const COLOR_KEY = 'jiggle.colorOrder'
@@ -34,6 +35,7 @@ let choice: OrganizeChoice = {
   by: 'name',
   widgetMode: 'keep-pages',
   folders: null,
+  perPage: false,
   colorOrder: savedColorOrder()
 }
 const listeners = new Set<() => void>()
