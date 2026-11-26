@@ -418,6 +418,37 @@ test.describe('Home Screen search', () => {
   })
 })
 
+test('Device > Refresh reads the home screen from the phone again', async () => {
+  const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
+  const win = await app.firstWindow()
+  await expect(win.getByTestId('page').first()).toBeVisible()
+  // Count the layout reads from here on. Playwright has no public way to watch an IPC handler.
+  await app.evaluate(({ ipcMain }) => {
+    const handlers = (
+      ipcMain as unknown as { _invokeHandlers: Map<string, (...a: unknown[]) => unknown> }
+    )._invokeHandlers
+    const read = handlers.get('layout:get')!
+    const counter = globalThis as unknown as { layoutReads: number }
+    counter.layoutReads = 0
+    handlers.set('layout:get', (...args) => {
+      counter.layoutReads++
+      return read(...args)
+    })
+  })
+  const reads = (): Promise<number> =>
+    app.evaluate(() => (globalThis as unknown as { layoutReads: number }).layoutReads)
+  expect(await reads()).toBe(0)
+
+  const enabled = await app.evaluate(({ Menu }) => {
+    const item = Menu.getApplicationMenu()!.getMenuItemById('refresh')!
+    item.click()
+    return item.enabled
+  })
+  expect(enabled).toBe(true)
+  await expect.poll(reads).toBe(1)
+  await app.close()
+})
+
 test.describe('Organize', () => {
   test('previews A–Z before/after without applying, and the pager moves both frames', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })

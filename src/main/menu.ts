@@ -12,6 +12,7 @@ export function buildMenu(handlers: {
   restoreLast: () => void
   openSettings: () => void
   checkForUpdates: () => void
+  refresh: () => void
   saveLayout: () => void
   exportLayout: () => void
   copyLayout: () => void
@@ -62,6 +63,10 @@ export function buildMenu(handlers: {
         todo('Undo'),
         todo('Redo'),
         { type: 'separator' },
+        // A Mac only runs ⌘X, ⌘C and ⌘V in text fields when the menu has these.
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
         todo('Select All', 'CmdOrCtrl+A'),
         todo('Find', 'CmdOrCtrl+F')
       ]
@@ -69,7 +74,7 @@ export function buildMenu(handlers: {
     {
       label: 'Device',
       submenu: [
-        todo('Refresh', 'CmdOrCtrl+R'),
+        { id: 'refresh', label: 'Refresh', accelerator: 'CmdOrCtrl+R', click: handlers.refresh },
         { id: 'backup', label: 'Back Up Now', click: handlers.backUpNow },
         { id: 'restore-last', label: 'Restore Last Backup…', click: handlers.restoreLast }
       ]

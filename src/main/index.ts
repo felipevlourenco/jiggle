@@ -202,6 +202,8 @@ if (!app.requestSingleInstanceLock()) {
     buildMenu({
       openSettings: openSettingsWindow,
       checkForUpdates: () => void updater.check(true),
+      // The window then reads the devices, the layout and the apps again.
+      refresh: () => broadcast('device:changed', undefined),
       backUpNow: () => void backUpActiveDevice({ bridge, snapshots, broadcast }),
       saveLayout: () => void requestSaveLayout({ bridge, broadcast }),
       copyLayout: () =>
