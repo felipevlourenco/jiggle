@@ -1,6 +1,10 @@
 import { join } from 'node:path'
-import { BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { OS } from '@shared/platform'
+
+// End-to-end tests on a developer's computer (ignored in packaged builds): windows are never shown, so they don't
+// jump in front, and real typing or clicks can't land in them.
+export const hiddenWindows = !app.isPackaged && !!process.env['JIGGLE_HIDDEN']
 
 export function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -20,11 +24,14 @@ export function createMainWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      backgroundThrottling: !hiddenWindows // a hidden window must keep drawing and running its timers
     }
   })
 
-  win.once('ready-to-show', () => win.show())
+  win.once('ready-to-show', () => {
+    if (!hiddenWindows) win.show()
+  })
 
   // Never open new windows or navigate away; external links go to the browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -71,11 +78,14 @@ let settingsWindow: BrowserWindow | undefined
 // One Settings window: ⌘, again just brings it forward.
 export function openSettingsWindow(): void {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.show()
-    settingsWindow.focus()
+    if (!hiddenWindows) {
+      settingsWindow.show()
+      settingsWindow.focus()
+    }
     return
   }
   settingsWindow = new BrowserWindow({
+    show: !hiddenWindows,
     width: 600,
     height: 460,
     resizable: false,
@@ -87,7 +97,8 @@ export function openSettingsWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      backgroundThrottling: !hiddenWindows
     }
   })
   settingsWindow.removeMenu() // the fixed height leaves no room for a menu bar

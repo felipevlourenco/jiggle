@@ -106,6 +106,8 @@ JIGGLE_MOCK_DEVICE=iphone-widgets pnpm dev
 | `cd sidecar && uv run --no-sync python -m pytest` | Tests for the engine's RPC handlers                                    |
 | `pnpm dist`                                       | Builds the app. Run `bash sidecar/build.sh` first to freeze the engine |
 
+The end-to-end tests keep the app's windows hidden. To watch them, run `SHOW=1 pnpm test:e2e`.
+
 CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing a `v*` tag that matches `package.json`'s version runs `release.yml`, which builds and signs the Mac apps, builds the unsigned Windows installer and Linux AppImage, and creates a **draft** GitHub release.
 
 ## How it works

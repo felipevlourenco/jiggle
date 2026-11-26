@@ -32,12 +32,14 @@ import type { DeviceBridge } from './services/bridge/DeviceBridge'
 import { MockBridge, loadFixture } from './services/bridge/MockBridge'
 import { SidecarBridge } from './services/bridge/SidecarBridge'
 import { createUpdater } from './updater'
-import { createMainWindow, openSettingsWindow } from './windows'
+import { createMainWindow, hiddenWindows, openSettingsWindow } from './windows'
 import { buildMenu } from './menu'
 
 // Tests (and a second dev copy) get a folder of their own. Ignored in packaged builds.
 const userDataOverride = app.isPackaged ? undefined : process.env['JIGGLE_USER_DATA']
 if (userDataOverride) app.setPath('userData', userDataOverride)
+
+if (hiddenWindows) app.dock?.hide() // or every test run would bounce a Dock icon and take the keyboard
 
 registerAssetScheme()
 
@@ -108,7 +110,8 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     // A packaged app gets build/icon.icns from its bundle; in dev the Dock would show Electron's.
-    if (!app.isPackaged) app.dock?.setIcon(join(app.getAppPath(), 'build/icon.png'))
+    if (!app.isPackaged && !hiddenWindows)
+      app.dock?.setIcon(join(app.getAppPath(), 'build/icon.png'))
     const broadcast: Broadcast = (event, payload) => {
       for (const win of BrowserWindow.getAllWindows()) win.webContents.send(event, payload)
     }
