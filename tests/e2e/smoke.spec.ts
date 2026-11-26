@@ -502,6 +502,26 @@ test.describe('Organize', () => {
     await app.close()
   })
 
+  test('One color per page uses more pages, and is off where it cannot work', async () => {
+    const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-messy' })
+    const win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await expect(win.getByRole('checkbox', { name: /per page/ })).toHaveCount(0) // not for A–Z
+    await win.getByRole('radio', { name: /Color/ }).click()
+    // The summary counts the pages removed: spreading the colors out removes fewer.
+    const removed = async (): Promise<number> =>
+      Number(/(\d+) pages? removed/.exec(await win.getByTestId('summary').innerText())?.[1] ?? 0)
+    const packed = await removed()
+    await win.getByRole('checkbox', { name: 'One color per page' }).check()
+    await expect.poll(removed).toBeLessThan(packed)
+    // the color picker shows which colors share a page
+    await expect(win.getByRole('listitem', { name: /^teal, .*same page as green/ })).toBeVisible()
+    await expect(win.getByRole('button', { name: 'Apply to iPhone' })).toBeEnabled()
+    await win.getByRole('radio', { name: 'Sort widget pages too' }).click()
+    await expect(win.getByRole('checkbox', { name: 'One color per page' })).toBeDisabled()
+    await app.close()
+  })
+
   test('read-only mode turns Apply off', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-ios16' })
     const win = await app.firstWindow()

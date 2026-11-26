@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { IconColor } from '../../types'
-import { compareColors, dominantColor, rgbToHsl } from '../color'
+import { compareColors, dominantColor, familyOf, rgbToHsl } from '../color'
 
 const hsl = (h: number, s = 0.8, l = 0.5): IconColor => ({ h, s, l })
 
@@ -39,6 +39,11 @@ describe('compareColors', () => {
       'unknown',
       'black'
     ])
+  })
+
+  it('calls lime green green, not yellow', () => {
+    expect(familyOf(hsl(100))).toBe('green')
+    expect(familyOf(hsl(60))).toBe('yellow')
   })
 
   it('goes light to dark inside a hue band and inside the neutrals', () => {

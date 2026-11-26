@@ -71,8 +71,8 @@ export const DEFAULT_COLOR_ORDER: readonly ColorFamily[] = COLOR_FAMILIES
 const BAND_FAMILY: ColorFamily[] = [
   'red', // 0: the 12 hue bands, 30° each
   'orange',
-  'yellow',
-  'yellow',
+  'yellow', // 2: 45° to 75°
+  'green', // 3: from 75° an icon looks lime, not yellow
   'green',
   'green',
   'teal',
@@ -82,6 +82,16 @@ const BAND_FAMILY: ColorFamily[] = [
   'purple',
   'pink'
 ]
+// Look-alikes: with One color per page they share a page when they are next to each other in the order.
+// An icon a few degrees (or shades) over a family's edge would otherwise get a page of its own.
+const LOOKS_LIKE: Partial<Record<ColorFamily, ColorFamily>> = {
+  yellow: 'orange',
+  teal: 'green',
+  pink: 'purple',
+  grey: 'white'
+}
+export const pageGroupOf = (f: ColorFamily): ColorFamily => LOOKS_LIKE[f] ?? f
+
 // ponytail: white and black are cut at fixed lightness (0.85, 0.25); tune if icons land on the wrong side.
 export function familyOf(c: IconColor | null): ColorFamily {
   if (!c) return 'grey' // no color known: a mid grey

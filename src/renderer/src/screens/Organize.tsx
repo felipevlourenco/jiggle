@@ -4,7 +4,7 @@ import { movedIds } from '@shared/layout/diff'
 import type { FolderRule } from '@shared/layout/folders'
 import { serialize } from '@shared/layout/serialize'
 import { layoutSignature } from '@shared/layout/signature'
-import { sortLayout, type SortOptions } from '@shared/layout/sort'
+import { canSortPerPage, MAX_PAGES, sortLayout, type SortOptions } from '@shared/layout/sort'
 import { describeIssue, validateLayout } from '@shared/layout/validate'
 import type { AppItem, Device, Layout, LayoutItem } from '@shared/types'
 import { BeforeAfter } from '../components/BeforeAfter'
@@ -74,6 +74,7 @@ export function Organize({ device }: { device: Device }) {
         by,
         widgetMode: choice.widgetMode,
         pins,
+        perPage: choice.perPage,
         folders: choice.folders ?? undefined,
         categoryOf,
         developerOf: (id) => developers.get(id) ?? null,
@@ -95,6 +96,7 @@ export function Organize({ device }: { device: Device }) {
       movedApps,
       totalApps: appsOf([...before.dock, ...before.pages.flat()]).length,
       removedPages: Math.max(0, before.pages.length - after.pages.length),
+      addedPages: Math.max(0, after.pages.length - before.pages.length),
       widgetPages: after.pages.filter((p) => p.some((i) => i.kind !== 'app' && i.kind !== 'folder'))
         .length,
       issues: validateLayout(before, after),
@@ -131,14 +133,24 @@ export function Organize({ device }: { device: Device }) {
   const preset = PRESETS.find((p) => p.by === choice.by)!
   const presetTitle = preset.title
   const readOnly = device.state === 'unsupported-os'
+  const perPageAllowed = canSortPerPage({ ...choice, folders: choice.folders ?? undefined })
+  // Only the option can add many pages. A phone that already has more than the limit isn't blocked.
+  const tooManyPages =
+    choice.perPage &&
+    perPageAllowed &&
+    preview.after.pages.length > Math.max(MAX_PAGES, before.pages.length)
   const blocked = preview.issues.length > 0
+  const added =
+    preview.addedPages > 0
+      ? `${preview.addedPages} page${preview.addedPages === 1 ? '' : 's'} added`
+      : null
   const lookup = apps.data?.lookup
   return (
     <div className={s.root}>
       <ToolbarActions>
         <button
           className="btn btn-primary"
-          disabled={readOnly || blocked}
+          disabled={readOnly || blocked || tooManyPages}
           onClick={() => setApplying(true)}
         >
           Apply to {device.deviceClass}
@@ -209,12 +221,33 @@ export function Organize({ device }: { device: Device }) {
             </button>
           ))}
         </div>
+        {choice.by !== 'name' && (
+          <label
+            className="sw"
+            title={
+              perPageAllowed
+                ? undefined
+                : choice.widgetMode === 'fill'
+                  ? 'Not available with Sort widget pages too'
+                  : 'Not available with category folders'
+            }
+          >
+            <input
+              type="checkbox"
+              disabled={!perPageAllowed}
+              checked={perPageAllowed && choice.perPage}
+              onChange={(e) => setChoice({ perPage: e.target.checked })}
+            />
+            One {choice.by} per page
+          </label>
+        )}
       </div>
 
       {choice.by === 'color' && (
         <div className={s.options}>
           <ColorOrder
             order={choice.colorOrder}
+            perPage={choice.perPage && perPageAllowed}
             onChange={(colorOrder) => setChoice({ colorOrder })}
           />
         </div>
@@ -223,6 +256,12 @@ export function Organize({ device }: { device: Device }) {
       {blocked && (
         <Banner severity="error">
           This layout can’t be applied: {preview.issues.map(describeIssue).join('; ')}.
+        </Banner>
+      )}
+      {tooManyPages && (
+        <Banner severity="error">
+          This makes {preview.after.pages.length} pages, and iPhone and iPad may allow only{' '}
+          {MAX_PAGES}. Turn off One {choice.by} per page, or add folders.
         </Banner>
       )}
       {needsLookup && lookup && lookup !== 'idle' && (
@@ -253,6 +292,7 @@ export function Organize({ device }: { device: Device }) {
             ` · ${preview.widgetPages} widget page${preview.widgetPages === 1 ? '' : 's'} kept`}
           {preview.removedPages > 0 &&
             ` · ${preview.removedPages} page${preview.removedPages === 1 ? '' : 's'} removed`}
+          {added && ` · ${added}`}
           {preview.newFolders > 0 &&
             ` · ${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`}
         </span>
@@ -266,6 +306,7 @@ export function Organize({ device }: { device: Device }) {
             ...(preview.removedPages > 0
               ? [`${preview.removedPages} page${preview.removedPages === 1 ? '' : 's'} removed`]
               : []),
+            ...(added ? [added] : []),
             ...(preview.newFolders > 0
               ? [`${preview.newFolders} folder${preview.newFolders === 1 ? '' : 's'} created`]
               : []),
