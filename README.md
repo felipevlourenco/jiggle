@@ -135,7 +135,7 @@ CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing
 
 ## What is verified
 
-All of it passes typecheck, lint, 375 unit tests, 40 engine tests and 65 end-to-end tests, run against mock devices. Not yet confirmed on real hardware:
+All of it passes typecheck, lint, 375 unit tests, 40 engine tests and 66 end-to-end tests, run against mock devices. Not yet confirmed on real hardware:
 
 - Writing to a phone: drag and drop, pins, auto-folders, Send to App Library, saved layouts, and uninstall.
 - Wi-Fi connection.
