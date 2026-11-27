@@ -1,5 +1,10 @@
 import { useSyncExternalStore } from 'react'
-import { COLOR_FAMILIES, DEFAULT_COLOR_ORDER, type ColorFamily } from '@shared/layout/color'
+import {
+  COLOR_FAMILIES,
+  DEFAULT_COLOR_ORDER,
+  defaultJoins,
+  type ColorFamily
+} from '@shared/layout/color'
 import type { FolderRule } from '@shared/layout/folders'
 import type { SortOptions } from '@shared/layout/sort'
 
@@ -10,33 +15,48 @@ export interface OrganizeChoice {
   widgetMode: SortOptions['widgetMode']
   folders: FolderRule | null // one folder per category, developer or first letter; null: no folders
   colorOrder: readonly ColorFamily[] // with by: 'color'; kept across launches
+  colorJoins: readonly ColorFamily[] // colors sharing a page with the one before them; kept too
   perPage: boolean // each color or category starts on a new page, where canSortPerPage allows it
 }
 
 const COLOR_KEY = 'jiggle.colorOrder'
-function savedColorOrder(): readonly ColorFamily[] {
+const JOINS_KEY = 'jiggle.colorJoins'
+
+// A saved list of known color families; anything else, or no storage, is null.
+function savedFamilies(key: string): ColorFamily[] | null {
   try {
-    const saved = JSON.parse(localStorage.getItem(COLOR_KEY) ?? 'null') as unknown
-    // Only a complete list of known families counts; anything else is the default.
-    if (
-      Array.isArray(saved) &&
-      saved.length === COLOR_FAMILIES.length &&
-      COLOR_FAMILIES.every((f) => saved.includes(f))
-    ) {
+    const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as unknown
+    if (Array.isArray(saved) && saved.every((f) => COLOR_FAMILIES.includes(f as ColorFamily))) {
       return saved as ColorFamily[]
     }
   } catch {
-    // no storage: the default
+    // unreadable: the default
   }
-  return DEFAULT_COLOR_ORDER
+  return null
 }
+
+function save(key: string, families: readonly ColorFamily[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(families))
+  } catch {
+    // not saved: it lasts until the app closes
+  }
+}
+
+// Only a complete order counts.
+const savedOrder = savedFamilies(COLOR_KEY)
+const startOrder =
+  savedOrder && COLOR_FAMILIES.every((f) => savedOrder.includes(f))
+    ? savedOrder
+    : DEFAULT_COLOR_ORDER
 
 let choice: OrganizeChoice = {
   by: 'name',
   widgetMode: 'keep-pages',
   folders: null,
   perPage: false,
-  colorOrder: savedColorOrder()
+  colorOrder: startOrder,
+  colorJoins: savedFamilies(JOINS_KEY) ?? defaultJoins(startOrder)
 }
 const listeners = new Set<() => void>()
 
@@ -52,13 +72,8 @@ export function useOrganizeChoice(): [OrganizeChoice, (patch: Partial<OrganizeCh
     current,
     (patch) => {
       choice = { ...choice, ...patch }
-      if (patch.colorOrder) {
-        try {
-          localStorage.setItem(COLOR_KEY, JSON.stringify(patch.colorOrder))
-        } catch {
-          // not saved: it lasts until the app closes
-        }
-      }
+      if (patch.colorOrder) save(COLOR_KEY, patch.colorOrder)
+      if (patch.colorJoins) save(JOINS_KEY, patch.colorJoins)
       listeners.forEach((l) => l())
     }
   ]

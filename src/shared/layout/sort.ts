@@ -1,5 +1,12 @@
 import type { AppItem, FolderItem, IconColor, Layout, LayoutItem, Pins } from '../types'
-import { compareColors, familyOf, pageGroupOf, type ColorFamily } from './color.ts'
+import {
+  compareColors,
+  DEFAULT_COLOR_ORDER,
+  defaultJoins,
+  familyOf,
+  pageHeadOf,
+  type ColorFamily
+} from './color.ts'
 import { foldBy, type FolderRule } from './folders.ts'
 // Explicit extension: scripts/engine-preview.ts runs this file with plain Node.
 import { pageCapacity } from './grid.ts'
@@ -17,6 +24,9 @@ export interface SortOptions {
   colorOf?: (bundleId: string) => IconColor | null
   // With by: 'color': the order of the color families (default: the rainbow, then white, grey, black).
   colorOrder?: readonly ColorFamily[]
+  // With by: 'color' and perPage: the colors that share a page with the one before them in colorOrder
+  // (default: look-alike neighbors, see defaultJoins).
+  colorJoins?: readonly ColorFamily[]
   // Pinned apps and page 1 stay exactly where they are (see sortInPlace).
   pins?: Pins
   // Loose apps gather into one folder per category, developer or first letter (2 or more apps each).
@@ -145,9 +155,13 @@ function sortInPlace(layout: Layout, opts: SortOptions): Layout {
 // What must share a page. The sort keeps each group's items next to each other.
 function groupOf(item: Movable, opts: SortOptions): string {
   if (item.kind === 'folder') return '\0folders'
-  return opts.by === 'color'
-    ? pageGroupOf(familyOf(opts.colorOf?.(item.bundleId) ?? null))
-    : (opts.categoryOf?.(item.bundleId) ?? '').toLowerCase()
+  if (opts.by !== 'color') return (opts.categoryOf?.(item.bundleId) ?? '').toLowerCase()
+  const order = opts.colorOrder ?? DEFAULT_COLOR_ORDER
+  return pageHeadOf(
+    familyOf(opts.colorOf?.(item.bundleId) ?? null),
+    order,
+    opts.colorJoins ?? defaultJoins(order)
+  )
 }
 
 // One group per page, a big group carrying over. Without app pins, the pages that stay (a pinned page 1,

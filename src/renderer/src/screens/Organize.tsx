@@ -79,7 +79,8 @@ export function Organize({ device }: { device: Device }) {
         categoryOf,
         developerOf: (id) => developers.get(id) ?? null,
         colorOf: (id) => colors.get(id) ?? null,
-        colorOrder: choice.colorOrder
+        colorOrder: choice.colorOrder,
+        colorJoins: choice.colorJoins
       })
     const after = sorted(choice.by)
     const moved = movedIds(before, after)
@@ -247,8 +248,9 @@ export function Organize({ device }: { device: Device }) {
         <div className={s.options}>
           <ColorOrder
             order={choice.colorOrder}
+            joins={choice.colorJoins}
             perPage={choice.perPage && perPageAllowed}
-            onChange={(colorOrder) => setChoice({ colorOrder })}
+            onChange={(colorOrder, colorJoins) => setChoice({ colorOrder, colorJoins })}
           />
         </div>
       )}
