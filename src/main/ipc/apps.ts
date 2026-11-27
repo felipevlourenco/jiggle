@@ -3,6 +3,7 @@ import { appLocations } from '@shared/layout/locations'
 import { normalize } from '@shared/layout/normalize'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
 import type { CategoryService } from '../services/CategoryService'
+import type { ColorOverrideService } from '../services/ColorOverrideService'
 import type { UninstallService } from '../services/UninstallService'
 import type { IconService } from '../services/IconService'
 import { handle, type IpcLike } from './handle'
@@ -12,7 +13,8 @@ export function registerAppsIpc(
   bridge: DeviceBridge,
   icons: IconService,
   categories: CategoryService,
-  uninstaller: UninstallService
+  uninstaller: UninstallService,
+  colorOverrides: ColorOverrideService
 ): void {
   handle(ipc, 'apps:list', async (udid) => {
     const [installed, raw] = await Promise.all([bridge.listApps(udid), bridge.getIconState(udid)])
@@ -27,7 +29,10 @@ export function registerAppsIpc(
     const result = categories.resolve(installed)
     return {
       ...result,
-      apps: result.apps.map((a) => ({ ...a, iconColor: colors[a.bundleId] ?? null }))
+      apps: result.apps.map((a) => ({
+        ...a,
+        iconColor: colorOverrides.apply(a.bundleId, colors[a.bundleId] ?? null)
+      }))
     }
   })
   handle(ipc, 'apps:uninstall', (udid, bundleIds) => uninstaller.run(udid, bundleIds))
@@ -41,4 +46,8 @@ export function registerAppsIpc(
     }
   })
   handle(ipc, 'apps:reset-category', (bundleId) => categories.resetOverride(bundleId))
+  handle(ipc, 'apps:color-overrides', () => colorOverrides.list())
+  handle(ipc, 'apps:set-color', (bundleId, name, color) =>
+    colorOverrides.set(bundleId, name, color)
+  )
 }

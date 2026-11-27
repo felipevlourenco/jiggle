@@ -4,6 +4,7 @@ import type { UninstallService } from '../services/UninstallService'
 import type { ExportService } from '../services/ExportService'
 import type { DeviceBridge } from '../services/bridge/DeviceBridge'
 import type { CategoryService } from '../services/CategoryService'
+import type { ColorOverrideService } from '../services/ColorOverrideService'
 import type { IconService } from '../services/IconService'
 import type { PinsService } from '../services/PinsService'
 import type { SettingsService } from '../services/SettingsService'
@@ -22,6 +23,7 @@ export interface IpcDeps {
   broadcast: Broadcast
   icons: IconService
   categories: CategoryService
+  colorOverrides: ColorOverrideService
   snapshots: SnapshotService
   apply: ApplyService
   exporter: ExportService
@@ -35,7 +37,7 @@ export interface IpcDeps {
 export function registerIpc(ipc: IpcLike, d: IpcDeps): void {
   registerDeviceIpc(ipc, d.bridge, d.broadcast)
   registerLayoutIpc(ipc, d.bridge, d.icons)
-  registerAppsIpc(ipc, d.bridge, d.icons, d.categories, d.uninstaller)
+  registerAppsIpc(ipc, d.bridge, d.icons, d.categories, d.uninstaller, d.colorOverrides)
   registerSnapshotsIpc(ipc, {
     bridge: d.bridge,
     snapshots: d.snapshots,

@@ -10,6 +10,7 @@ import { NO_PINS, toggleAppPin } from '@shared/layout/pins'
 import type { Pins } from '@shared/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PinIcon } from '../components/icons'
+import { ChangeColorSheet } from '../sheets/ChangeColor'
 import s from './pins.module.css'
 
 interface PinsApi {
@@ -26,7 +27,7 @@ interface PinsApi {
 const PinsContext = createContext<PinsApi>({ pins: NO_PINS, setPage1() {}, openMenu() {} })
 export const usePins = (): PinsApi => useContext(PinsContext)
 
-// A device's pins, plus the right-click menu every app tile and row shares.
+// A device's pins, plus the right-click menu every app tile and row shares (and its Change Color… sheet).
 export function PinsProvider({
   udid,
   children
@@ -46,6 +47,7 @@ export function PinsProvider({
     mutationFn: (next: Pins) => window.jiggle.pins.set(udid!, next),
     onMutate: (next) => qc.setQueryData(key, next)
   })
+  const [recoloring, setRecoloring] = useState<{ bundleId: string; name: string }>()
   const [menu, setMenu] = useState<{
     x: number
     y: number
@@ -96,7 +98,13 @@ export function PinsProvider({
               {item.label}
             </button>
           ))}
+          <button role="menuitem" onClick={() => setRecoloring(menu)}>
+            Change Color…
+          </button>
         </div>
+      )}
+      {recoloring && udid && (
+        <ChangeColorSheet udid={udid} app={recoloring} onClose={() => setRecoloring(undefined)} />
       )}
     </PinsContext.Provider>
   )

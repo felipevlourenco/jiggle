@@ -95,6 +95,7 @@ export const pageGroupOf = (f: ColorFamily): ColorFamily => LOOKS_LIKE[f] ?? f
 // ponytail: white and black are cut at fixed lightness (0.85, 0.25); tune if icons land on the wrong side.
 export function familyOf(c: IconColor | null): ColorFamily {
   if (!c) return 'grey' // no color known: a mid grey
+  if (c.chosen) return c.chosen
   if (c.s < NEUTRAL_SATURATION) return c.l >= 0.85 ? 'white' : c.l <= 0.25 ? 'black' : 'grey'
   return BAND_FAMILY[bandOf(c.h)]!
 }
@@ -110,6 +111,8 @@ export function compareColors(
     const f = familyOf(c)
     const rank = order.indexOf(f)
     const family = rank < 0 ? order.length + COLOR_FAMILIES.indexOf(f) : rank
+    // A color the person chose has no shade to place it by: it follows the icons that were read.
+    if (c?.chosen) return [family, HUE_BANDS, 0]
     if (!c || c.s < NEUTRAL_SATURATION) return [family, 0, -(c?.l ?? 0.5)]
     return [family, bandOf(c.h), -c.l]
   }

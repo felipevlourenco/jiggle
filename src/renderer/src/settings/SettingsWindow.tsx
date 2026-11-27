@@ -12,7 +12,7 @@ const REGION = /^[a-z]{2}$/
 type Tab = 'general' | 'categories' | 'connection' | 'privacy'
 const TABS: { tab: Tab; label: string; icon: typeof GearIcon }[] = [
   { tab: 'general', label: 'General', icon: GearIcon },
-  { tab: 'categories', label: 'Categories', icon: AppsIcon },
+  { tab: 'categories', label: 'Categories & Colors', icon: AppsIcon },
   { tab: 'connection', label: 'Connection', icon: WifiIcon },
   { tab: 'privacy', label: 'Privacy', icon: ShieldOutline }
 ]
@@ -51,7 +51,7 @@ export function SettingsWindow() {
         )}
       </div>
       {tab === 'general' && <General settings={data} save={(p) => save.mutate(p)} />}
-      {tab === 'categories' && <Categories />}
+      {tab === 'categories' && <Changes />}
       {tab === 'connection' && <Connection settings={data} save={(p) => save.mutate(p)} />}
       {tab === 'privacy' && <Privacy settings={data} save={(p) => save.mutate(p)} />}
     </div>
@@ -205,38 +205,57 @@ function Connection({
   )
 }
 
-// The categories the person changed in Apps, each with a way back to the App Store's.
-function Categories() {
+// The categories and colors the person changed, each with a way back to Jiggle's own answer.
+function Changes() {
   const qc = useQueryClient()
-  const { data } = useQuery({
+  const categories = useQuery({
     queryKey: ['overrides'],
     queryFn: () => window.jiggle.apps.overrides()
-  })
+  }).data
+  const colors = useQuery({
+    queryKey: ['color-overrides'],
+    queryFn: () => window.jiggle.apps.colorOverrides()
+  }).data
   useEffect(
     () =>
-      window.jiggle.apps.onChanged(() => void qc.invalidateQueries({ queryKey: ['overrides'] })),
+      window.jiggle.apps.onChanged(() => {
+        void qc.invalidateQueries({ queryKey: ['overrides'] })
+        void qc.invalidateQueries({ queryKey: ['color-overrides'] })
+      }),
     [qc]
   )
-  if (!data) return null
-  if (data.length === 0) {
+  if (!categories || !colors) return null
+  const changes = [
+    ...categories.map((o) => ({
+      key: `category:${o.bundleId}`,
+      name: o.name,
+      to: o.category,
+      label: `Reset ${o.name}`,
+      reset: () => window.jiggle.apps.resetCategory(o.bundleId)
+    })),
+    ...colors.map((o) => ({
+      key: `color:${o.bundleId}`,
+      name: o.name,
+      to: `${o.color} color`,
+      label: `Reset color of ${o.name}`,
+      reset: () => window.jiggle.apps.setColor(o.bundleId, o.name, null)
+    }))
+  ]
+  if (changes.length === 0) {
     return (
       <p className={s.empty}>
-        No category overrides. Right‑click an app in Apps to change its category.
+        No changes yet. Right‑click an app to change its color, or in Apps to change its category.
       </p>
     )
   }
   return (
     <ul className={s.overrides}>
-      {data.map((o) => (
-        <li key={o.bundleId}>
+      {changes.map((c) => (
+        <li key={c.key}>
           <span>
-            <strong>{o.name}</strong> → {o.category}
+            <strong>{c.name}</strong> → {c.to}
           </span>
-          <button
-            className="btn btn-sm"
-            aria-label={`Reset ${o.name}`}
-            onClick={() => void window.jiggle.apps.resetCategory(o.bundleId)}
-          >
+          <button className="btn btn-sm" aria-label={c.label} onClick={() => void c.reset()}>
             Reset
           </button>
         </li>

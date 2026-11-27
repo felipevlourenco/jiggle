@@ -1,3 +1,5 @@
+import type { ColorFamily } from './layout/color'
+
 export type Udid = string
 
 export type DeviceState =
@@ -77,6 +79,14 @@ export interface IconColor {
   h: number
   s: number
   l: number
+  chosen?: ColorFamily // the family the person set for this app: it wins over h, s and l
+}
+
+// A color the person chose for an app, for the Color sort. Global to this computer, not per device.
+export interface ColorOverride {
+  bundleId: string
+  name: string // kept so Settings can list it when the app is gone
+  color: ColorFamily
 }
 
 export interface AppInfo extends InstalledApp {
