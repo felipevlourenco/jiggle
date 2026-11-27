@@ -560,6 +560,73 @@ test.describe('Organize', () => {
     await app.close()
   })
 
+  test('any number of colors can share a page, and the choice is kept', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-joins-'))
+    const env = { JIGGLE_MOCK_DEVICE: 'iphone-messy', JIGGLE_USER_DATA: userData }
+    const open = async () => {
+      const app = await launch(env)
+      const win = await app.firstWindow()
+      await win.getByRole('link', { name: 'Organize' }).click()
+      await win.getByRole('radio', { name: /Color/ }).click()
+      await win.getByRole('checkbox', { name: 'One color per page' }).check()
+      return { app, win }
+    }
+    // The mock phone has no real icons (every app counts as grey), so give three loose apps a color.
+    // Saved before Organize first opens, so nothing changes under the test.
+    const setup = await launch(env)
+    await (
+      await setup.firstWindow()
+    ).evaluate(`(async () => {
+      const [device] = await window.jiggle.device.list()
+      const { layout } = await window.jiggle.layout.get(device.udid)
+      const loose = layout.pages
+        .filter((page) => page.every((i) => i.kind === 'app' || i.kind === 'folder'))
+        .flat()
+        .filter((i) => i.kind === 'app')
+      for (const [n, color] of ['red', 'orange', 'green'].entries())
+        await window.jiggle.apps.setColor(loose[n].bundleId, loose[n].name, color)
+    })()`)
+    await setup.close()
+
+    let { app, win } = await open()
+    const link = (a: string, b: string) =>
+      win.getByRole('button', { name: `Same page: ${a} and ${b}` })
+    // by default only the look-alikes are linked
+    await expect(link('orange', 'yellow')).toHaveAttribute('aria-pressed', 'true')
+    await expect(link('red', 'orange')).toHaveAttribute('aria-pressed', 'false')
+    // The page count compared with the phone now: pages added, or minus the pages removed.
+    const net = async (): Promise<number> => {
+      const text = await win.getByTestId('summary').innerText()
+      const count = (what: string): number =>
+        Number(new RegExp(`(\\d+) pages? ${what}`).exec(text)?.[1] ?? 0)
+      return count('added') - count('removed')
+    }
+
+    // red, orange and green have a page each until they are linked (orange and yellow already are)
+    await expect(win.getByTestId('summary')).toContainText('apps will move')
+    const before = await net()
+    for (const [a, b] of [
+      ['red', 'orange'],
+      ['yellow', 'green']
+    ] as const) {
+      await link(a, b).click()
+      await expect(link(a, b)).toHaveAttribute('aria-pressed', 'true')
+    }
+    await expect.poll(net).toBe(before - 2)
+    await link('teal', 'blue').click()
+    await expect(link('teal', 'blue')).toHaveAttribute('aria-pressed', 'true')
+    await app.close()
+
+    ;({ app, win } = await open())
+    await expect(link('teal', 'blue')).toHaveAttribute('aria-pressed', 'true')
+    await link('orange', 'yellow').click() // any link can be split, the default ones too
+    await expect(link('orange', 'yellow')).toHaveAttribute('aria-pressed', 'false')
+    await win.getByRole('button', { name: 'Reset' }).click()
+    await expect(link('orange', 'yellow')).toHaveAttribute('aria-pressed', 'true')
+    await expect(link('red', 'orange')).toHaveAttribute('aria-pressed', 'false')
+    await app.close()
+  })
+
   test('read-only mode turns Apply off', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-ios16' })
     const win = await app.firstWindow()

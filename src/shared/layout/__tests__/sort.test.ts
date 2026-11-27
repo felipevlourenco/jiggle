@@ -375,6 +375,18 @@ describe('sortLayout per page', () => {
       ])
     })
 
+    it('are only the default: any number of colors can share a page, or none', () => {
+      const four = sortLayout(all, { ...opts, colorJoins: ['yellow', 'green', 'teal'] })
+      expect(four.pages.map(names)).toEqual([
+        ['orange', 'yellow', 'green', 'teal'],
+        ['blue'],
+        ['white'],
+        ['grey'],
+        ['black']
+      ])
+      expect(sortLayout(all, { ...opts, colorJoins: [] }).pages).toHaveLength(8)
+    })
+
     it('get their own pages when the color order puts something between them', () => {
       const colorOrder = ['orange', 'yellow', 'green', 'blue', 'teal', 'white'] as const
       expect(

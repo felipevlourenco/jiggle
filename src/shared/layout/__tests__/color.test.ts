@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { IconColor } from '../../types'
-import { compareColors, dominantColor, familyOf, rgbToHsl } from '../color'
+import {
+  compareColors,
+  DEFAULT_COLOR_ORDER,
+  defaultJoins,
+  dominantColor,
+  familyOf,
+  moveColor,
+  pageHeadOf,
+  rgbToHsl
+} from '../color'
 
 const hsl = (h: number, s = 0.8, l = 0.5): IconColor => ({ h, s, l })
 
@@ -63,6 +72,52 @@ describe('compareColors', () => {
 
   it('puts a barely colored icon with the neutrals, not the colors', () => {
     expect(compareColors(hsl(120, 0.1, 0.9), hsl(280, 0.8, 0.5))).toBeGreaterThan(0)
+  })
+})
+
+describe('colors sharing a page', () => {
+  const order = ['red', 'orange', 'yellow', 'green', 'teal', 'blue'] as const
+
+  it('starts with the look-alike neighbors joined', () => {
+    expect(defaultJoins(DEFAULT_COLOR_ORDER)).toEqual(['yellow', 'teal', 'pink', 'grey'])
+    expect(defaultJoins(['green', 'blue', 'teal'])).toEqual([])
+  })
+
+  it('makes runs as long as the person likes', () => {
+    const joins = ['orange', 'yellow', 'green', 'teal'] as const
+    expect(order.map((f) => pageHeadOf(f, order, joins))).toEqual([
+      'red',
+      'red',
+      'red',
+      'red',
+      'red',
+      'blue'
+    ])
+  })
+
+  // red+orange+yellow, then green+teal, then blue
+  const joins = ['orange', 'yellow', 'teal'] as const
+  const runsAfter = (from: number, to: number): string => {
+    const moved = moveColor(order, joins, from, to)
+    return moved.order
+      .map((f, i) => (i === 0 ? f : `${moved.joins.includes(f) ? '+' : ' '}${f}`))
+      .join('')
+  }
+
+  it('keeps a color in its run when it moves inside it', () => {
+    expect(runsAfter(0, 2)).toBe('orange+yellow+red green+teal blue')
+    expect(runsAfter(2, 0)).toBe('yellow+red+orange green+teal blue')
+  })
+
+  it('takes a color out of its run, and the others stay together', () => {
+    expect(runsAfter(1, 5)).toBe('red+yellow green+teal blue orange')
+    expect(runsAfter(0, 5)).toBe('orange+yellow green+teal blue red') // the first of a run too
+  })
+
+  it('joins a color dropped inside a run, and leaves one at its edge alone', () => {
+    expect(runsAfter(5, 1)).toBe('red+blue+orange+yellow green+teal')
+    expect(runsAfter(5, 3)).toBe('red+orange+yellow blue green+teal')
+    expect(runsAfter(5, 0)).toBe('blue red+orange+yellow green+teal')
   })
 })
 

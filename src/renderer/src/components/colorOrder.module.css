@@ -12,6 +12,22 @@
   padding: 0;
   list-style: none;
 }
+.list[data-links] {
+  column-gap: 0; /* the + and − buttons sit between the swatches */
+}
+.item {
+  display: flex;
+  align-items: stretch;
+  border-radius: 999px;
+  cursor: grab;
+  user-select: none;
+}
+.item[data-dragging] {
+  opacity: 0.4;
+}
+.item:focus-visible {
+  outline: 2px solid var(--ring);
+}
 .chip {
   display: inline-flex;
   align-items: center;
@@ -21,8 +37,6 @@
   background: var(--surface-2);
   font-size: 12px;
   text-transform: capitalize;
-  cursor: grab;
-  user-select: none;
 }
 .chip i {
   width: 14px;
@@ -30,25 +44,42 @@
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
 }
-.chip[data-dragging] {
-  opacity: 0.4;
+.link {
+  width: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }
-.chip:focus-visible {
+.link:hover {
+  color: var(--primary);
+}
+.link:focus-visible {
   outline: 2px solid var(--ring);
 }
-/* Two swatches that share a page read as one pill. */
-.chip[data-joined] {
-  margin-left: -6px; /* the list's gap */
-  border-left: 1px solid var(--border);
+/* Swatches that share a page read as one pill: the − button is the bridge between them. */
+.item[data-joined] .link {
+  background: var(--surface-2);
+}
+.item[data-joined] .chip {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
-.chip:has(+ .chip[data-joined]) {
+.item:has(+ .item[data-joined]) .chip {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
-.hint {
+.foot {
   flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+.hint {
   color: var(--text-secondary);
   font-size: 12px;
 }

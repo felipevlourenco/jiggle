@@ -82,15 +82,57 @@ const BAND_FAMILY: ColorFamily[] = [
   'purple',
   'pink'
 ]
-// Look-alikes: with One color per page they share a page when they are next to each other in the order.
-// An icon a few degrees (or shades) over a family's edge would otherwise get a page of its own.
+// Which colors share their pages with One color per page is the person's choice: `joins` lists the colors
+// that share a page with the one before them in the color order, so a run can be as long as they like.
+// Until they choose, look-alikes that are neighbors are joined: an icon a few degrees (or shades) over a
+// family's edge would otherwise get a page of its own.
 const LOOKS_LIKE: Partial<Record<ColorFamily, ColorFamily>> = {
   yellow: 'orange',
   teal: 'green',
   pink: 'purple',
   grey: 'white'
 }
-export const pageGroupOf = (f: ColorFamily): ColorFamily => LOOKS_LIKE[f] ?? f
+export const defaultJoins = (order: readonly ColorFamily[]): ColorFamily[] =>
+  order.filter(
+    (f, i) => i > 0 && (LOOKS_LIKE[f] ?? f) === (LOOKS_LIKE[order[i - 1]!] ?? order[i - 1])
+  )
+
+// The first color of the run that shares its pages with `family`.
+export function pageHeadOf(
+  family: ColorFamily,
+  order: readonly ColorFamily[],
+  joins: readonly ColorFamily[]
+): ColorFamily {
+  let i = order.indexOf(family)
+  if (i < 0) return family
+  while (i > 0 && joins.includes(order[i]!)) i--
+  return order[i]!
+}
+
+// Moves the color at `from` to `to`. The others stay in their runs. The moved color stays in its own run
+// when it lands next to it, joins a run it is dropped inside, and anywhere else stands alone.
+export function moveColor(
+  order: readonly ColorFamily[],
+  joins: readonly ColorFamily[],
+  from: number,
+  to: number
+): { order: ColorFamily[]; joins: ColorFamily[] } {
+  let runs = 0
+  const run = new Map(order.map((f, i) => [f, i > 0 && joins.includes(f) ? runs : ++runs]))
+  const next = [...order]
+  const moved = next.splice(from, 1)[0]!
+  next.splice(to, 0, moved)
+  const before = run.get(next[to - 1]!)
+  const after = run.get(next[to + 1]!)
+  const own = run.get(moved)
+  if (before !== own && after !== own) {
+    run.set(moved, before !== undefined && before === after ? before : 0)
+  }
+  return {
+    order: next,
+    joins: next.filter((f, i) => i > 0 && run.get(f) === run.get(next[i - 1]!))
+  }
+}
 
 // ponytail: white and black are cut at fixed lightness (0.85, 0.25); tune if icons land on the wrong side.
 export function familyOf(c: IconColor | null): ColorFamily {
