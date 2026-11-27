@@ -7,7 +7,7 @@ import {
 } from '@shared/layout/color'
 import s from './colorOrder.module.css'
 
-const SWATCH: Record<ColorFamily, string> = {
+export const SWATCH: Record<ColorFamily, string> = {
   red: '#e5484d',
   orange: '#f5821f',
   yellow: '#f5c518',

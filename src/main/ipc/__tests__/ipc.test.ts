@@ -7,6 +7,7 @@ import { gridFor } from '@shared/layout/grid'
 import { normalize } from '@shared/layout/normalize'
 import { MockBridge, loadFixture } from '../../services/bridge/MockBridge'
 import { CategoryService } from '../../services/CategoryService'
+import { ColorOverrideService } from '../../services/ColorOverrideService'
 import { ApplyService } from '../../services/ApplyService'
 import { IconService } from '../../services/IconService'
 import { ExportService } from '../../services/ExportService'
@@ -49,6 +50,7 @@ function setup() {
     broadcast,
     icons,
     categories,
+    colorOverrides: new ColorOverrideService(root, silent),
     snapshots,
     apply,
     settings,
@@ -68,6 +70,21 @@ function setup() {
   const call = async (ch: string, ...args: unknown[]) => await handlers.get(ch)!(...args)
   return { call, broadcast }
 }
+
+describe('apps:set-color', () => {
+  it('shows the chosen color in the app list, until it is reset, and refuses unknown colors', async () => {
+    const { call } = setup()
+    const first = async () =>
+      ((await call('apps:list', fixture.device.udid)) as AppsResult).apps[0]!
+    const { bundleId, name } = await first()
+    await call('apps:set-color', bundleId, name, 'teal')
+    expect((await first()).iconColor?.chosen).toBe('teal')
+    expect(await call('apps:color-overrides')).toEqual([{ bundleId, name, color: 'teal' }])
+    await expect(call('apps:set-color', bundleId, name, 'beige')).rejects.toThrow()
+    await call('apps:set-color', bundleId, name, null)
+    expect((await first()).iconColor?.chosen).toBeUndefined()
+  })
+})
 
 describe('IPC validation', () => {
   it('serves valid calls', async () => {

@@ -385,6 +385,17 @@ describe('sortLayout per page', () => {
     })
   })
 
+  it('puts an app on the page of the color the person chose', () => {
+    const out = sortLayout(layout([[app('r01'), app('r02'), app('b01')]]), {
+      ...perColor,
+      colorOf: (id) => ({
+        ...perColor.colorOf!(id)!,
+        ...(id === 'app.r02' ? { chosen: 'blue' as const } : {})
+      })
+    })
+    expect(out.pages.map(names)).toEqual([['r01'], ['b01', 'r02']])
+  })
+
   it('starts each category on a new page', () => {
     const out = sortLayout(layout([[app('Chess'), app('Bank'), app('Go')]]), {
       by: 'category',

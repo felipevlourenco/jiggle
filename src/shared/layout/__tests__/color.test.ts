@@ -41,6 +41,16 @@ describe('compareColors', () => {
     ])
   })
 
+  it('lets a chosen color win, after the icons of that family that were read', () => {
+    const chosen: IconColor = { ...hsl(30), chosen: 'blue' }
+    expect(familyOf(chosen)).toBe('blue')
+    expect(compareColors(hsl(250, 0.8, 0.2), chosen)).toBeLessThan(0)
+    expect(compareColors(chosen, hsl(280))).toBeLessThan(0) // still before purple
+    // the neutrals too, and two chosen ones are a tie (their names then decide)
+    expect(compareColors(hsl(0, 0, 0.05), { ...hsl(30), chosen: 'black' })).toBeLessThan(0)
+    expect(compareColors(chosen, { ...hsl(120), chosen: 'blue' })).toBe(0)
+  })
+
   it('calls lime green green, not yellow', () => {
     expect(familyOf(hsl(100))).toBe('green')
     expect(familyOf(hsl(60))).toBe('yellow')

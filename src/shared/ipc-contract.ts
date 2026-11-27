@@ -1,10 +1,12 @@
 import { z } from 'zod'
+import { COLOR_FAMILIES } from './layout/color'
 import type {
   ApplyPlan,
   ApplyResult,
   ApplyStep,
   AppsResult,
   CategoryOverride,
+  ColorOverride,
   Device,
   ExportRequest,
   ExportResult,
@@ -108,6 +110,16 @@ export const channels = {
     result: z.custom<UninstallResult>()
   },
   'apps:reset-category': { args: z.tuple([z.string().min(1)]), result: z.void() },
+  // Colors the person set by hand, for the Color sort. null puts Jiggle's own reading back.
+  'apps:color-overrides': { args: z.tuple([]), result: z.custom<ColorOverride[]>() },
+  'apps:set-color': {
+    args: z.tuple([
+      z.string().min(1),
+      z.string().min(1).max(100),
+      z.enum(COLOR_FAMILIES).nullable()
+    ]),
+    result: z.void()
+  },
   // No udid: every device's snapshots, so History still works with nothing plugged in.
   'snapshots:list': { args: z.tuple([Udid.optional()]), result: z.custom<SnapshotEntry[]>() },
   'snapshots:backup': { args: z.tuple([Udid]), result: z.custom<SnapshotSummary>() },
@@ -212,6 +224,8 @@ export interface JiggleApi {
       category: string
     ): Promise<{ ok: true } | { ok: false; message: string }>
     resetCategory(bundleId: string): Promise<void>
+    colorOverrides(): Promise<ColorOverride[]>
+    setColor(bundleId: string, name: string, color: ColorOverride['color'] | null): Promise<void>
     uninstall(udid: string, bundleIds: string[]): Promise<UninstallResult>
     onUninstallProgress(
       listener: (progress: { done: number; total: number; name: string }) => void

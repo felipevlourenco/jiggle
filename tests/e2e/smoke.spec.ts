@@ -1658,7 +1658,7 @@ test.describe('Category overrides', () => {
     await settings.getByRole('tab', { name: 'Categories' }).click()
     await expect(settings.getByText(`${name} → Finance`)).toBeVisible()
     await settings.getByRole('button', { name: `Reset ${name}` }).click()
-    await expect(settings.getByText(/No category overrides/)).toBeVisible()
+    await expect(settings.getByText(/No changes yet/)).toBeVisible()
     await expect(mine).toContainText('Unknown')
     await expect(mine.getByTestId('override-dot')).toHaveCount(0)
 
@@ -1683,6 +1683,67 @@ test.describe('Category overrides', () => {
     await win.getByRole('menuitem', { name: 'Change Category…' }).click()
     await win.getByRole('button', { name: 'Reset to App Store' }).click()
     await expect(win.getByTestId('override-dot')).toHaveCount(0)
+    await app.close()
+  })
+})
+
+test.describe('Color overrides', () => {
+  test('Change Color… is used by the Color sort, listed in Settings, and kept after Clear Cache and a relaunch', async () => {
+    const userData = mkdtempSync(join(tmpdir(), 'jiggle-e2e-colors-'))
+    const env = { JIGGLE_MOCK_DEVICE: 'iphone-basic', JIGGLE_USER_DATA: userData }
+    let app = await launch(env)
+    let win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    const mine = () => win.getByRole('row').filter({ has: win.getByLabel('Select Spotify') })
+    const openSheet = async () => {
+      await mine().click({ button: 'right' })
+      await win.getByRole('menuitem', { name: 'Change Color…' }).click()
+      return win.getByRole('dialog', { name: 'Change color of Spotify' })
+    }
+
+    let sheet = await openSheet()
+    await expect(sheet).toContainText(/Spotify · now \w+/)
+    await expect(sheet.getByRole('button', { name: 'Use Jiggle’s color' })).toHaveCount(0)
+    // pick a color it doesn't already have
+    const other = sheet.getByRole('group', { name: 'Color' }).locator('[aria-pressed="false"]')
+    const chosen = (await other.last().innerText()).trim().toLowerCase()
+    await other.last().click()
+    await expect(sheet).toHaveCount(0)
+    sheet = await openSheet()
+    await expect(sheet).toContainText(`now ${chosen} (set by you`)
+    await sheet.getByRole('button', { name: 'Cancel' }).click()
+
+    const opened = app.waitForEvent('window')
+    await app.evaluate(({ Menu }) =>
+      Menu.getApplicationMenu()!.getMenuItemById('settings')!.click()
+    )
+    const settings = await opened
+    await settings.getByRole('tab', { name: 'Privacy' }).click()
+    await settings.getByRole('button', { name: 'Clear Cache' }).click()
+    await expect(settings.getByText('Cleared.')).toBeVisible()
+    await settings.getByRole('tab', { name: /Colors/ }).click()
+    await expect(settings.getByText(`Spotify → ${chosen} color`)).toBeVisible()
+    await app.close()
+
+    app = await launch(env)
+    win = await app.firstWindow()
+    await win.getByRole('link', { name: 'Apps' }).click()
+    sheet = await openSheet()
+    await expect(sheet).toContainText(`now ${chosen} (set by you`)
+    await sheet.getByRole('button', { name: 'Use Jiggle’s color' }).click()
+    await expect(sheet).toHaveCount(0)
+    sheet = await openSheet()
+    await expect(sheet).not.toContainText('set by you')
+    await sheet.getByRole('button', { name: 'Cancel' }).click()
+
+    // the same menu works on an icon in the Organize preview
+    await win.getByRole('link', { name: 'Organize' }).click()
+    await win
+      .getByRole('figure', { name: 'After' })
+      .locator('[data-kind="app"]')
+      .first()
+      .click({ button: 'right' })
+    await expect(win.getByRole('menuitem', { name: 'Change Color…' })).toBeVisible()
     await app.close()
   })
 })

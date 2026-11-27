@@ -20,8 +20,10 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 84px;
+  min-width: 84px;
   height: 50px;
+  padding: 0 8px;
+  white-space: nowrap; /* "Categories & Colors" stays on one line */
   border: 0;
   border-radius: 6px;
   background: none;

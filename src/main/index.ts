@@ -23,6 +23,7 @@ import { ApplyService } from './services/ApplyService'
 import { ElectronPageRenderer } from './services/ElectronPageRenderer'
 import { ExportService } from './services/ExportService'
 import { CategoryService } from './services/CategoryService'
+import { ColorOverrideService } from './services/ColorOverrideService'
 import { IconService } from './services/IconService'
 import { PinsService } from './services/PinsService'
 import { UninstallService } from './services/UninstallService'
@@ -152,6 +153,9 @@ if (!app.requestSingleInstanceLock()) {
       log: log.scope('categories'),
       onChange: () => broadcast('apps:changed', undefined)
     })
+    const colorOverrides = new ColorOverrideService(userData, log.scope('colors'), () =>
+      broadcast('apps:changed', undefined)
+    )
     const snapshots = new SnapshotService(userData, log.scope('snapshots'), {
       keepAutoBackups: () => settings.get().backupRetention
     })
@@ -177,6 +181,7 @@ if (!app.requestSingleInstanceLock()) {
       broadcast,
       icons,
       categories,
+      colorOverrides,
       snapshots,
       apply,
       exporter,

@@ -36,7 +36,7 @@ The demos use a mock phone, so the icons are placeholders.
 
 - **Preview** the Home Screen as it is: wallpaper, pages, dock, folders and widget placeholders.
 - **Apps table**: searchable and sortable by name, category, developer, location and size. **Largest apps** ranks them by size and totals the ones you tick, ready to send to the App Library or uninstall. Change an app's category (kept per Mac) or remove apps in bulk.
-- **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, developer or first letter, from 2 apps) and pins. Pages with widgets are kept as they are, cleared of apps (sort around widgets), or sorted too with every widget staying in its spot and the other pages packed full (sort widget pages too). With colour or category, **One per page** starts each colour or category on a new page (look-alike colours next to each other in the colour order, such as green and teal, share one); it is not available with **Sort widget pages too**, or when sorting by category with category folders.
+- **Organize**: sort by **A–Z**, **App Store category** or **icon colour**, with a before/after preview. Optional auto-folders (one folder per category, developer or first letter, from 2 apps) and pins. Pages with widgets are kept as they are, cleared of apps (sort around widgets), or sorted too with every widget staying in its spot and the other pages packed full (sort widget pages too). With colour or category, **One per page** starts each colour or category on a new page (look-alike colours next to each other in the colour order, such as green and teal, share one); it is not available with **Sort widget pages too**, or when sorting by category with category folders. If an icon's colour looks wrong to you, right-click the app and choose **Change Color…**; the choice is kept for all your devices and can be undone there or in Settings.
 - **Edit by hand**: drag and drop (or Space and arrow keys), with undo and redo, then push to the phone.
 - **Send to App Library**: take apps off the Home Screen in bulk. They stay installed.
 - **Saved layouts**: name the current layout ("Work", "Weekend") and switch back to it in one click. Export one as a `.jiggle` file and import it on another Mac or device.
@@ -135,7 +135,7 @@ CI (`.github/workflows/ci.yml`) runs all of these on every pull request. Pushing
 
 ## What is verified
 
-All of it passes typecheck, lint, 375 unit tests, 40 engine tests and 66 end-to-end tests, run against mock devices. Not yet confirmed on real hardware:
+All of it passes typecheck, lint, 382 unit tests, 40 engine tests and 67 end-to-end tests, run against mock devices. Not yet confirmed on real hardware:
 
 - Writing to a phone: drag and drop, pins, auto-folders, Send to App Library, saved layouts, and uninstall.
 - Wi-Fi connection.
