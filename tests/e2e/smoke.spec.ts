@@ -697,6 +697,15 @@ test.describe('Edit mode (drag and drop)', () => {
     await win.mouse.up()
   }
 
+  // The click right after a drop can be swallowed (dnd-kit eats the click that follows a drop), so retry it.
+  // A retry can come after an earlier click did land, when this one has nothing left to hit (the button is
+  // gone, or what it opened covers it): then only the check counts.
+  const clickAfterDrop = (target: ReturnType<typeof cell>, check: () => Promise<void>) =>
+    expect(async () => {
+      await target.click({ timeout: 1000 }).catch(() => {})
+      await check()
+    }).toPass()
+
   test('drags an icon from page 2 to page 1, undoes, redoes, and pushes it to the phone', async () => {
     const app = await launch({ JIGGLE_MOCK_DEVICE: 'iphone-basic' })
     const win = await app.firstWindow()
@@ -877,11 +886,9 @@ test.describe('Edit mode (drag and drop)', () => {
     await expect.poll(async () => await titles(win)).toEqual(original)
     await expect(win.getByText('Editing · 2 changes')).toBeVisible()
 
-    // The click right after a drag can be swallowed (dnd-kit eats the click that follows a drop), so retry it.
-    await expect(async () => {
-      await win.getByRole('button', { name: 'Discard' }).click({ timeout: 1000 })
-      await expect(win.getByText(/change/)).toHaveCount(0, { timeout: 1000 })
-    }).toPass()
+    await clickAfterDrop(win.getByRole('button', { name: 'Discard' }), () =>
+      expect(win.getByText(/change/)).toHaveCount(0, { timeout: 1000 })
+    )
     await app.close()
   })
 
@@ -910,11 +917,9 @@ test.describe('Edit mode (drag and drop)', () => {
     await dragTo(win, await centre(cellIn(before[0]!)), await centre(cellIn(before[2]!)))
     await expect.poll(names).toEqual([before[1], before[2], before[0], ...before.slice(3)])
     await expect(win.getByText('Editing · 2 changes')).toBeVisible()
-    // (the click right after a drop can be swallowed, so retry it)
-    await expect(async () => {
-      await tools.getByRole('button', { name: 'Close folder' }).click({ timeout: 1000 })
-      await expect(tools).toHaveCount(0, { timeout: 1000 })
-    }).toPass()
+    await clickAfterDrop(tools.getByRole('button', { name: 'Close folder' }), () =>
+      expect(tools).toHaveCount(0, { timeout: 1000 })
+    )
 
     // make a folder: hold ⌥ while dropping the first app on the second
     const page = await titles(win)
@@ -927,10 +932,7 @@ test.describe('Edit mode (drag and drop)', () => {
     const made = win.getByTestId('page').locator('[data-kind="folder"][title="New Folder"]')
     await expect(made).toHaveCount(1)
     const inside = win.getByRole('dialog', { name: 'Folder New Folder' })
-    await expect(async () => {
-      await made.click({ timeout: 1000 })
-      await expect(inside).toBeVisible({ timeout: 1000 })
-    }).toPass()
+    await clickAfterDrop(made, () => expect(inside).toBeVisible({ timeout: 1000 }))
     expect(
       await inside
         .locator('[data-kind]')
